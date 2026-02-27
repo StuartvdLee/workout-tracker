@@ -31,7 +31,12 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- **Code Quality Gate**: Confirm linting/formatting/static analysis strategy and merge blocker.
+- **Testing Gate**: Define required automated tests (unit/integration/e2e) and regression test plan.
+- **UX Consistency Gate**: Document impacted user flows, design pattern reuse, and accessibility checks.
+- **Performance Gate**: Define measurable budgets/targets and the validation method (benchmark/profile).
+- **Evidence Gate**: Identify what artifacts (test results, screenshots, benchmark output) are required
+  in PR review.
 
 ## Project Structure
 

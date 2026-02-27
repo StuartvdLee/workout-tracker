@@ -1,50 +1,95 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report
+- Version change: template-unversioned -> 1.0.0
+- Modified principles:
+	- Placeholder Principle 1 -> I. Code Quality Is a Release Gate
+	- Placeholder Principle 2 -> II. Testing Standards Are Mandatory
+	- Placeholder Principle 3 -> III. UX Consistency Is Non-Negotiable
+	- Placeholder Principle 4 -> IV. Performance Requirements Are Defined and Verified
+- Added sections:
+	- Engineering Standards
+	- Delivery Workflow & Quality Gates
+- Removed sections:
+	- Placeholder Principle 5 section
+- Templates requiring updates:
+	- ✅ updated: .specify/templates/plan-template.md
+	- ✅ updated: .specify/templates/spec-template.md
+	- ✅ updated: .specify/templates/tasks-template.md
+	- ✅ not applicable (directory absent): .specify/templates/commands/*.md
+	- ✅ not applicable (file absent): README.md
+	- ✅ not applicable (file absent): docs/quickstart.md
+- Follow-up TODOs:
+	- None
+-->
+
+# Workout Tracker Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Code Quality Is a Release Gate
+All production code changes MUST pass repository linting, formatting, and static checks before
+merge. Code MUST favor clear names, cohesive modules, and removal of dead or duplicate logic.
+Non-trivial design decisions MUST be captured in feature planning artifacts so reviewers can
+verify intent and maintainability.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+Rationale: Enforcing objective quality gates reduces defects, keeps the codebase readable, and
+prevents drift into unmaintainable patterns.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### II. Testing Standards Are Mandatory
+Every behavior change MUST include automated tests at the appropriate level (unit, integration,
+or end-to-end). Every bug fix MUST include a regression test that fails before the fix and passes
+afterward. Merge to the default branch MUST be blocked when required tests fail.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+Rationale: Mandatory automated tests create confidence in frequent changes and prevent known
+failures from reappearing.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### III. UX Consistency Is Non-Negotiable
+All user-facing changes MUST use approved UI patterns, interaction behaviors, and terminology
+defined for this product. Accessibility expectations (keyboard navigation, visible focus,
+semantic labels, and adequate contrast) MUST be met for affected screens. Intentional deviations
+MUST be documented in the spec and approved during review.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+Rationale: Consistent and accessible experiences reduce user confusion, support costs, and
+rework across features.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### IV. Performance Requirements Are Defined and Verified
+Each feature specification MUST define measurable performance targets for impacted user journeys
+or system operations. Changes on performance-sensitive paths MUST include evidence from profiling,
+benchmarks, or production-like measurements. Regressions beyond agreed budgets MUST be fixed or
+formally waived before release.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+Rationale: Explicit budgets and evidence-based validation prevent hidden slowdowns and preserve
+product responsiveness as scope grows.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+## Engineering Standards
+
+- Plans and specs MUST identify quality, test, UX, and performance impacts before implementation.
+- Pull requests MUST remain focused in scope and include rationale for any trade-off decisions.
+- Tooling and framework choices MUST prioritize maintainability and team operability over novelty.
+- Definition of Done MUST include updated tests, validated UX behavior, and measured performance
+	where applicable.
+
+## Delivery Workflow & Quality Gates
+
+- Spec Phase: include independently testable user scenarios and measurable outcomes.
+- Plan Phase: complete Constitution Check with pass/fail evidence for each core principle.
+- Implementation Phase: follow task ordering that preserves testability and independent delivery.
+- Review Phase: reviewers MUST confirm constitutional compliance before approval.
+- Release Phase: performance and UX validation artifacts MUST be attached for affected changes.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution is the source of truth for engineering practices in this repository and
+supersedes conflicting process guidance.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+- Amendment process: propose changes via pull request that includes rationale, impact assessment,
+	and updates to affected templates and guidance files.
+- Approval policy: at least one maintainer approval is required for any constitutional amendment.
+- Versioning policy: semantic versioning is mandatory for this document.
+	- MAJOR: backward-incompatible principle removals or redefinitions.
+	- MINOR: new principle or materially expanded guidance.
+	- PATCH: clarifications, wording improvements, and non-semantic refinements.
+- Compliance review: every feature plan and pull request MUST include an explicit constitution
+	compliance check; unresolved violations MUST be tracked with owner and due date.
+
+**Version**: 1.0.0 | **Ratified**: 2026-02-27 | **Last Amended**: 2026-02-27

@@ -75,6 +75,13 @@
 - What happens when [boundary condition]?
 - How does system handle [error scenario]?
 
+## UX Consistency Requirements *(mandatory)*
+
+- Reused UI patterns/components: [List existing patterns this feature MUST follow]
+- Interaction consistency: [Navigation, validation, error messaging expectations]
+- Accessibility checks: [Keyboard, focus visibility, labels, contrast requirements]
+- Allowed deviations: [List any approved exceptions, or state "None"]
+
 ## Requirements *(mandatory)*
 
 <!--
@@ -99,6 +106,13 @@
 
 - **[Entity 1]**: [What it represents, key attributes without implementation]
 - **[Entity 2]**: [What it represents, relationships to other entities]
+
+## Performance Requirements *(mandatory)*
+
+- **PR-001**: Define measurable target(s) for impacted journeys (e.g., p95 latency, render time,
+  processing throughput).
+- **PR-002**: Define test/measurement method (benchmark, profiling, load test, synthetic check).
+- **PR-003**: Define acceptable regression threshold and mitigation plan if exceeded.
 
 ## Success Criteria *(mandatory)*
 
