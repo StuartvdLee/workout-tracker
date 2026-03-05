@@ -31,11 +31,12 @@ function HomePage() {
     }
 
     return (
-        <section>
-            <h1>Workout Tracker</h1>
-            <form onSubmit={handleStartSession} aria-label="Start workout session form">
-                <label htmlFor="workout-type">Workout Type</label>
+        <section className="home-page">
+            <h1 className="home-title">Workout Tracker</h1>
+            <form className="home-form" onSubmit={handleStartSession} aria-label="Start workout session form">
+                <label className="sr-only" htmlFor="workout-type">Workout Type</label>
                 <select
+                    className="workout-select"
                     id="workout-type"
                     value={workoutType}
                     onChange={(event) => {
@@ -53,16 +54,14 @@ function HomePage() {
                     <option value="Legs">Legs</option>
                 </select>
 
-                {error ? (
-                    <p id="workout-type-error" role="alert">
-                        {error}
-                    </p>
-                ) : null}
+                <p id="workout-type-error" role="alert" className="error-slot">
+                    {error ?? "\u00A0"}
+                </p>
 
-                <button type="submit">Start Session</button>
+                <button className="start-button" type="submit">Start Session</button>
             </form>
 
-            {success ? <p>{success}</p> : null}
+            {success ? <p className="success-text">{success}</p> : null}
         </section>
     );
 }
