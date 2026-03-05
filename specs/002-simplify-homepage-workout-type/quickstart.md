@@ -41,7 +41,13 @@ npm run dev
 2. Confirm links `Session`, `History`, and `Progression` are not shown.
 3. Confirm `Add Exercise Entry` section and all content under it are not shown.
 
-## 6) Run automated tests
+## 6) Validate FR-012: Non-homepage flows unchanged
+1. Navigate directly to `/sessions` and verify existing session creation and entry actions remain available.
+2. Navigate directly to `/history` and verify history page behavior remains available.
+3. Navigate directly to `/progression` and verify progression page behavior remains available.
+4. Record regression evidence (screenshots/test output) for these direct-route checks.
+
+## 7) Run automated tests
 
 ### Backend
 ```bash
@@ -67,5 +73,11 @@ npm test
 - Backend integration test output for session creation validation/timestamp behavior.
 - Frontend integration test output for required dropdown validation and simplified homepage rendering.
 - E2E output proving end-to-end start-session flow works from homepage.
+- Frontend/backend regression evidence confirming non-homepage Sessions/History/Progression flows are unchanged.
 - Screenshots of homepage default state and missing-workout-type error state.
 - Timing evidence for homepage render and successful start-session latency.
+
+## Screenshot evidence placeholders
+- Homepage default state: `artifacts/002/homepage-default.png`
+- Homepage validation error state: `artifacts/002/homepage-validation-error.png`
+- Non-homepage regression state (`/sessions`, `/history`, `/progression`): `artifacts/002/non-homepage-regression.png`

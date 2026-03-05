@@ -1,4 +1,4 @@
 namespace Api.Contracts;
 
-public sealed record CreateSessionRequest(DateTimeOffset StartedAt, string? Notes);
-public sealed record WorkoutSessionResponse(Guid Id, DateTimeOffset StartedAt, DateTimeOffset? EndedAt, string? Notes);
+public sealed record CreateSessionRequest(string? WorkoutType, string? Notes);
+public sealed record WorkoutSessionResponse(Guid Id, string WorkoutType, DateTimeOffset StartedAt, DateTimeOffset? EndedAt, string? Notes);

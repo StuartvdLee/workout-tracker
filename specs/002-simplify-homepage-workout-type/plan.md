@@ -117,3 +117,12 @@ to implement the homepage simplification while preserving current deployment and
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
 | None | N/A | N/A |
+
+## Implementation Evidence
+
+- Backend tests: `cd backend && dotnet test`
+- Frontend tests: `cd frontend && npm test -- --run`
+- E2E tests: `cd e2e && npm test`
+- Performance workflow: `scripts/perf/save-entry-metrics.md`
+- Contract reference: `specs/002-simplify-homepage-workout-type/contracts/session-start-api.yaml`
+- Regression verification flow: `specs/002-simplify-homepage-workout-type/quickstart.md`

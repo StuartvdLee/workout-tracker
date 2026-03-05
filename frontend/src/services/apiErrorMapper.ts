@@ -1,7 +1,7 @@
 export function mapApiError(error: unknown): string {
     if (error instanceof Error) {
         if (error.message.includes("400")) {
-            return "Please review your input and try again.";
+            return "Please select a workout type.";
         }
 
         if (error.message.includes("404")) {
