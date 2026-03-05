@@ -1,7 +1,14 @@
 export type WeightUnit = "kg" | "lb";
+export type WorkoutType = "Push" | "Pull" | "Legs";
+
+export interface CreateSessionPayload {
+    workoutType: WorkoutType;
+    notes?: string;
+}
 
 export interface WorkoutSession {
     id: string;
+    workoutType: WorkoutType;
     startedAt: string;
     endedAt?: string | null;
     notes?: string | null;

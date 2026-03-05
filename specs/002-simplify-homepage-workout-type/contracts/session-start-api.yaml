@@ -1,0 +1,83 @@
+openapi: 3.0.3
+info:
+  title: Workout Tracker Session Start API
+  version: 1.0.0
+  description: Contract for starting a workout session from the simplified homepage.
+servers:
+  - url: /api
+paths:
+  /sessions:
+    post:
+      summary: Start a new workout session
+      operationId: startWorkoutSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartSessionRequest'
+      responses:
+        '201':
+          description: Session created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkoutSession'
+        '400':
+          description: Validation error (for example, missing or invalid workout type)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationProblem'
+components:
+  schemas:
+    StartSessionRequest:
+      type: object
+      required: [workoutType]
+      additionalProperties: false
+      properties:
+        workoutType:
+          type: string
+          enum: [Push, Pull, Legs]
+      example:
+        workoutType: Push
+
+    WorkoutSession:
+      type: object
+      required: [id, workoutType, startedAt, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        workoutType:
+          type: string
+          enum: [Push, Pull, Legs]
+        startedAt:
+          type: string
+          format: date-time
+          description: Server-generated session start timestamp.
+        endedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ValidationProblem:
+      type: object
+      required: [title, status, errors]
+      properties:
+        title:
+          type: string
+        status:
+          type: integer
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string

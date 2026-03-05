@@ -19,6 +19,7 @@ public sealed class WorkoutTrackerDbContext(DbContextOptions<WorkoutTrackerDbCon
         modelBuilder.Entity<WorkoutSessionEntity>(entity =>
         {
             entity.HasKey(x => x.Id);
+            entity.Property(x => x.WorkoutType).HasMaxLength(32).IsRequired();
             entity.HasOne<UserEntity>()
                 .WithMany()
                 .HasForeignKey(x => x.UserId)
@@ -56,6 +57,7 @@ public sealed class WorkoutSessionEntity
 {
     public Guid Id { get; set; }
     public Guid UserId { get; set; }
+    public string WorkoutType { get; set; } = string.Empty;
     public DateTimeOffset StartedAt { get; set; }
     public DateTimeOffset? EndedAt { get; set; }
     public string? Notes { get; set; }

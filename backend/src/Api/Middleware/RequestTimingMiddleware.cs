@@ -11,7 +11,10 @@ public sealed class RequestTimingMiddleware(RequestDelegate next, ILogger<Reques
         await next(context);
         stopwatch.Stop();
 
-        context.Response.Headers["X-Request-Duration-Ms"] = stopwatch.ElapsedMilliseconds.ToString(CultureInfo.InvariantCulture);
+        if (!context.Response.HasStarted)
+        {
+            context.Response.Headers["X-Request-Duration-Ms"] = stopwatch.ElapsedMilliseconds.ToString(CultureInfo.InvariantCulture);
+        }
         logger.LogInformation("{Method} {Path} took {Duration}ms", context.Request.Method, context.Request.Path, stopwatch.ElapsedMilliseconds);
     }
 }

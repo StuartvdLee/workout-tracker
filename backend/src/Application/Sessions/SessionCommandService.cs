@@ -9,11 +9,28 @@ public sealed class SessionCommandService(
     IExerciseEntryRepository exerciseEntryRepository)
 {
     private static readonly Guid DefaultUserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+    private static readonly HashSet<string> AllowedWorkoutTypes = new(StringComparer.Ordinal)
+    {
+        "Push",
+        "Pull",
+        "Legs"
+    };
+
+    public static bool IsValidWorkoutType(string? workoutType)
+    {
+        return !string.IsNullOrWhiteSpace(workoutType) && AllowedWorkoutTypes.Contains(workoutType);
+    }
 
     public async Task<WorkoutSessionResponse> CreateSessionAsync(CreateSessionRequest request, CancellationToken cancellationToken)
     {
-        var entity = await workoutSessionRepository.CreateAsync(DefaultUserId, request.StartedAt, request.Notes, cancellationToken);
-        return new WorkoutSessionResponse(entity.Id, entity.StartedAt, entity.EndedAt, entity.Notes);
+        if (!IsValidWorkoutType(request.WorkoutType))
+        {
+            throw new ArgumentException("Workout type must be one of Push, Pull, Legs.", nameof(request.WorkoutType));
+        }
+
+        var startedAt = DateTimeOffset.UtcNow;
+        var entity = await workoutSessionRepository.CreateAsync(DefaultUserId, request.WorkoutType!, startedAt, request.Notes, cancellationToken);
+        return new WorkoutSessionResponse(entity.Id, entity.WorkoutType, entity.StartedAt, entity.EndedAt, entity.Notes);
     }
 
     public async Task<ExerciseEntryResponse> AddEntryAsync(Guid sessionId, CreateExerciseEntryRequest request, CancellationToken cancellationToken)
