@@ -57,7 +57,7 @@ public sealed class WorkoutSessionEntity
 {
     public Guid Id { get; set; }
     public Guid UserId { get; set; }
-    public string WorkoutType { get; set; } = "Push";
+    public string WorkoutType { get; set; } = string.Empty;
     public DateTimeOffset StartedAt { get; set; }
     public DateTimeOffset? EndedAt { get; set; }
     public string? Notes { get; set; }
