@@ -104,7 +104,7 @@
 ### Implementation for User Story 3
 
 - [ ] T036 [US3] Remove Session/History/Progression homepage links and Add Exercise Entry section in frontend/src/App.tsx
-- [ ] T037 [US3] Remove obsolete homepage composition related to entry UI in frontend/src/pages/SessionsPage.tsx
+- [ ] T037 [US3] Remove homepage-only obsolete composition related to Add Exercise Entry in frontend/src/App.tsx (no changes to non-homepage pages)
 - [ ] T038 [US3] Remove unused imports/services now detached from homepage in frontend/src/App.tsx
 - [ ] T039 [US3] Validate homepage copy consistency and keyboard navigation after element removal in frontend/src/App.tsx
 - [ ] T040 [US3] Record before/after homepage screenshot evidence in specs/002-simplify-homepage-workout-type/quickstart.md
@@ -122,6 +122,9 @@
 - [ ] T043 [P] Run E2E suite for homepage session start in e2e/tests/simplified-homepage-session-start.spec.ts
 - [ ] T044 Verify quickstart end-to-end walkthrough accuracy in specs/002-simplify-homepage-workout-type/quickstart.md
 - [ ] T045 Update feature notes with final evidence links in specs/002-simplify-homepage-workout-type/plan.md
+- [ ] T046 [P] Add frontend regression tests for direct routes to Sessions/History/Progression pages to confirm unchanged behavior in frontend/tests/integration/simplified-homepage-regression.test.tsx
+- [ ] T047 [P] Add backend regression tests confirming existing non-homepage sessions/history/progression endpoint behavior remains unchanged in backend/tests/integration/Api/Regression/ExistingFlowsRegressionTests.cs
+- [ ] T048 Verify and document FR-012 regression evidence for non-homepage flows in specs/002-simplify-homepage-workout-type/quickstart.md
 
 ---
 
@@ -156,6 +159,7 @@
 - US2 parallel test tasks: T024, T025, T026, T027.
 - US3 parallel test tasks: T034, T035.
 - Polish parallel verification tasks: T041, T042, T043.
+- Polish parallel verification tasks: T041, T042, T043, T046, T047.
 
 ---
 
@@ -183,7 +187,7 @@ Task T031: frontend API error mapping in frontend/src/services/apiErrorMapper.ts
 ```bash
 # Remove legacy homepage surfaces in parallel where files do not overlap:
 Task T036: remove legacy homepage links/sections in frontend/src/App.tsx
-Task T037: remove obsolete session page homepage composition in frontend/src/pages/SessionsPage.tsx
+Task T037: remove homepage-only obsolete composition related to Add Exercise Entry in frontend/src/App.tsx
 Task T040: update screenshot evidence in specs/002-simplify-homepage-workout-type/quickstart.md
 ```
 

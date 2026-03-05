@@ -99,7 +99,7 @@ As a user, I do not see links and sections unrelated to starting a session on th
 - **FR-009**: The created session record MUST include the session start date-time captured automatically at start time.
 - **FR-010**: The homepage MUST NOT display links to "Session", "History", or "Progression".
 - **FR-011**: The homepage MUST NOT display "Add Exercise Entry" or any content that appears under it.
-- **FR-012**: Existing pages and flows outside the homepage scope MUST remain functionally unchanged.
+- **FR-012**: Existing non-homepage flows (including Sessions, History, and Progression pages/routes outside the homepage) MUST remain functionally unchanged.
 
 ### Key Entities *(include if feature involves data)*
 
