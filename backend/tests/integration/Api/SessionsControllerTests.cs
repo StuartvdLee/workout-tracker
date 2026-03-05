@@ -27,7 +27,7 @@ public sealed class SessionsControllerTests : IClassFixture<WebApplicationFactor
     public async Task CreateSession_WithWorkoutType_Succeeds()
     {
         // Arrange
-        var workoutType = "Strength";
+        var workoutType = "Push";
         var request = new CreateSessionRequest(workoutType);
 
         // Act
@@ -64,8 +64,8 @@ public sealed class SessionsControllerTests : IClassFixture<WebApplicationFactor
         var problemDetails = await response.Content.ReadFromJsonAsync<ValidationProblemDetailsLike>();
         Assert.NotNull(problemDetails);
         Assert.NotNull(problemDetails!.Errors);
-        Assert.Contains("WorkoutType", problemDetails.Errors.Keys);
-        Assert.NotEmpty(problemDetails.Errors["WorkoutType"]);
+        Assert.Contains("workoutType", problemDetails.Errors.Keys);
+        Assert.NotEmpty(problemDetails.Errors["workoutType"]);
     }
 
     private sealed class ValidationProblemDetailsLike
