@@ -5,8 +5,8 @@ export async function createSession(payload: CreateSessionPayload): Promise<Work
 export async function createSession(startedAt: string, notes?: string): Promise<WorkoutSession>;
 export async function createSession(payloadOrStartedAt: CreateSessionPayload | string, notes?: string): Promise<WorkoutSession> {
     const payload = typeof payloadOrStartedAt === "string"
-        ? { workoutType: "Push", notes: notes || null }
-        : { workoutType: payloadOrStartedAt.workoutType, notes: payloadOrStartedAt.notes || null };
+        ? { workoutType: "Push", startedAt: payloadOrStartedAt, notes: notes || null }
+        : { workoutType: payloadOrStartedAt.workoutType, startedAt: payloadOrStartedAt.startedAt, notes: payloadOrStartedAt.notes || null };
 
     return apiFetch<WorkoutSession>("/sessions", {
         method: "POST",
