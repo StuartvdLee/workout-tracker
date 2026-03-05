@@ -17,6 +17,7 @@ obj/
 *.suo
 packages/
 TestResults/
+**/appsettings.Development.json
 
 # Tooling / Editors
 .vscode/
