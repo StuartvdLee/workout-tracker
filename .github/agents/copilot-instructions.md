@@ -26,4 +26,5 @@ C# (.NET 10) backend, TypeScript (React) frontend: Follow standard conventions
 - 001-strength-progression-tracker: Added C# (.NET 10) backend, TypeScript (React) frontend + ASP.NET Core Web API, Entity Framework Core (Npgsql provider), React, React Router, form/state validation library
 
 <!-- MANUAL ADDITIONS START -->
+- Spec numbering must always be validated before creating a new feature spec: check matching remote branches, local branches, and `specs/[0-9]+-<short-name>` directories, then use the next available number (max existing + 1).
 <!-- MANUAL ADDITIONS END -->
