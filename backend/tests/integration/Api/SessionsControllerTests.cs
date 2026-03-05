@@ -1,14 +1,11 @@
-using System;
 using System.Net;
-using System.Net.Http;
 using System.Net.Http.Json;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc.Testing;
+using Backend.Tests.Integration.TestInfrastructure;
 using Xunit;
 
 namespace Backend.Tests.Integration.Api;
 
-public sealed class SessionsControllerTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class SessionsControllerTests : IClassFixture<IntegrationTestWebApplicationFactory>
 {
     private readonly HttpClient _client;
 
@@ -18,7 +15,7 @@ public sealed class SessionsControllerTests : IClassFixture<WebApplicationFactor
 
     private sealed record SessionResponse(Guid Id, string WorkoutType, DateTimeOffset StartedAt, DateTimeOffset? EndedAt);
 
-    public SessionsControllerTests(WebApplicationFactory<Program> factory)
+    public SessionsControllerTests(IntegrationTestWebApplicationFactory factory)
     {
         _client = factory.CreateClient();
     }
@@ -75,7 +72,7 @@ public sealed class SessionsControllerTests : IClassFixture<WebApplicationFactor
         public int? Status { get; set; }
         public string? Detail { get; set; }
         public string? Instance { get; set; }
-        public System.Collections.Generic.Dictionary<string, string[]> Errors { get; set; } =
-            new System.Collections.Generic.Dictionary<string, string[]>();
+        public Dictionary<string, string[]> Errors { get; set; } =
+            [];
     }
 }
