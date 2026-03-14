@@ -17,7 +17,7 @@ public class HomeLandingPageSelectionTests : IClassFixture<WebAppFixture>, IClas
 
     private async Task<IPage> CreatePageAsync()
     {
-        
+
         var page = await _playwright.Browser.NewPageAsync();
         var baseUrl = _webApp.BaseUrl;
         await page.GotoAsync(baseUrl);
