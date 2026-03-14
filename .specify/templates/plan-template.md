@@ -31,7 +31,18 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- **Code Quality**: Identify the linting, formatting, typing, and architecture
+  constraints that apply to this feature. Any intentional deviation MUST be
+  recorded in `Complexity Tracking`.
+- **Testing**: Define the automated tests required for each user story and the
+  regression coverage needed for changed behavior. Plans MUST treat test work as
+  mandatory, not optional.
+- **Security**: Document input validation, auth/authz impact, secret handling,
+  third-party trust boundaries, and abuse or misuse considerations.
+- **User Experience Consistency**: Reference the existing UX patterns, shared
+  components, copy conventions, and state handling that this feature must match.
+- **Performance**: State measurable budgets for latency, rendering, throughput,
+  storage, or memory, plus how those budgets will be verified.
 
 ## Project Structure
 

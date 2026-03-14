@@ -1,50 +1,121 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report
+- Version change: template (unratified) -> 1.0.0
+- Modified principles:
+  - Template principle slot 1 -> I. Code Quality Is Mandatory
+  - Template principle slot 2 -> II. Tests Prove Behavior
+  - Template principle slot 3 -> III. Security By Default
+  - Template principle slot 4 -> IV. Consistent User Experience
+  - Template principle slot 5 -> V. Performance Is a Feature
+- Added sections:
+  - Delivery Standards
+  - Review & Release Workflow
+- Removed sections:
+  - None
+- Templates requiring updates:
+  - ✅ .specify/templates/plan-template.md
+  - ✅ .specify/templates/spec-template.md
+  - ✅ .specify/templates/tasks-template.md
+  - ⚠ pending: .specify/templates/commands/*.md (directory not present)
+- Follow-up TODOs:
+  - None
+-->
+# Workout Tracker Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Code Quality Is Mandatory
+All production code MUST be readable, cohesive, and intentionally designed.
+Changes MUST follow established project patterns, use descriptive names, avoid
+duplication, and improve any touched code rather than merely adding to its
+entropy. Reviews MUST reject speculative abstractions, dead code, and changes
+that bypass linting, typing, formatting, or equivalent quality gates.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+Rationale: workout-tracker will evolve through repeated feature additions. A
+high quality bar keeps the codebase maintainable, easier to review, and safer
+to extend without regressions.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### II. Tests Prove Behavior
+Every behavior change MUST be backed by automated tests at the appropriate
+level before the change is considered complete. New user journeys MUST include
+integration or end-to-end coverage, critical domain logic MUST include unit
+coverage, and bug fixes MUST ship with a regression test that fails before the
+fix and passes after it. Manual verification MAY supplement automated tests,
+but it MUST NOT replace them.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+Rationale: test coverage is the executable proof that the product still works
+as intended and that future changes can be made with confidence.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### III. Security By Default
+Security requirements MUST be addressed during design, implementation, and
+review. Inputs MUST be validated, secrets MUST be excluded from source control,
+privileged operations MUST enforce explicit authorization, and dependencies or
+third-party integrations MUST be introduced with a documented trust and data
+handling review. When a tradeoff exists, the safer default MUST be chosen and
+any exception MUST be justified in writing.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+Rationale: security failures are expensive and trust-eroding. Making security
+default behavior prevents rushed features from creating avoidable risk.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### IV. Consistent User Experience
+User-facing changes MUST preserve a coherent experience across flows, screens,
+copy, and interaction patterns. New interfaces MUST align with existing visual
+and behavioral conventions or explicitly define a replacement standard before
+implementation. Error states, empty states, loading states, and success
+feedback MUST be deliberate and consistent wherever similar user actions occur.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+Rationale: consistency reduces user confusion, lowers support burden, and makes
+the product feel reliable even as it grows.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### V. Performance Is a Feature
+Features MUST define measurable performance expectations before implementation
+and MUST be validated against them before release. Changes MUST avoid
+unbounded work, unnecessary network or storage overhead, and avoidable render
+or interaction latency. When performance budgets cannot be met immediately, the
+gap MUST be recorded with a mitigation plan before merging.
+
+Rationale: performance directly shapes user trust and product usability.
+Treating it as a first-class requirement prevents slow degradation over time.
+
+## Delivery Standards
+
+- Every feature specification MUST define security, user experience, and
+  performance expectations alongside functional requirements.
+- Every implementation plan MUST document the quality gates, test strategy,
+  performance budgets, and any constitution exceptions before build work starts.
+- Every task breakdown MUST include explicit work for automated testing,
+  security validation, experience consistency checks, and performance
+  verification when a change affects those concerns.
+- Definition of done for any change includes passing validation, updated
+  documentation when behavior changes, and evidence that the affected user
+  journey still works end to end.
+
+## Review & Release Workflow
+
+- Pull requests MUST describe the user-visible or operational impact, the tests
+  executed, and any security or performance considerations.
+- Reviewers MUST verify constitution compliance, including code quality,
+  coverage depth, security posture, UX consistency, and stated performance
+  expectations.
+- Releases MUST NOT include known constitution violations unless they are
+  documented in an approved exception with owner, scope, and follow-up plan.
+- When a change introduces a new pattern, the corresponding spec, plan, and
+  task templates MUST be updated in the same stream of work if future features
+  need to follow that pattern.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+- This constitution supersedes conflicting local habits and template defaults.
+- Amendments MUST be proposed as repository changes that include the
+  constitution diff, a clear rationale, and any required template or workflow
+  updates.
+- Semantic versioning governs this document: MAJOR for incompatible governance
+  changes or principle removals, MINOR for new principles or materially
+  expanded guidance, and PATCH for clarifications that do not change expected
+  behavior.
+- Compliance review is mandatory in feature planning and pull request review.
+  The Constitution Check in plans and the release review checklist MUST confirm
+  adherence or document approved exceptions.
+- Ratification and amendment dates MUST use ISO format (`YYYY-MM-DD`).
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2026-03-14 | **Last Amended**: 2026-03-14
