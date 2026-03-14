@@ -1,0 +1,63 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+packages/
+*.nupkg
+*.snupkg
+project.lock.json
+*.nuget.props
+*.nuget.targets
+
+# User-specific
+*.rsuser
+*.suo
+*.user
+*.sln.docstates
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio
+.vs/
+*.csproj.user
+
+# Rider
+.idea/
+
+# Node.js
+node_modules/
+npm-debug.log*
+
+# TypeScript
+*.js.map
+src/WorkoutTracker.Web/wwwroot/js/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.*
+
+# Test results
+TestResults/
+coverage/
+
+# Aspire
+.aspire/

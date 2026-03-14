@@ -9,6 +9,19 @@
 - Node.js (for TypeScript compiler) or `dotnet tool` equivalent
 - A modern browser (Chrome, Firefox, Safari, or Edge)
 
+## Project Structure
+
+```
+src/
+├── WorkoutTracker.sln              # Solution file
+├── WorkoutTracker.Web/             # ASP.NET web project (static frontend)
+├── WorkoutTracker.AppHost/         # .NET Aspire orchestration
+├── WorkoutTracker.Tests/           # Unit and E2E (Playwright) tests
+├── WorkoutTracker.ServiceDefaults/ # Shared service configuration
+├── WorkoutTracker.Api/             # API project
+└── Directory.Build.props           # Shared build settings
+```
+
 ## Setup
 
 1. Clone the repository and check out the feature branch:
@@ -18,28 +31,31 @@
    git checkout 001-home-landing-page
    ```
 
-2. Restore .NET dependencies:
+2. Restore .NET dependencies and build:
    ```bash
-   dotnet restore
+   cd src && dotnet build
    ```
 
-3. Install TypeScript compiler (if not already available):
+3. Install frontend dependencies and compile TypeScript:
    ```bash
-   npm install -g typescript
+   cd src/WorkoutTracker.Web && npm install && npm run build
    ```
 
-4. Compile TypeScript:
+4. Install Playwright browsers (required for E2E tests):
    ```bash
-   cd WorkoutTracker.Web
-   tsc
+   node ~/.nuget/packages/microsoft.playwright/1.58.0/.playwright/package/cli.js install chromium
    ```
 
 ## Running the Application
 
-Start the Aspire AppHost, which orchestrates all projects:
+Start the web project directly:
 ```bash
-cd WorkoutTracker.AppHost
-dotnet run
+cd src && dotnet run --project WorkoutTracker.Web
+```
+
+Or start the Aspire AppHost, which orchestrates all projects:
+```bash
+cd src && dotnet run --project WorkoutTracker.AppHost
 ```
 
 Open the Aspire dashboard (URL shown in terminal output) to find the
@@ -75,18 +91,29 @@ Web project endpoint. Navigate to it in your browser.
 
 ### Automated Verification
 
-Run the Playwright E2E tests:
+Run all tests (unit and E2E):
 ```bash
-cd WorkoutTracker.Tests
-dotnet test
+cd src && dotnet test
+```
+
+Run only unit tests:
+```bash
+cd src && dotnet test --filter "FullyQualifiedName~Unit"
+```
+
+Run only E2E tests (requires Playwright browsers installed):
+```bash
+cd src && dotnet test --filter "FullyQualifiedName~E2E"
 ```
 
 ## Troubleshooting
 
-- **TypeScript compilation errors**: Ensure `tsconfig.json` has
-  `"strict": true` and target is `"ES2022"`.
+- **TypeScript compilation errors**: Run `cd src/WorkoutTracker.Web && npm run build`
+  and ensure `tsconfig.json` has `"strict": true` and target is `"ES2022"`.
 - **Page not loading**: Check the Aspire dashboard for the correct Web
   project URL and port.
 - **Static files not served**: Confirm `app.UseStaticFiles()` is
-  called in `WorkoutTracker.Web/Program.cs` and that compiled JS is
+  called in `src/WorkoutTracker.Web/Program.cs` and that compiled JS is
   in `wwwroot/js/`.
+- **Playwright tests failing**: Ensure browsers are installed with
+  `node ~/.nuget/packages/microsoft.playwright/1.58.0/.playwright/package/cli.js install chromium`.

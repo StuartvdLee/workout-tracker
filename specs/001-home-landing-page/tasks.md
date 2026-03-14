@@ -17,12 +17,12 @@
 
 **Purpose**: Create the Aspire solution layout, frontend toolchain, and test project skeleton under `src/`.
 
-- [ ] T001 Create the solution file and `src/` project folders in `src/WorkoutTracker.sln`, `src/WorkoutTracker.AppHost/`, `src/WorkoutTracker.ServiceDefaults/`, `src/WorkoutTracker.Api/`, `src/WorkoutTracker.Web/`, and `src/WorkoutTracker.Tests/`
-- [ ] T002 Create Aspire project definitions in `src/WorkoutTracker.AppHost/WorkoutTracker.AppHost.csproj`, `src/WorkoutTracker.ServiceDefaults/WorkoutTracker.ServiceDefaults.csproj`, and `src/WorkoutTracker.Api/WorkoutTracker.Api.csproj`
-- [ ] T003 [P] Create the web host project and static asset folders in `src/WorkoutTracker.Web/WorkoutTracker.Web.csproj`, `src/WorkoutTracker.Web/Program.cs`, and `src/WorkoutTracker.Web/wwwroot/`
-- [ ] T004 [P] Configure TypeScript compilation in `src/WorkoutTracker.Web/package.json` and `src/WorkoutTracker.Web/tsconfig.json`
-- [ ] T005 [P] Configure shared .NET code style and build settings in `.editorconfig` and `src/Directory.Build.props`
-- [ ] T006 [P] Create the test project and Playwright package references in `src/WorkoutTracker.Tests/WorkoutTracker.Tests.csproj`
+- [x] T001 Create the solution file and `src/` project folders in `src/WorkoutTracker.sln`, `src/WorkoutTracker.AppHost/`, `src/WorkoutTracker.ServiceDefaults/`, `src/WorkoutTracker.Api/`, `src/WorkoutTracker.Web/`, and `src/WorkoutTracker.Tests/`
+- [x] T002 Create Aspire project definitions in `src/WorkoutTracker.AppHost/WorkoutTracker.AppHost.csproj`, `src/WorkoutTracker.ServiceDefaults/WorkoutTracker.ServiceDefaults.csproj`, and `src/WorkoutTracker.Api/WorkoutTracker.Api.csproj`
+- [x] T003 [P] Create the web host project and static asset folders in `src/WorkoutTracker.Web/WorkoutTracker.Web.csproj`, `src/WorkoutTracker.Web/Program.cs`, and `src/WorkoutTracker.Web/wwwroot/`
+- [x] T004 [P] Configure TypeScript compilation in `src/WorkoutTracker.Web/package.json` and `src/WorkoutTracker.Web/tsconfig.json`
+- [x] T005 [P] Configure shared .NET code style and build settings in `.editorconfig` and `src/Directory.Build.props`
+- [x] T006 [P] Create the test project and Playwright package references in `src/WorkoutTracker.Tests/WorkoutTracker.Tests.csproj`
 
 ---
 
@@ -32,14 +32,14 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T007 Wire Aspire orchestration for the web and API projects in `src/WorkoutTracker.AppHost/Program.cs`
-- [ ] T008 [P] Add shared ASP.NET service defaults in `src/WorkoutTracker.ServiceDefaults/Extensions.cs`
-- [ ] T009 [P] Configure static file hosting and `/` fallback routing in `src/WorkoutTracker.Web/Program.cs`
-- [ ] T010 [P] Add baseline page shell and script/style references in `src/WorkoutTracker.Web/wwwroot/index.html`
-- [ ] T011 [P] Add shared CSS tokens, layout primitives, and error-state classes in `src/WorkoutTracker.Web/wwwroot/css/styles.css`
-- [ ] T012 [P] Add frontend bootstrap and fixed workout-type constants in `src/WorkoutTracker.Web/wwwroot/ts/main.ts`
-- [ ] T013 [P] Create Playwright web app fixture and browser lifecycle helpers in `src/WorkoutTracker.Tests/Infrastructure/WebAppFixture.cs` and `src/WorkoutTracker.Tests/Infrastructure/PlaywrightFixture.cs`
-- [ ] T014 Configure test host settings and base URL resolution in `src/WorkoutTracker.Tests/appsettings.json` and `src/WorkoutTracker.Tests/Infrastructure/TestSettings.cs`
+- [x] T007 Wire Aspire orchestration for the web and API projects in `src/WorkoutTracker.AppHost/Program.cs`
+- [x] T008 [P] Add shared ASP.NET service defaults in `src/WorkoutTracker.ServiceDefaults/Extensions.cs`
+- [x] T009 [P] Configure static file hosting and `/` fallback routing in `src/WorkoutTracker.Web/Program.cs`
+- [x] T010 [P] Add baseline page shell and script/style references in `src/WorkoutTracker.Web/wwwroot/index.html`
+- [x] T011 [P] Add shared CSS tokens, layout primitives, and error-state classes in `src/WorkoutTracker.Web/wwwroot/css/styles.css`
+- [x] T012 [P] Add frontend bootstrap and fixed workout-type constants in `src/WorkoutTracker.Web/wwwroot/ts/main.ts`
+- [x] T013 [P] Create Playwright web app fixture and browser lifecycle helpers in `src/WorkoutTracker.Tests/Infrastructure/WebAppFixture.cs` and `src/WorkoutTracker.Tests/Infrastructure/PlaywrightFixture.cs`
+- [x] T014 Configure test host settings and base URL resolution in `src/WorkoutTracker.Tests/appsettings.json` and `src/WorkoutTracker.Tests/Infrastructure/TestSettings.cs`
 
 **Checkpoint**: Foundation ready - user story implementation can now begin.
 
@@ -55,15 +55,15 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T015 [P] [US1] Add Playwright happy-path tests for Push, Pull, and Legs selection in `src/WorkoutTracker.Tests/E2E/HomeLandingPageSelectionTests.cs`
-- [ ] T016 [P] [US1] Add unit tests for workout option configuration and selection state in `src/WorkoutTracker.Tests/Unit/HomeLandingPageSelectionStateTests.cs`
+- [x] T015 [P] [US1] Add Playwright happy-path tests for Push, Pull, and Legs selection in `src/WorkoutTracker.Tests/E2E/HomeLandingPageSelectionTests.cs`
+- [x] T016 [P] [US1] Add unit tests for workout option configuration and selection state in `src/WorkoutTracker.Tests/Unit/HomeLandingPageSelectionStateTests.cs`
 
 ### Implementation for User Story 1
 
-- [ ] T017 [US1] Add the `Workout Tracker` heading, workout dropdown, placeholder option, and `Start Workout` button in `src/WorkoutTracker.Web/wwwroot/index.html`
-- [ ] T018 [US1] Implement workout option rendering and selected-workout state management in `src/WorkoutTracker.Web/wwwroot/ts/main.ts`
-- [ ] T019 [US1] Load the compiled frontend script and preserve no-op valid submit behavior in `src/WorkoutTracker.Web/wwwroot/index.html` and `src/WorkoutTracker.Web/package.json`
-- [ ] T020 [US1] Keep the selection UI accessible with labels and keyboard support in `src/WorkoutTracker.Web/wwwroot/index.html` and `src/WorkoutTracker.Web/wwwroot/css/styles.css`
+- [x] T017 [US1] Add the `Workout Tracker` heading, workout dropdown, placeholder option, and `Start Workout` button in `src/WorkoutTracker.Web/wwwroot/index.html`
+- [x] T018 [US1] Implement workout option rendering and selected-workout state management in `src/WorkoutTracker.Web/wwwroot/ts/main.ts`
+- [x] T019 [US1] Load the compiled frontend script and preserve no-op valid submit behavior in `src/WorkoutTracker.Web/wwwroot/index.html` and `src/WorkoutTracker.Web/package.json`
+- [x] T020 [US1] Keep the selection UI accessible with labels and keyboard support in `src/WorkoutTracker.Web/wwwroot/index.html` and `src/WorkoutTracker.Web/wwwroot/css/styles.css`
 
 **Checkpoint**: User Story 1 should be fully functional and independently testable.
 
@@ -77,15 +77,15 @@
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T021 [P] [US2] Add Playwright validation-flow coverage for missing selection and error clearing in `src/WorkoutTracker.Tests/E2E/HomeLandingPageValidationTests.cs`
-- [ ] T022 [P] [US2] Add unit tests for empty-selection validation and error reset logic in `src/WorkoutTracker.Tests/Unit/HomeLandingPageValidationTests.cs`
+- [x] T021 [P] [US2] Add Playwright validation-flow coverage for missing selection and error clearing in `src/WorkoutTracker.Tests/E2E/HomeLandingPageValidationTests.cs`
+- [x] T022 [P] [US2] Add unit tests for empty-selection validation and error reset logic in `src/WorkoutTracker.Tests/Unit/HomeLandingPageValidationTests.cs`
 
 ### Implementation for User Story 2
 
-- [ ] T023 [US2] Add an inline validation message region near the workout controls in `src/WorkoutTracker.Web/wwwroot/index.html`
-- [ ] T024 [US2] Implement empty-selection validation, single-error rendering, and error clearing in `src/WorkoutTracker.Web/wwwroot/ts/main.ts`
-- [ ] T025 [US2] Style the validation state for visibility and consistency in `src/WorkoutTracker.Web/wwwroot/css/styles.css`
-- [ ] T026 [US2] Guard the client-side handler against invalid or unexpected workout values in `src/WorkoutTracker.Web/wwwroot/ts/main.ts`
+- [x] T023 [US2] Add an inline validation message region near the workout controls in `src/WorkoutTracker.Web/wwwroot/index.html`
+- [x] T024 [US2] Implement empty-selection validation, single-error rendering, and error clearing in `src/WorkoutTracker.Web/wwwroot/ts/main.ts`
+- [x] T025 [US2] Style the validation state for visibility and consistency in `src/WorkoutTracker.Web/wwwroot/css/styles.css`
+- [x] T026 [US2] Guard the client-side handler against invalid or unexpected workout values in `src/WorkoutTracker.Web/wwwroot/ts/main.ts`
 
 **Checkpoint**: User Stories 1 and 2 should both work independently on the same page.
 
@@ -99,15 +99,15 @@
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T027 [P] [US3] Add Playwright viewport tests for mobile and desktop layout behavior in `src/WorkoutTracker.Tests/E2E/HomeLandingPageResponsiveTests.cs`
-- [ ] T028 [P] [US3] Add automated checks for touch-target sizing and overflow behavior in `src/WorkoutTracker.Tests/E2E/HomeLandingPageAccessibilityTests.cs`
+- [x] T027 [P] [US3] Add Playwright viewport tests for mobile and desktop layout behavior in `src/WorkoutTracker.Tests/E2E/HomeLandingPageResponsiveTests.cs`
+- [x] T028 [P] [US3] Add automated checks for touch-target sizing and overflow behavior in `src/WorkoutTracker.Tests/E2E/HomeLandingPageAccessibilityTests.cs`
 
 ### Implementation for User Story 3
 
-- [ ] T029 [US3] Implement the mobile-first stacked layout and desktop width constraints in `src/WorkoutTracker.Web/wwwroot/css/styles.css`
-- [ ] T030 [US3] Tune spacing, typography, and control sizing for touch interaction in `src/WorkoutTracker.Web/wwwroot/css/styles.css`
-- [ ] T031 [US3] Ensure the HTML structure supports responsive behavior without layout shifts in `src/WorkoutTracker.Web/wwwroot/index.html`
-- [ ] T032 [US3] Add a lightweight performance audit script for the home page in `src/WorkoutTracker.Web/package.json` and `src/WorkoutTracker.Tests/E2E/HomeLandingPagePerformanceTests.cs`
+- [x] T029 [US3] Implement the mobile-first stacked layout and desktop width constraints in `src/WorkoutTracker.Web/wwwroot/css/styles.css`
+- [x] T030 [US3] Tune spacing, typography, and control sizing for touch interaction in `src/WorkoutTracker.Web/wwwroot/css/styles.css`
+- [x] T031 [US3] Ensure the HTML structure supports responsive behavior without layout shifts in `src/WorkoutTracker.Web/wwwroot/index.html`
+- [x] T032 [US3] Add a lightweight performance audit script for the home page in `src/WorkoutTracker.Web/package.json` and `src/WorkoutTracker.Tests/E2E/HomeLandingPagePerformanceTests.cs`
 
 **Checkpoint**: All user stories should now be independently functional.
 
@@ -117,10 +117,10 @@
 
 **Purpose**: Final verification, documentation alignment, and cross-story quality gates.
 
-- [ ] T033 [P] Update the feature runbook and `src/` paths in `specs/001-home-landing-page/quickstart.md`
-- [ ] T034 [P] Add regression coverage for repeated invalid clicks and placeholder reselection in `src/WorkoutTracker.Tests/E2E/HomeLandingPageRegressionTests.cs`
-- [ ] T035 Run the quickstart validation steps and document any fixes in `specs/001-home-landing-page/quickstart.md`
-- [ ] T036 Verify formatting, test, and performance commands in `src/WorkoutTracker.Web/package.json`, `src/WorkoutTracker.Tests/WorkoutTracker.Tests.csproj`, and `src/Directory.Build.props`
+- [x] T033 [P] Update the feature runbook and `src/` paths in `specs/001-home-landing-page/quickstart.md`
+- [x] T034 [P] Add regression coverage for repeated invalid clicks and placeholder reselection in `src/WorkoutTracker.Tests/E2E/HomeLandingPageRegressionTests.cs`
+- [x] T035 Run the quickstart validation steps and document any fixes in `specs/001-home-landing-page/quickstart.md`
+- [x] T036 Verify formatting, test, and performance commands in `src/WorkoutTracker.Web/package.json`, `src/WorkoutTracker.Tests/WorkoutTracker.Tests.csproj`, and `src/Directory.Build.props`
 
 ---
 
