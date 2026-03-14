@@ -13,7 +13,7 @@
 
 ```
 src/
-├── WorkoutTracker.sln              # Solution file
+├── WorkoutTracker.slnx             # Solution file
 ├── WorkoutTracker.Web/             # ASP.NET web project (static frontend)
 ├── WorkoutTracker.AppHost/         # .NET Aspire orchestration
 ├── WorkoutTracker.Tests/           # Unit and E2E (Playwright) tests

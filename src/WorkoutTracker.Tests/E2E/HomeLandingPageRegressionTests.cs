@@ -17,7 +17,7 @@ public class HomeLandingPageRegressionTests : IClassFixture<WebAppFixture>, ICla
 
     private async Task<IPage> CreatePageAsync()
     {
-        
+
         var page = await _playwright.Browser.NewPageAsync();
         var baseUrl = _webApp.BaseUrl;
         await page.GotoAsync(baseUrl);

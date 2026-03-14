@@ -17,7 +17,7 @@ public class HomeLandingPageAccessibilityTests : IClassFixture<WebAppFixture>, I
 
     private async Task<IPage> CreatePageAsync(int width = 375, int height = 667)
     {
-        
+
         var page = await _playwright.Browser.NewPageAsync(new BrowserNewPageOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },

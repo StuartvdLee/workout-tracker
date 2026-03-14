@@ -17,7 +17,7 @@
 
 **Purpose**: Create the Aspire solution layout, frontend toolchain, and test project skeleton under `src/`.
 
-- [x] T001 Create the solution file and `src/` project folders in `src/WorkoutTracker.sln`, `src/WorkoutTracker.AppHost/`, `src/WorkoutTracker.ServiceDefaults/`, `src/WorkoutTracker.Api/`, `src/WorkoutTracker.Web/`, and `src/WorkoutTracker.Tests/`
+- [x] T001 Create the solution file and `src/` project folders in `src/WorkoutTracker.slnx`, `src/WorkoutTracker.AppHost/`, `src/WorkoutTracker.ServiceDefaults/`, `src/WorkoutTracker.Api/`, `src/WorkoutTracker.Web/`, and `src/WorkoutTracker.Tests/`
 - [x] T002 Create Aspire project definitions in `src/WorkoutTracker.AppHost/WorkoutTracker.AppHost.csproj`, `src/WorkoutTracker.ServiceDefaults/WorkoutTracker.ServiceDefaults.csproj`, and `src/WorkoutTracker.Api/WorkoutTracker.Api.csproj`
 - [x] T003 [P] Create the web host project and static asset folders in `src/WorkoutTracker.Web/WorkoutTracker.Web.csproj`, `src/WorkoutTracker.Web/Program.cs`, and `src/WorkoutTracker.Web/wwwroot/`
 - [x] T004 [P] Configure TypeScript compilation in `src/WorkoutTracker.Web/package.json` and `src/WorkoutTracker.Web/tsconfig.json`

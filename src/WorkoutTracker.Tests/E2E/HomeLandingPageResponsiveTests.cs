@@ -17,7 +17,7 @@ public class HomeLandingPageResponsiveTests : IClassFixture<WebAppFixture>, ICla
 
     private async Task<IPage> CreatePageWithViewportAsync(int width, int height)
     {
-        
+
         var page = await _playwright.Browser.NewPageAsync(new BrowserNewPageOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },

@@ -18,7 +18,7 @@ public class HomeLandingPagePerformanceTests : IClassFixture<WebAppFixture>, ICl
     [Fact]
     public async Task HomePage_LoadsWithinPerformanceBudget()
     {
-        
+
         var page = await _playwright.Browser.NewPageAsync();
         var baseUrl = _webApp.BaseUrl;
 
@@ -38,7 +38,7 @@ public class HomeLandingPagePerformanceTests : IClassFixture<WebAppFixture>, ICl
     [Fact]
     public async Task HomePage_NoExternalNetworkRequests()
     {
-        
+
         var page = await _playwright.Browser.NewPageAsync();
         var baseUrl = _webApp.BaseUrl;
         var externalRequests = new List<string>();
