@@ -7,4 +7,10 @@
   <ItemGroup>
     <ProjectReference Include="..\WorkoutTracker.ServiceDefaults\WorkoutTracker.ServiceDefaults.csproj" />
   </ItemGroup>
+  
+  <!-- Compile TypeScript before build -->
+  <Target Name="BuildTypeScript" BeforeTargets="Build">
+    <Exec Command="npm install" WorkingDirectory="$(ProjectDir)" />
+    <Exec Command="npm run build" WorkingDirectory="$(ProjectDir)" />
+  </Target>
 </Project>
