@@ -15,6 +15,16 @@ public class HomeLandingPagePerformanceTests : IClassFixture<WebAppFixture>, ICl
         _playwright = playwright;
     }
 
+    /// <summary>
+    /// Lightweight performance smoke test for the home page.
+    /// 
+    /// Note: The product spec requires the page to be interactive within 3 seconds
+    /// on a slow 3G connection. This test does not attempt to emulate slow 3G
+    /// network conditions and instead runs against a local test server without
+    /// network throttling. The relaxed 5-second threshold below is intended only
+    /// to catch obvious regressions in the test environment, not to validate the
+    /// full production performance requirement.
+    /// </summary>
     [Fact]
     public async Task HomePage_LoadsWithinPerformanceBudget()
     {
@@ -29,7 +39,9 @@ public class HomeLandingPagePerformanceTests : IClassFixture<WebAppFixture>, ICl
         });
         stopwatch.Stop();
 
-        // Page should load quickly in test environment (local server)
+        // Smoke check: in the local test environment (no network throttling),
+        // the page should load well under this relaxed 5-second budget. This
+        // is not a strict verification of the 3-second slow-3G performance spec.
         Assert.True(stopwatch.ElapsedMilliseconds < 5000, $"Page load took {stopwatch.ElapsedMilliseconds}ms, expected < 5000ms");
 
         await page.CloseAsync();
