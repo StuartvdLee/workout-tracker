@@ -24,7 +24,8 @@
   --spacing-xl: 2rem;
 
   --radius: 0.5rem;
-  --min-touch-target: 2.75rem; /* 44px */
+  --min-touch-target: 2.75rem;
+  /* 44px */
   --max-content-width: 28rem;
 }
 
@@ -117,7 +118,6 @@ body {
   border-color: var(--color-border-focus);
 }
 
-.workout-form__select:invalid,
 .workout-form__select--error {
   border-color: var(--color-error);
 }
