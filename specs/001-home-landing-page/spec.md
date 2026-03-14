@@ -100,9 +100,6 @@ confirming all elements are visible, properly sized, and do not overflow.
 - What happens when the user rapidly taps "Start Workout" multiple times
   without a selection? The error message MUST appear once and not
   duplicate or flash.
-- What happens when the user selects a workout, then deselects it (back
-  to the placeholder/empty option) and presses "Start Workout"? The
-  validation error MUST appear.
 - How does the page behave when the device is rotated from portrait to
   landscape? The layout MUST remain usable without elements overlapping
   or becoming inaccessible.

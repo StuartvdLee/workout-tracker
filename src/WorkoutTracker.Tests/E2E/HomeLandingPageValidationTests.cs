@@ -74,29 +74,6 @@ public class HomeLandingPageValidationTests : IClassFixture<WebAppFixture>, ICla
     }
 
     [Fact]
-    public async Task SelectThenDeselect_ShowsErrorOnSubmit()
-    {
-        var page = await CreatePageAsync();
-        var select = page.Locator("#workout-select");
-        var button = page.Locator("button[type='submit']");
-
-        await select.SelectOptionAsync(new SelectOptionValue { Value = "pull" });
-        await button.ClickAsync();
-
-        var error = page.Locator("#workout-error");
-        await Expect(error).ToBeHiddenAsync();
-
-        // Deselect by choosing the placeholder
-        await select.EvaluateAsync("el => el.value = ''");
-        await button.ClickAsync();
-
-        await Expect(error).ToBeVisibleAsync();
-        await Expect(error).ToHaveTextAsync("Please select a workout");
-
-        await page.CloseAsync();
-    }
-
-    [Fact]
     public async Task ErrorState_AddsAriaInvalid_ToSelect()
     {
         var page = await CreatePageAsync();

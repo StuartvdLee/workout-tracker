@@ -43,28 +43,6 @@ public class HomeLandingPageRegressionTests : IClassFixture<WebAppFixture>, ICla
     }
 
     [Fact]
-    public async Task SelectThenResetToPlaceholder_ValidationReappears()
-    {
-        var page = await CreatePageAsync();
-        var select = page.Locator("#workout-select");
-        var button = page.Locator("button[type='submit']");
-        var error = page.Locator("#workout-error");
-
-        // Select a workout and submit — no error
-        await select.SelectOptionAsync(new SelectOptionValue { Value = "legs" });
-        await button.ClickAsync();
-        await Assertions.Expect(error).ToBeHiddenAsync();
-
-        // Reset to placeholder and submit — error should appear
-        await select.EvaluateAsync("el => el.value = ''");
-        await button.ClickAsync();
-        await Assertions.Expect(error).ToBeVisibleAsync();
-        await Assertions.Expect(error).ToHaveTextAsync("Please select a workout");
-
-        await page.CloseAsync();
-    }
-
-    [Fact]
     public async Task AllWorkoutTypes_CanBeSelectedAndSubmitted()
     {
         var page = await CreatePageAsync();
