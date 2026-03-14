@@ -26,6 +26,12 @@ function initializeApp(): void {
     event.preventDefault();
     handleStartWorkout(select, errorEl);
   });
+
+  select.addEventListener("change", () => {
+    if (select.value && isValidWorkoutValue(select.value)) {
+      clearError(select, errorEl);
+    }
+  });
 }
 
 function populateWorkoutOptions(select: HTMLSelectElement): void {

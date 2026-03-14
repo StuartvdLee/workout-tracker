@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.Playwright;
 using WorkoutTracker.Tests.Infrastructure;
 using Xunit;
@@ -49,9 +50,64 @@ public class HomeLandingPageValidationTests : IClassFixture<WebAppFixture>, ICla
 
         var select = page.Locator("#workout-select");
         await select.SelectOptionAsync(new SelectOptionValue { Value = "push" });
-        await page.Locator("button[type='submit']").ClickAsync();
 
         await Expect(error).ToBeHiddenAsync();
+
+        await page.CloseAsync();
+    }
+
+    [Fact]
+    public async Task SelectWorkoutAfterError_RemovesAriaInvalid()
+    {
+        var page = await CreatePageAsync();
+        var select = page.Locator("#workout-select");
+
+        await page.Locator("button[type='submit']").ClickAsync();
+        await Expect(page.Locator("#workout-error")).ToBeVisibleAsync();
+        Assert.Equal("true", await select.GetAttributeAsync("aria-invalid"));
+
+        await select.SelectOptionAsync(new SelectOptionValue { Value = "pull" });
+
+        Assert.Null(await select.GetAttributeAsync("aria-invalid"));
+
+        await page.CloseAsync();
+    }
+
+    [Fact]
+    public async Task SelectWorkoutAfterError_RemovesErrorStyling()
+    {
+        var page = await CreatePageAsync();
+        var select = page.Locator("#workout-select");
+
+        await page.Locator("button[type='submit']").ClickAsync();
+        await Expect(page.Locator("#workout-error")).ToBeVisibleAsync();
+        await Expect(select).ToHaveClassAsync(new Regex("workout-form__select--error"));
+
+        await select.SelectOptionAsync(new SelectOptionValue { Value = "legs" });
+
+        await Expect(select).Not.ToHaveClassAsync(new Regex("workout-form__select--error"));
+
+        await page.CloseAsync();
+    }
+
+    [Fact]
+    public async Task SelectEachWorkoutAfterError_ClearsErrorForAll()
+    {
+        var page = await CreatePageAsync();
+        var select = page.Locator("#workout-select");
+        var error = page.Locator("#workout-error");
+        var button = page.Locator("button[type='submit']");
+
+        foreach (var workout in new[] { "push", "pull", "legs" })
+        {
+            // Navigate fresh to reset the form state
+            await page.GotoAsync(_webApp.BaseUrl);
+            await button.ClickAsync();
+            await Expect(error).ToBeVisibleAsync();
+
+            await select.SelectOptionAsync(new SelectOptionValue { Value = workout });
+            await Expect(error).ToBeHiddenAsync();
+        }
 
         await page.CloseAsync();
     }
