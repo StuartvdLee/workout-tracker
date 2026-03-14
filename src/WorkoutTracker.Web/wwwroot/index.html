@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Workout Tracker</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <main class="app">
+    <h1 class="app__title">Workout Tracker</h1>
+
+    <form class="workout-form" id="workout-form" novalidate>
+      <div class="workout-form__group">
+        <label class="workout-form__label" for="workout-select">
+          Select your workout
+        </label>
+        <select
+          class="workout-form__select"
+          id="workout-select"
+          name="workout"
+          aria-describedby="workout-error"
+          required
+        >
+          <option value="" disabled selected>Select a workout</option>
+        </select>
+      </div>
+
+      <div
+        class="workout-form__error"
+        id="workout-error"
+        role="alert"
+        aria-live="polite"
+        hidden
+      ></div>
+
+      <button class="workout-form__button" type="submit">
+        Start Workout
+      </button>
+    </form>
+  </main>
+
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>
