@@ -1,0 +1,25 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "Europe/Amsterdam"
+
+  - package-ecosystem: "nuget"
+    directory: "/src"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "Europe/Amsterdam"
+
+  - package-ecosystem: "npm"
+    directory: "/src/WorkoutTracker.Web"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "Europe/Amsterdam"
