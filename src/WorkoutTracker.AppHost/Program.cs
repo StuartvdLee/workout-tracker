@@ -1,6 +1,13 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-var api = builder.AddProject<Projects.WorkoutTracker_Api>("api");
+var postgres = builder.AddPostgres("postgres")
+    .WithLifetime(ContainerLifetime.Persistent);
+
+var workoutDb = postgres.AddDatabase("workout-tracker-db");
+
+var api = builder.AddProject<Projects.WorkoutTracker_Api>("api")
+    .WithReference(workoutDb)
+    .WaitFor(workoutDb);
 
 builder.AddProject<Projects.WorkoutTracker_Web>("web")
     .WithExternalHttpEndpoints()
