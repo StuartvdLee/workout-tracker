@@ -5,7 +5,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 
-builder.AddNpgsqlDbContext<WorkoutTrackerDbContext>("workout-tracker-db");
+builder.AddNpgsqlDbContext<WorkoutTrackerDbContext>("workout-tracker-db",
+    configureDbContextOptions: options => options.UseSnakeCaseNamingConvention());
 
 var app = builder.Build();
 
@@ -17,5 +18,15 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapDefaultEndpoints();
+
+app.MapGet("/api/workout-types", async (WorkoutTrackerDbContext db) =>
+{
+    var workoutTypes = await db.WorkoutTypes
+        .OrderBy(wt => wt.Name)
+        .Select(wt => new { wt.WorkoutTypeId, wt.Name })
+        .ToListAsync();
+
+    return Results.Ok(workoutTypes);
+});
 
 app.Run();

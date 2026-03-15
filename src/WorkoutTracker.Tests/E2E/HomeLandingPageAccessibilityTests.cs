@@ -22,8 +22,8 @@ public class HomeLandingPageAccessibilityTests : IClassFixture<WebAppFixture>, I
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
         });
-        var baseUrl = _webApp.BaseUrl;
-        await page.GotoAsync(baseUrl);
+        await page.GotoAsync(_webApp.BaseUrl);
+        await page.Locator("#workout-select option:not([disabled])").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
         return page;
     }
 

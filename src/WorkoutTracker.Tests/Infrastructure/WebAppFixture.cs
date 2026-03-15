@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Hosting;
 
@@ -10,6 +11,16 @@ public class WebAppFixture : WebApplicationFactory<Program>
     private IHost? _host;
 
     public string BaseUrl { get; }
+
+    /// <summary>
+    /// Mock workout types served by the test server at /api/workout-types.
+    /// </summary>
+    public static readonly IReadOnlyList<MockWorkoutType> WorkoutTypes =
+    [
+        new("d0f1a2b3-c4d5-6e7f-8a9b-0c1d2e3f4a5b", "Legs"),
+        new("a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d", "Pull"),
+        new("b2c3d4e5-f6a7-8b9c-0d1e-2f3a4b5c6d7e", "Push"),
+    ];
 
     public WebAppFixture()
     {
@@ -37,6 +48,10 @@ public class WebAppFixture : WebApplicationFactory<Program>
         webAppBuilder.Environment.EnvironmentName = "Development";
 
         var app = webAppBuilder.Build();
+
+        // Mock API endpoint for workout types
+        app.MapGet("/api/workout-types", () => Results.Ok(WorkoutTypes));
+
         app.UseDefaultFiles();
         app.UseStaticFiles();
         app.MapFallbackToFile("index.html");
@@ -77,3 +92,5 @@ public class WebAppFixture : WebApplicationFactory<Program>
         base.Dispose(disposing);
     }
 }
+
+public record MockWorkoutType(string WorkoutTypeId, string Name);

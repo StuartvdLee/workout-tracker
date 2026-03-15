@@ -17,10 +17,9 @@ public class HomeLandingPageSelectionTests : IClassFixture<WebAppFixture>, IClas
 
     private async Task<IPage> CreatePageAsync()
     {
-
         var page = await _playwright.Browser.NewPageAsync();
-        var baseUrl = _webApp.BaseUrl;
-        await page.GotoAsync(baseUrl);
+        await page.GotoAsync(_webApp.BaseUrl);
+        await page.Locator("#workout-select option:not([disabled])").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
         return page;
     }
 
@@ -61,18 +60,18 @@ public class HomeLandingPageSelectionTests : IClassFixture<WebAppFixture>, IClas
     }
 
     [Theory]
-    [InlineData("push")]
-    [InlineData("pull")]
-    [InlineData("legs")]
-    public async Task SelectWorkout_AndClickStart_NoErrorDisplayed(string value)
+    [InlineData("Push")]
+    [InlineData("Pull")]
+    [InlineData("Legs")]
+    public async Task SelectWorkout_AndClickStart_NoErrorDisplayed(string label)
     {
         var page = await CreatePageAsync();
 
         var select = page.Locator("#workout-select");
-        await select.SelectOptionAsync(new SelectOptionValue { Value = value });
+        await select.SelectOptionAsync(new SelectOptionValue { Label = label });
 
         var selectedValue = await select.InputValueAsync();
-        Assert.Equal(value, selectedValue);
+        Assert.NotEmpty(selectedValue);
 
         await page.Locator("button[type='submit']").ClickAsync();
 
@@ -91,7 +90,7 @@ public class HomeLandingPageSelectionTests : IClassFixture<WebAppFixture>, IClas
         await Expect(options).ToHaveCountAsync(3);
 
         var texts = await options.AllTextContentsAsync();
-        Assert.Equal(["Push", "Pull", "Legs"], texts);
+        Assert.Equal(["Legs", "Pull", "Push"], texts);
 
         await page.CloseAsync();
     }

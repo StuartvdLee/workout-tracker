@@ -18,10 +18,9 @@ public class HomeLandingPageValidationTests : IClassFixture<WebAppFixture>, ICla
 
     private async Task<IPage> CreatePageAsync()
     {
-
         var page = await _playwright.Browser.NewPageAsync();
-        var baseUrl = _webApp.BaseUrl;
-        await page.GotoAsync(baseUrl);
+        await page.GotoAsync(_webApp.BaseUrl);
+        await page.Locator("#workout-select option:not([disabled])").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
         return page;
     }
 
@@ -49,7 +48,7 @@ public class HomeLandingPageValidationTests : IClassFixture<WebAppFixture>, ICla
         await Expect(error).ToBeVisibleAsync();
 
         var select = page.Locator("#workout-select");
-        await select.SelectOptionAsync(new SelectOptionValue { Value = "push" });
+        await select.SelectOptionAsync(new SelectOptionValue { Label = "Push" });
 
         await Expect(error).ToBeHiddenAsync();
 
@@ -66,7 +65,7 @@ public class HomeLandingPageValidationTests : IClassFixture<WebAppFixture>, ICla
         await Expect(page.Locator("#workout-error")).ToBeVisibleAsync();
         Assert.Equal("true", await select.GetAttributeAsync("aria-invalid"));
 
-        await select.SelectOptionAsync(new SelectOptionValue { Value = "pull" });
+        await select.SelectOptionAsync(new SelectOptionValue { Label = "Pull" });
 
         Assert.Null(await select.GetAttributeAsync("aria-invalid"));
 
@@ -83,7 +82,7 @@ public class HomeLandingPageValidationTests : IClassFixture<WebAppFixture>, ICla
         await Expect(page.Locator("#workout-error")).ToBeVisibleAsync();
         await Expect(select).ToHaveClassAsync(new Regex("workout-form__select--error"));
 
-        await select.SelectOptionAsync(new SelectOptionValue { Value = "legs" });
+        await select.SelectOptionAsync(new SelectOptionValue { Label = "Legs" });
 
         await Expect(select).Not.ToHaveClassAsync(new Regex("workout-form__select--error"));
 
@@ -98,14 +97,15 @@ public class HomeLandingPageValidationTests : IClassFixture<WebAppFixture>, ICla
         var error = page.Locator("#workout-error");
         var button = page.Locator("button[type='submit']");
 
-        foreach (var workout in new[] { "push", "pull", "legs" })
+        foreach (var label in new[] { "Push", "Pull", "Legs" })
         {
             // Navigate fresh to reset the form state
             await page.GotoAsync(_webApp.BaseUrl);
+            await page.Locator("#workout-select option:not([disabled])").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
             await button.ClickAsync();
             await Expect(error).ToBeVisibleAsync();
 
-            await select.SelectOptionAsync(new SelectOptionValue { Value = workout });
+            await select.SelectOptionAsync(new SelectOptionValue { Label = label });
             await Expect(error).ToBeHiddenAsync();
         }
 
