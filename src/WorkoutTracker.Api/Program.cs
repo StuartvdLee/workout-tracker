@@ -5,7 +5,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 
-builder.AddNpgsqlDbContext<WorkoutTrackerDbContext>("workout-tracker-db");
+builder.AddNpgsqlDbContext<WorkoutTrackerDbContext>("workout-tracker-db",
+    configureDbContextOptions: options => options.UseSnakeCaseNamingConvention());
 
 var app = builder.Build();
 

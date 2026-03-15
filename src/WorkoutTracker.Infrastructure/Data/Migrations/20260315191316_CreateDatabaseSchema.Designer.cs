@@ -12,7 +12,7 @@ using WorkoutTracker.Infrastructure.Data;
 namespace WorkoutTracker.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(WorkoutTrackerDbContext))]
-    [Migration("20260315183639_CreateDatabaseSchema")]
+    [Migration("20260315191316_CreateDatabaseSchema")]
     partial class CreateDatabaseSchema
     {
         /// <inheritdoc />
@@ -30,79 +30,99 @@ namespace WorkoutTracker.Infrastructure.Data.Migrations
                 {
                     b.Property<Guid>("ExerciseId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("exercise_id");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("name");
 
-                    b.HasKey("ExerciseId");
+                    b.HasKey("ExerciseId")
+                        .HasName("pk_exercises");
 
-                    b.ToTable("Exercises", "workout_tracker");
+                    b.ToTable("exercises", "workout_tracker");
                 });
 
             modelBuilder.Entity("WorkoutTracker.Infrastructure.Data.Models.Workout", b =>
                 {
                     b.Property<Guid>("WorkoutId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("workout_id");
 
                     b.Property<DateOnly>("WorkoutDate")
-                        .HasColumnType("date");
+                        .HasColumnType("date")
+                        .HasColumnName("workout_date");
 
                     b.Property<Guid>("WorkoutTypeId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("workout_type_id");
 
-                    b.HasKey("WorkoutId");
+                    b.HasKey("WorkoutId")
+                        .HasName("pk_workouts");
 
-                    b.HasIndex("WorkoutTypeId");
+                    b.HasIndex("WorkoutTypeId")
+                        .HasDatabaseName("ix_workouts_workout_type_id");
 
-                    b.ToTable("Workouts", "workout_tracker");
+                    b.ToTable("workouts", "workout_tracker");
                 });
 
             modelBuilder.Entity("WorkoutTracker.Infrastructure.Data.Models.WorkoutExercise", b =>
                 {
                     b.Property<Guid>("WorkoutExerciseId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("workout_exercise_id");
 
                     b.Property<Guid>("ExerciseId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("exercise_id");
 
                     b.Property<int?>("Reps")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("reps");
 
                     b.Property<int?>("Sets")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("sets");
 
                     b.Property<decimal?>("Weight")
-                        .HasColumnType("numeric");
+                        .HasColumnType("numeric")
+                        .HasColumnName("weight");
 
                     b.Property<Guid>("WorkoutId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("workout_id");
 
-                    b.HasKey("WorkoutExerciseId");
+                    b.HasKey("WorkoutExerciseId")
+                        .HasName("pk_workout_exercises");
 
-                    b.HasIndex("ExerciseId");
+                    b.HasIndex("ExerciseId")
+                        .HasDatabaseName("ix_workout_exercises_exercise_id");
 
-                    b.HasIndex("WorkoutId");
+                    b.HasIndex("WorkoutId")
+                        .HasDatabaseName("ix_workout_exercises_workout_id");
 
-                    b.ToTable("WorkoutExercises", "workout_tracker");
+                    b.ToTable("workout_exercises", "workout_tracker");
                 });
 
             modelBuilder.Entity("WorkoutTracker.Infrastructure.Data.Models.WorkoutType", b =>
                 {
                     b.Property<Guid>("WorkoutTypeId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("workout_type_id");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("name");
 
-                    b.HasKey("WorkoutTypeId");
+                    b.HasKey("WorkoutTypeId")
+                        .HasName("pk_workout_types");
 
-                    b.ToTable("WorkoutTypes", "workout_tracker");
+                    b.ToTable("workout_types", "workout_tracker");
                 });
 
             modelBuilder.Entity("WorkoutTracker.Infrastructure.Data.Models.Workout", b =>
@@ -111,7 +131,8 @@ namespace WorkoutTracker.Infrastructure.Data.Migrations
                         .WithMany("Workouts")
                         .HasForeignKey("WorkoutTypeId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_workouts_workout_types_workout_type_id");
 
                     b.Navigation("WorkoutType");
                 });
@@ -122,13 +143,15 @@ namespace WorkoutTracker.Infrastructure.Data.Migrations
                         .WithMany("WorkoutExercises")
                         .HasForeignKey("ExerciseId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_workout_exercises_exercises_exercise_id");
 
                     b.HasOne("WorkoutTracker.Infrastructure.Data.Models.Workout", "Workout")
                         .WithMany("WorkoutExercises")
                         .HasForeignKey("WorkoutId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_workout_exercises_workouts_workout_id");
 
                     b.Navigation("Exercise");
 
