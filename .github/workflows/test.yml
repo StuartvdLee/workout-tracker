@@ -1,0 +1,63 @@
+name: Run Tests
+
+# Trigger this workflow on pull request creation and updates
+on:
+  pull_request:
+
+jobs:
+  test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      # Check out the repository source code
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.2
+
+      # Set up .NET 10 (preview) required by the project
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5.2.0
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      # Set up Node.js to compile TypeScript for WorkoutTracker.Web
+      - name: Set up Node.js
+        uses: actions/setup-node@v6.3.0
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+          cache-dependency-path: src/WorkoutTracker.Web/package-lock.json
+
+      # Install TypeScript and compile wwwroot/ts → wwwroot/js
+      - name: Build TypeScript
+        working-directory: src/WorkoutTracker.Web
+        run: |
+          npm ci
+          npm run build
+
+      # Restore all NuGet packages for the solution
+      - name: Restore .NET dependencies
+        run: dotnet restore src/WorkoutTracker.Tests/WorkoutTracker.Tests.csproj
+
+      # Build the test project (and its dependencies)
+      - name: Build
+        run: dotnet build src/WorkoutTracker.Tests/WorkoutTracker.Tests.csproj --no-restore --configuration Release
+
+      # Install Playwright browser binaries and OS-level dependencies for Chromium
+      - name: Install Playwright browsers
+        run: pwsh src/WorkoutTracker.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+
+      # Run all test suites and report results
+      - name: Run tests
+        run: dotnet test src/WorkoutTracker.Tests/WorkoutTracker.Tests.csproj --no-build --configuration Release --logger "trx;LogFileName=test-results.trx"
+
+      # Upload test result artifacts so they are visible in the workflow summary
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7.0.0
+        with:
+          name: test-results
+          path: src/WorkoutTracker.Tests/TestResults/
