@@ -1,6 +1,7 @@
 <Solution>
   <Project Path="WorkoutTracker.Api/WorkoutTracker.Api.csproj" />
   <Project Path="WorkoutTracker.AppHost/WorkoutTracker.AppHost.csproj" />
+  <Project Path="WorkoutTracker.Infrastructure/WorkoutTracker.Infrastructure.csproj" />
   <Project Path="WorkoutTracker.ServiceDefaults/WorkoutTracker.ServiceDefaults.csproj" />
   <Project Path="WorkoutTracker.Tests/WorkoutTracker.Tests.csproj" />
   <Project Path="WorkoutTracker.Web/WorkoutTracker.Web.csproj" />
