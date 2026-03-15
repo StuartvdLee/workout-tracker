@@ -17,10 +17,9 @@ public class HomeLandingPageRegressionTests : IClassFixture<WebAppFixture>, ICla
 
     private async Task<IPage> CreatePageAsync()
     {
-
         var page = await _playwright.Browser.NewPageAsync();
-        var baseUrl = _webApp.BaseUrl;
-        await page.GotoAsync(baseUrl);
+        await page.GotoAsync(_webApp.BaseUrl);
+        await page.Locator("#workout-select option:not([disabled])").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
         return page;
     }
 
@@ -49,11 +48,11 @@ public class HomeLandingPageRegressionTests : IClassFixture<WebAppFixture>, ICla
         var select = page.Locator("#workout-select");
         var button = page.Locator("button[type='submit']");
         var error = page.Locator("#workout-error");
-        string[] workoutValues = ["push", "pull", "legs"];
+        string[] workoutLabels = ["Push", "Pull", "Legs"];
 
-        foreach (var value in workoutValues)
+        foreach (var label in workoutLabels)
         {
-            await select.SelectOptionAsync(new SelectOptionValue { Value = value });
+            await select.SelectOptionAsync(new SelectOptionValue { Label = label });
             await button.ClickAsync();
             await Assertions.Expect(error).ToBeHiddenAsync();
         }

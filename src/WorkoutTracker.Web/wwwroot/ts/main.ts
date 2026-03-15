@@ -1,26 +1,24 @@
-interface WorkoutOption {
-  readonly value: string;
-  readonly label: string;
+interface WorkoutType {
+  readonly workoutTypeId: string;
+  readonly name: string;
 }
 
-const WORKOUT_OPTIONS: ReadonlyArray<WorkoutOption> = [
-  { value: "push", label: "Push" },
-  { value: "pull", label: "Pull" },
-  { value: "legs", label: "Legs" },
-] as const;
+let loadedWorkoutTypeIds: Set<string> = new Set();
 
-const VALID_WORKOUT_VALUES = new Set(WORKOUT_OPTIONS.map((o) => o.value));
-
-function initializeApp(): void {
+async function initializeApp(): Promise<void> {
   const form = document.getElementById("workout-form") as HTMLFormElement | null;
-  const select = document.getElementById("workout-select") as HTMLSelectElement | null;
-  const errorEl = document.getElementById("workout-error") as HTMLElement | null;
+  const select = document.getElementById(
+    "workout-select",
+  ) as HTMLSelectElement | null;
+  const errorEl = document.getElementById(
+    "workout-error",
+  ) as HTMLElement | null;
 
   if (!form || !select || !errorEl) {
     return;
   }
 
-  populateWorkoutOptions(select);
+  await populateWorkoutOptions(select);
 
   form.addEventListener("submit", (event: Event) => {
     event.preventDefault();
@@ -34,12 +32,26 @@ function initializeApp(): void {
   });
 }
 
-function populateWorkoutOptions(select: HTMLSelectElement): void {
-  for (const option of WORKOUT_OPTIONS) {
-    const optionEl = document.createElement("option");
-    optionEl.value = option.value;
-    optionEl.textContent = option.label;
-    select.appendChild(optionEl);
+async function populateWorkoutOptions(
+  select: HTMLSelectElement,
+): Promise<void> {
+  try {
+    const response = await fetch("/api/workout-types");
+    if (!response.ok) {
+      return;
+    }
+
+    const workoutTypes: WorkoutType[] = await response.json();
+    loadedWorkoutTypeIds = new Set(workoutTypes.map((wt) => wt.workoutTypeId));
+
+    for (const wt of workoutTypes) {
+      const optionEl = document.createElement("option");
+      optionEl.value = wt.workoutTypeId;
+      optionEl.textContent = wt.name;
+      select.appendChild(optionEl);
+    }
+  } catch {
+    // API unavailable — dropdown remains empty
   }
 }
 
@@ -58,7 +70,7 @@ function handleStartWorkout(
 }
 
 function isValidWorkoutValue(value: string): boolean {
-  return VALID_WORKOUT_VALUES.has(value);
+  return loadedWorkoutTypeIds.has(value);
 }
 
 function showError(
