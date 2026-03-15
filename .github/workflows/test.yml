@@ -14,18 +14,18 @@ jobs:
     steps:
       # Check out the repository source code
       - name: Checkout repository
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v6.0.2
 
       # Set up .NET 10 (preview) required by the project
       - name: Set up .NET
-        uses: actions/setup-dotnet@v4.3.1
+        uses: actions/setup-dotnet@v5.2.0
         with:
           dotnet-version: '10.0.x'
           dotnet-quality: 'preview'
 
       # Set up Node.js to compile TypeScript for WorkoutTracker.Web
       - name: Set up Node.js
-        uses: actions/setup-node@v4.4.0
+        uses: actions/setup-node@v6.3.0
         with:
           node-version: 'lts/*'
           cache: 'npm'
@@ -57,7 +57,7 @@ jobs:
       # Upload test result artifacts so they are visible in the workflow summary
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4.6.2
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: test-results
           path: src/WorkoutTracker.Tests/TestResults/
