@@ -61,3 +61,6 @@ coverage/
 
 # Aspire
 .aspire/
+
+# appsettings
+appsettings.Development.json
