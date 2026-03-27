@@ -28,8 +28,11 @@ public class HomeLandingPageSelectionTests : IClassFixture<WebAppFixture>, IClas
     {
         var page = await CreatePageAsync();
 
-        var heading = page.Locator("h1");
-        await Expect(heading).ToHaveTextAsync("Workout Tracker");
+        var sidebarTitle = page.Locator(".sidebar__title");
+        await Expect(sidebarTitle).ToHaveTextAsync("Workout Tracker");
+
+        var pageTitle = page.Locator("h1");
+        await Expect(pageTitle).ToHaveTextAsync("Home");
 
         await page.CloseAsync();
     }
