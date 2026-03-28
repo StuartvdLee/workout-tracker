@@ -8,6 +8,7 @@ interface Route {
 const routes: Route[] = [];
 let contentEl: HTMLElement | null = null;
 let onNavigateCallback: ((path: string) => void) | null = null;
+let navigationToken = 0;
 
 export function registerRoute(path: string, render: RenderFn): void {
   routes.push({ path, render });
@@ -23,7 +24,7 @@ export function navigate(path: string): void {
     return;
   }
   history.pushState(null, "", normalised);
-  renderCurrentRoute();
+  void renderCurrentRoute();
 }
 
 export function getCurrentPath(): string {
@@ -32,15 +33,16 @@ export function getCurrentPath(): string {
 
 export function init(): void {
   contentEl = document.getElementById("content");
-  window.addEventListener("popstate", () => renderCurrentRoute());
-  renderCurrentRoute();
+  window.addEventListener("popstate", () => void renderCurrentRoute());
+  void renderCurrentRoute();
 }
 
-function renderCurrentRoute(): void {
+async function renderCurrentRoute(): Promise<void> {
   if (!contentEl) {
     return;
   }
 
+  const token = ++navigationToken;
   const path = getCurrentPath();
   const route = routes.find((r) => r.path === path);
 
@@ -49,15 +51,19 @@ function renderCurrentRoute(): void {
     const homeRoute = routes.find((r) => r.path === "/");
     if (homeRoute) {
       contentEl.innerHTML = "";
-      homeRoute.render(contentEl);
+      await homeRoute.render(contentEl);
     }
-    onNavigateCallback?.("/");
+    if (token === navigationToken) {
+      onNavigateCallback?.("/");
+    }
     return;
   }
 
   contentEl.innerHTML = "";
-  route.render(contentEl);
-  onNavigateCallback?.(path);
+  await route.render(contentEl);
+  if (token === navigationToken) {
+    onNavigateCallback?.(path);
+  }
 }
 
 function normalisePath(path: string): string {
