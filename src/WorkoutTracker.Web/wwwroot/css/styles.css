@@ -327,6 +327,263 @@ body {
   line-height: 1.6;
 }
 
+/* === Exercises Page === */
+.exercises-page {
+  width: 100%;
+  max-width: var(--max-content-width);
+  padding-top: var(--spacing-xl);
+}
+
+.exercises-page__title {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: var(--spacing-lg);
+}
+
+/* === Exercise Form === */
+.exercise-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.exercise-form__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.exercise-form__label {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-light);
+}
+
+.exercise-form__input {
+  width: 100%;
+  min-height: var(--min-touch-target);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-base);
+  font-family: var(--font-family);
+  color: var(--color-text);
+  background-color: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  transition: border-color 0.15s ease;
+}
+
+.exercise-form__input:focus {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+  border-color: var(--color-border-focus);
+}
+
+.exercise-form__input--error {
+  border-color: var(--color-error);
+}
+
+.exercise-form__muscles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(6rem, 1fr));
+  gap: var(--spacing-xs);
+}
+
+.exercise-form__error {
+  font-size: var(--font-size-sm);
+  color: var(--color-error);
+  background-color: var(--color-error-bg);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius);
+  border: 1px solid var(--color-error);
+}
+
+.exercise-form__error:empty {
+  display: none;
+}
+
+.exercise-form__actions {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.exercise-form__submit {
+  flex: 1;
+  min-height: var(--min-touch-target);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  font-family: var(--font-family);
+  color: var(--color-white);
+  background-color: var(--color-primary);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.exercise-form__submit:hover {
+  background-color: var(--color-primary-hover);
+}
+
+.exercise-form__submit:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+.exercise-form__submit:active {
+  transform: scale(0.98);
+}
+
+.exercise-form__submit--loading {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.exercise-form__cancel {
+  display: none;
+  flex: 0 0 auto;
+  min-height: var(--min-touch-target);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  font-family: var(--font-family);
+  color: var(--color-text);
+  background-color: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.exercise-form__cancel:hover {
+  background-color: var(--color-bg);
+}
+
+.exercise-form__api-error {
+  font-size: var(--font-size-sm);
+  color: var(--color-error);
+  background-color: var(--color-error-bg);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius);
+  border: 1px solid var(--color-error);
+}
+
+.exercise-form__api-error:empty {
+  display: none;
+}
+
+/* === Muscle Toggle === */
+.muscle-toggle {
+  min-height: var(--min-touch-target);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  font-family: var(--font-family);
+  color: var(--color-text-light);
+  background-color: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.muscle-toggle:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.muscle-toggle--active {
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  border-color: var(--color-primary);
+}
+
+/* === Exercise List === */
+.exercise-list {
+  width: 100%;
+  margin-top: var(--spacing-xl);
+}
+
+.exercise-list__heading {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: var(--spacing-md);
+}
+
+.exercise-list__items {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.exercise-list__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  background-color: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.exercise-list__details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  flex: 1;
+  min-width: 0;
+}
+
+.exercise-list__name {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.exercise-list__muscles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.exercise-list__muscle-chip {
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
+  background-color: var(--color-primary-light);
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius);
+}
+
+.exercise-list__edit-btn {
+  min-width: var(--min-touch-target);
+  min-height: var(--min-touch-target);
+  padding: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  font-family: var(--font-family);
+  color: var(--color-primary);
+  background: none;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.exercise-list__edit-btn:hover {
+  background-color: var(--color-primary-light);
+}
+
+.exercise-list__empty {
+  text-align: center;
+  padding: var(--spacing-xl);
+  color: var(--color-text-light);
+  font-size: var(--font-size-base);
+}
+
 /* === Responsive: Mobile (below 768px) === */
 @media (max-width: 767px) {
   .sidebar {
@@ -364,5 +621,13 @@ body {
 
   .page-placeholder__title {
     font-size: 2.25rem;
+  }
+
+  .exercises-page__title {
+    font-size: 2.25rem;
+  }
+
+  .exercise-form__submit {
+    font-size: var(--font-size-lg);
   }
 }
