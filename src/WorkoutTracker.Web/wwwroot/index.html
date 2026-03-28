@@ -7,38 +7,64 @@
   <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
-  <main class="app">
-    <h1 class="app__title">Workout Tracker</h1>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar__header">
+      <span class="sidebar__title">Workout Tracker</span>
+    </div>
+    <nav class="sidebar__nav" aria-label="Main navigation">
+      <a class="sidebar__link" href="/" data-page="home">
+        <svg class="sidebar__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        <span class="sidebar__label">Home</span>
+      </a>
+      <a class="sidebar__link" href="/workouts" data-page="workouts">
+        <svg class="sidebar__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M6.5 6.5h-2a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1z"/>
+          <path d="M19.5 6.5h-2a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1z"/>
+          <line x1="7.5" y1="12" x2="16.5" y2="12"/>
+          <line x1="2" y1="10" x2="3.5" y2="10"/>
+          <line x1="2" y1="14" x2="3.5" y2="14"/>
+          <line x1="20.5" y1="10" x2="22" y2="10"/>
+          <line x1="20.5" y1="14" x2="22" y2="14"/>
+        </svg>
+        <span class="sidebar__label">Workouts</span>
+      </a>
+      <a class="sidebar__link" href="/exercises" data-page="exercises">
+        <svg class="sidebar__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="8" y1="6" x2="21" y2="6"/>
+          <line x1="8" y1="12" x2="21" y2="12"/>
+          <line x1="8" y1="18" x2="21" y2="18"/>
+          <line x1="3" y1="6" x2="3.01" y2="6"/>
+          <line x1="3" y1="12" x2="3.01" y2="12"/>
+          <line x1="3" y1="18" x2="3.01" y2="18"/>
+        </svg>
+        <span class="sidebar__label">Exercises</span>
+      </a>
+    </nav>
+  </aside>
 
-    <form class="workout-form" id="workout-form" novalidate>
-      <div class="workout-form__group">
-        <label class="workout-form__label" for="workout-select">
-          Select your workout
-        </label>
-        <select
-          class="workout-form__select"
-          id="workout-select"
-          name="workout"
-          aria-describedby="workout-error"
-          required
-        >
-          <option value="" disabled selected>Select a workout</option>
-        </select>
-      </div>
+  <div class="sidebar__backdrop" id="sidebar-backdrop"></div>
 
-      <div
-        class="workout-form__error"
-        id="workout-error"
-        role="alert"
-        aria-live="polite"
-        hidden
-      ></div>
+  <header class="topbar">
+    <button
+      class="topbar__toggle"
+      type="button"
+      aria-label="Toggle navigation"
+      aria-expanded="false"
+      aria-controls="sidebar"
+    >
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <line x1="3" y1="12" x2="21" y2="12"/>
+        <line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
+    <span class="topbar__title">Workout Tracker</span>
+  </header>
 
-      <button class="workout-form__button" type="submit">
-        Start Workout
-      </button>
-    </form>
-  </main>
+  <main class="content" id="content"></main>
 
   <script type="module" src="/js/main.js"></script>
 </body>
