@@ -1,18 +1,30 @@
 import { navigate, onNavigate, getCurrentPath } from "./router.js";
 
+function navigateFromSidebarLink(link: HTMLAnchorElement): void {
+  const page = link.dataset.page;
+  if (!page) {
+    return;
+  }
+  const path = page === "home" ? "/" : `/${page}`;
+  navigate(path);
+  closeMobileSidebar();
+}
+
 export function initSidebar(): void {
   const links = document.querySelectorAll<HTMLAnchorElement>(".sidebar__link");
 
   for (const link of links) {
     link.addEventListener("click", (event: Event) => {
       event.preventDefault();
-      const page = link.dataset.page;
-      if (!page) {
-        return;
+      navigateFromSidebarLink(link);
+    });
+
+    link.addEventListener("keydown", (event: KeyboardEvent) => {
+      // Treat Space as activation for accessibility, matching the click behavior.
+      if (event.key === " " || event.key === "Spacebar") {
+        event.preventDefault();
+        navigateFromSidebarLink(link);
       }
-      const path = page === "home" ? "/" : `/${page}`;
-      navigate(path);
-      closeMobileSidebar();
     });
   }
 
