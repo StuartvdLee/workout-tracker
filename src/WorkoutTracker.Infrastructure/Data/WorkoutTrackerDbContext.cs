@@ -38,6 +38,10 @@ public class WorkoutTrackerDbContext(DbContextOptions<WorkoutTrackerDbContext> o
         {
             entity.HasKey(e => e.ExerciseId);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(150);
+            entity.HasIndex(e => e.Name)
+                .IsUnique()
+                .HasDatabaseName("ix_exercises_name_lower");
+            entity.ToTable(t => t.HasCheckConstraint("ck_exercises_name_length", "length(name) <= 150"));
         });
 
         modelBuilder.Entity<Muscle>(entity =>
