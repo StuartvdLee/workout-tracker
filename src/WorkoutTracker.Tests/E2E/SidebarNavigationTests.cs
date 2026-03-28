@@ -65,7 +65,7 @@ public class SidebarNavigationTests : IClassFixture<WebAppFixture>, IClassFixtur
         Assert.EndsWith("/workouts", page.Url);
 
         await page.Locator(".sidebar__link[data-page='exercises']").ClickAsync();
-        await Expect(page.Locator(".page-placeholder__title")).ToHaveTextAsync("Exercises");
+        await Expect(page.Locator(".exercises-page__title")).ToHaveTextAsync("Exercises");
         Assert.EndsWith("/exercises", page.Url);
 
         await page.Locator(".sidebar__link[data-page='home']").ClickAsync();
@@ -125,7 +125,7 @@ public class SidebarNavigationTests : IClassFixture<WebAppFixture>, IClassFixtur
         await page.GotoAsync($"{_webApp.BaseUrl}/exercises");
         await page.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
 
-        await Expect(page.Locator(".page-placeholder__title")).ToHaveTextAsync("Exercises");
+        await Expect(page.Locator(".exercises-page__title")).ToHaveTextAsync("Exercises");
 
         var exercisesLink = page.Locator(".sidebar__link[data-page='exercises']");
         await Expect(exercisesLink).ToHaveClassAsync(new System.Text.RegularExpressions.Regex("sidebar__link--active"));
@@ -160,7 +160,7 @@ public class SidebarNavigationTests : IClassFixture<WebAppFixture>, IClassFixtur
         await Expect(page.Locator(".page-placeholder__title")).ToHaveTextAsync("Workouts");
 
         await page.Locator(".sidebar__link[data-page='exercises']").ClickAsync();
-        await Expect(page.Locator(".page-placeholder__title")).ToHaveTextAsync("Exercises");
+        await Expect(page.Locator(".exercises-page__title")).ToHaveTextAsync("Exercises");
 
         await page.GoBackAsync();
         await Expect(page.Locator(".page-placeholder__title")).ToHaveTextAsync("Workouts");
@@ -168,7 +168,7 @@ public class SidebarNavigationTests : IClassFixture<WebAppFixture>, IClassFixtur
         await Expect(workoutsLink).ToHaveClassAsync(new System.Text.RegularExpressions.Regex("sidebar__link--active"));
 
         await page.GoForwardAsync();
-        await Expect(page.Locator(".page-placeholder__title")).ToHaveTextAsync("Exercises");
+        await Expect(page.Locator(".exercises-page__title")).ToHaveTextAsync("Exercises");
 
         await page.CloseAsync();
     }
