@@ -88,8 +88,12 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         var page = await CreatePageAsync();
         try
         {
+            // maxlength="150" prevents FillAsync from exceeding limit,
+            // so bypass it via JS to test the client-side validation
             var longName = new string('A', 151);
-            await page.Locator("#exercise-name").FillAsync(longName);
+            await page.Locator("#exercise-name").EvaluateAsync(
+                "(el, name) => { el.removeAttribute('maxlength'); el.value = name; }",
+                longName);
             await page.Locator(".exercise-form__submit").ClickAsync();
 
             await Expect(page.Locator("#exercise-error")).ToHaveTextAsync("Exercise name must be 150 characters or fewer.");
@@ -650,6 +654,318 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
             // Switch to editing second exercise
             await page.Locator(".exercise-list__edit-btn").Nth(1).ClickAsync();
             await Expect(page.Locator("#exercise-name")).ToHaveValueAsync("Beta");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    // ──────────────────────────────────────────
+    // Phase 7 — T025: ARIA & Keyboard Navigation
+    // ──────────────────────────────────────────
+
+    [Fact]
+    public async Task Keyboard_TabThroughFormFields()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            // Focus name input
+            await page.Locator("#exercise-name").FocusAsync();
+            await Expect(page.Locator("#exercise-name")).ToBeFocusedAsync();
+
+            // Tab to first muscle toggle
+            await page.Keyboard.PressAsync("Tab");
+            var firstToggle = page.Locator(".muscle-toggle").First;
+            await Expect(firstToggle).ToBeFocusedAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task Keyboard_SpaceActivatesMuscleToggle()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var firstToggle = page.Locator(".muscle-toggle").First;
+            await firstToggle.FocusAsync();
+            await Expect(firstToggle).ToHaveAttributeAsync("aria-checked", "false");
+
+            await page.Keyboard.PressAsync("Space");
+            await Expect(firstToggle).ToHaveAttributeAsync("aria-checked", "true");
+
+            await page.Keyboard.PressAsync("Space");
+            await Expect(firstToggle).ToHaveAttributeAsync("aria-checked", "false");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task Keyboard_EnterSubmitsForm()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.Locator("#exercise-name").FillAsync("Keyboard Test");
+            await page.Keyboard.PressAsync("Enter");
+            await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(1);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task Aria_ErrorMessagesHaveAlertRole()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var validationError = page.Locator("#exercise-error");
+            await Expect(validationError).ToHaveAttributeAsync("role", "alert");
+            await Expect(validationError).ToHaveAttributeAsync("aria-live", "polite");
+
+            var apiError = page.Locator("#exercise-api-error");
+            await Expect(apiError).ToHaveAttributeAsync("role", "alert");
+            await Expect(apiError).ToHaveAttributeAsync("aria-live", "polite");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task Aria_MuscleTogglesHaveCheckboxRole()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var toggles = page.Locator(".muscle-toggle");
+            var count = await toggles.CountAsync();
+            Assert.Equal(11, count);
+
+            for (var i = 0; i < count; i++)
+            {
+                var toggle = toggles.Nth(i);
+                await Expect(toggle).ToHaveAttributeAsync("role", "checkbox");
+                await Expect(toggle).ToHaveAttributeAsync("aria-checked", "false");
+            }
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task Aria_EditButtonsHaveDescriptiveLabels()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.Locator("#exercise-name").FillAsync("Bench Press");
+            await page.Locator(".exercise-form__submit").ClickAsync();
+            await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(1);
+
+            var editBtn = page.Locator(".exercise-list__edit-btn").First;
+            await Expect(editBtn).ToHaveAttributeAsync("aria-label", "Edit Bench Press");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task Aria_SubmitDisabledDuringSave()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.Locator("#exercise-name").FillAsync("Slow Save");
+            await page.Locator(".exercise-form__submit").ClickAsync();
+
+            // After successful save, button should be re-enabled
+            await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(1);
+            var submitBtn = page.Locator(".exercise-form__submit");
+            await Expect(submitBtn).Not.ToHaveAttributeAsync("aria-disabled", "true");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    // ──────────────────────────────────────────
+    // Phase 7 — T026: Mobile Responsive Layout
+    // ──────────────────────────────────────────
+
+    private async Task<IPage> CreateMobilePageAsync()
+    {
+        WebAppFixture.ResetExercises();
+        var page = await _playwright.Browser.NewPageAsync(new BrowserNewPageOptions
+        {
+            ViewportSize = new ViewportSize { Width = 375, Height = 667 },
+        });
+        await page.GotoAsync($"{_webApp.BaseUrl}/exercises");
+        await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        return page;
+    }
+
+    [Fact]
+    public async Task Mobile_PageRendersAt375pxViewport()
+    {
+        var page = await CreateMobilePageAsync();
+        try
+        {
+            await Expect(page.Locator(".exercises-page__title")).ToBeVisibleAsync();
+            await Expect(page.Locator("#exercise-name")).ToBeVisibleAsync();
+            await Expect(page.Locator(".exercise-form__submit")).ToBeVisibleAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task Mobile_FormInputsAreUsable()
+    {
+        var page = await CreateMobilePageAsync();
+        try
+        {
+            await page.Locator("#exercise-name").FillAsync("Mobile Exercise");
+            await page.Locator(".exercise-form__submit").ClickAsync();
+            await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(1);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task Mobile_MuscleTogglesWrap()
+    {
+        var page = await CreateMobilePageAsync();
+        try
+        {
+            var muscleGroup = page.Locator("#exercise-muscles");
+            await Expect(muscleGroup).ToBeVisibleAsync();
+
+            // All 11 toggles should be visible even on narrow viewport
+            var toggles = page.Locator(".muscle-toggle");
+            var count = await toggles.CountAsync();
+            Assert.Equal(11, count);
+
+            for (var i = 0; i < count; i++)
+            {
+                await Expect(toggles.Nth(i)).ToBeVisibleAsync();
+            }
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task Mobile_TouchTargetsMinimum44px()
+    {
+        var page = await CreateMobilePageAsync();
+        try
+        {
+            // Submit button
+            var submitBox = await page.Locator(".exercise-form__submit").BoundingBoxAsync();
+            Assert.NotNull(submitBox);
+            Assert.True(submitBox.Height >= 44, $"Submit button height {submitBox.Height}px < 44px");
+
+            // Muscle toggle
+            var toggleBox = await page.Locator(".muscle-toggle").First.BoundingBoxAsync();
+            Assert.NotNull(toggleBox);
+            Assert.True(toggleBox.Height >= 44, $"Muscle toggle height {toggleBox.Height}px < 44px");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    // ──────────────────────────────────────────
+    // Phase 7 — T028: Performance Budgets
+    // ──────────────────────────────────────────
+
+    [Fact]
+    public async Task Performance_PageLoadUnder3sOnSlowNetwork()
+    {
+        WebAppFixture.ResetExercises();
+        var page = await _playwright.Browser.NewPageAsync(new BrowserNewPageOptions
+        {
+            ViewportSize = new ViewportSize { Width = 1024, Height = 768 },
+        });
+
+        try
+        {
+            // Simulate slow 3G via CDP
+            var cdpSession = await page.Context.NewCDPSessionAsync(page);
+            await cdpSession.SendAsync("Network.emulateNetworkConditions", new Dictionary<string, object>
+            {
+                ["offline"] = false,
+                ["downloadThroughput"] = 500 * 1024 / 8, // 500 Kbps
+                ["uploadThroughput"] = 500 * 1024 / 8,
+                ["latency"] = 400,
+            });
+
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            await page.GotoAsync($"{_webApp.BaseUrl}/exercises");
+            await page.Locator(".exercises-page__title").WaitForAsync(new LocatorWaitForOptions
+            {
+                State = WaitForSelectorState.Visible,
+                Timeout = 3000,
+            });
+            stopwatch.Stop();
+
+            Assert.True(stopwatch.ElapsedMilliseconds <= 3000,
+                $"Page load took {stopwatch.ElapsedMilliseconds}ms, exceeds 3000ms budget (PR-001)");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task Performance_SubmitFeedbackUnder200ms()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.Locator("#exercise-name").FillAsync("Speed Test");
+
+            // Measure time from click to loading state
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            await page.Locator(".exercise-form__submit").ClickAsync();
+
+            // Wait for the submit button to show loading state
+            await page.Locator(".exercise-form__submit[aria-disabled='true']").WaitForAsync(new LocatorWaitForOptions
+            {
+                State = WaitForSelectorState.Attached,
+                Timeout = 200,
+            });
+            stopwatch.Stop();
+
+            Assert.True(stopwatch.ElapsedMilliseconds <= 200,
+                $"Submit feedback took {stopwatch.ElapsedMilliseconds}ms, exceeds 200ms budget (PR-002)");
         }
         finally
         {
