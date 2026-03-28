@@ -35,7 +35,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         try
         {
             await page.Locator("#exercise-name").FillAsync("Bench Press");
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
 
             var item = page.Locator(".exercise-list__item");
             await Expect(item).ToBeVisibleAsync();
@@ -53,7 +53,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         var page = await CreatePageAsync();
         try
         {
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
 
             await Expect(page.Locator("#exercise-error")).ToHaveTextAsync("Exercise name is required.");
             await Expect(page.Locator("#exercise-name")).ToHaveAttributeAsync("aria-invalid", "true");
@@ -72,7 +72,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         try
         {
             await page.Locator("#exercise-name").FillAsync("   ");
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
 
             await Expect(page.Locator("#exercise-error")).ToHaveTextAsync("Exercise name is required.");
         }
@@ -94,7 +94,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
             await page.Locator("#exercise-name").EvaluateAsync(
                 "(el, name) => { el.removeAttribute('maxlength'); el.value = name; }",
                 longName);
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
 
             await Expect(page.Locator("#exercise-error")).ToHaveTextAsync("Exercise name must be 150 characters or fewer.");
         }
@@ -111,11 +111,11 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         try
         {
             await page.Locator("#exercise-name").FillAsync("Squat");
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
             await Expect(page.Locator(".exercise-list__item")).ToBeVisibleAsync();
 
             await page.Locator("#exercise-name").FillAsync("squat");
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
 
             await Expect(page.Locator("#exercise-api-error")).ToHaveTextAsync("An exercise with this name already exists.");
         }
@@ -132,7 +132,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         try
         {
             await page.Locator("#exercise-name").FillAsync("Deadlift");
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
             await Expect(page.Locator(".exercise-list__item")).ToBeVisibleAsync();
 
             await Expect(page.Locator("#exercise-name")).ToHaveValueAsync("");
@@ -189,9 +189,9 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
             });
 
             await page.Locator("#exercise-name").FillAsync("Pull Ups");
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
 
-            await Expect(page.Locator(".exercise-form__submit")).ToHaveAttributeAsync("aria-disabled", "true");
+            await Expect(page.Locator("#exercise-form .exercise-form__submit")).ToHaveAttributeAsync("aria-disabled", "true");
 
             // Wait for the request to complete and list to update
             await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(1);
@@ -210,7 +210,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         try
         {
             await page.Locator("#exercise-name").FillAsync("__MOCK_SERVER_ERROR");
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
 
             var apiError = page.Locator("#exercise-api-error");
             await Expect(apiError).ToBeVisibleAsync();
@@ -231,7 +231,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         var page = await CreatePageAsync();
         try
         {
-            await Expect(page.Locator(".muscle-toggle")).ToHaveCountAsync(11);
+            await Expect(page.Locator("#exercise-muscles .muscle-toggle")).ToHaveCountAsync(11);
         }
         finally
         {
@@ -245,7 +245,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         var page = await CreatePageAsync();
         try
         {
-            var toggle = page.Locator(".muscle-toggle").First;
+            var toggle = page.Locator("#exercise-muscles .muscle-toggle").First;
             await Expect(toggle).ToHaveAttributeAsync("aria-checked", "false");
             await toggle.ClickAsync();
             await Expect(toggle).ToHaveClassAsync(new Regex("muscle-toggle--active"));
@@ -271,10 +271,10 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
             await page.Locator("#exercise-name").FillAsync("Bench Press");
 
             // Select Chest muscle
-            var chestToggle = page.Locator(".muscle-toggle", new PageLocatorOptions { HasText = "Chest" });
+            var chestToggle = page.Locator("#exercise-muscles .muscle-toggle", new PageLocatorOptions { HasText = "Chest" });
             await chestToggle.ClickAsync();
 
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
 
             var item = page.Locator(".exercise-list__item");
             await Expect(item).ToBeVisibleAsync();
@@ -293,7 +293,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         try
         {
             await page.Locator("#exercise-name").FillAsync("Running");
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
 
             var item = page.Locator(".exercise-list__item");
             await Expect(item).ToBeVisibleAsync();
@@ -314,11 +314,11 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         {
             await page.Locator("#exercise-name").FillAsync("Deadlift");
 
-            await page.Locator(".muscle-toggle", new PageLocatorOptions { HasText = "Back" }).ClickAsync();
-            await page.Locator(".muscle-toggle", new PageLocatorOptions { HasText = "Hamstrings" }).ClickAsync();
-            await page.Locator(".muscle-toggle", new PageLocatorOptions { HasText = "Glutes" }).ClickAsync();
+            await page.Locator("#exercise-muscles .muscle-toggle", new PageLocatorOptions { HasText = "Back" }).ClickAsync();
+            await page.Locator("#exercise-muscles .muscle-toggle", new PageLocatorOptions { HasText = "Hamstrings" }).ClickAsync();
+            await page.Locator("#exercise-muscles .muscle-toggle", new PageLocatorOptions { HasText = "Glutes" }).ClickAsync();
 
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
 
             var item = page.Locator(".exercise-list__item");
             await Expect(item).ToBeVisibleAsync();
@@ -339,15 +339,15 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         try
         {
             await page.Locator("#exercise-name").FillAsync("Alpha");
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
             await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(1);
 
             await page.Locator("#exercise-name").FillAsync("Beta");
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
             await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(2);
 
             await page.Locator("#exercise-name").FillAsync("Gamma");
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
             await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(3);
 
             await Expect(page.Locator(".exercise-list__name").Nth(0)).ToHaveTextAsync("Alpha");
@@ -367,8 +367,8 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         try
         {
             await page.Locator("#exercise-name").FillAsync("Bench Press");
-            await page.Locator(".muscle-toggle", new PageLocatorOptions { HasText = "Chest" }).ClickAsync();
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-muscles .muscle-toggle", new PageLocatorOptions { HasText = "Chest" }).ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
 
             var item = page.Locator(".exercise-list__item").First;
             await Expect(item).ToBeVisibleAsync();
@@ -388,7 +388,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         try
         {
             await page.Locator("#exercise-name").FillAsync("Running");
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
 
             var item = page.Locator(".exercise-list__item").First;
             await Expect(item).ToBeVisibleAsync();
@@ -423,7 +423,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         try
         {
             await page.Locator("#exercise-name").FillAsync("Squat");
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
             await Expect(page.Locator(".exercise-list__item")).ToBeVisibleAsync();
 
             await Expect(page.Locator(".exercise-list__heading")).ToHaveTextAsync("Your Exercises");
@@ -444,16 +444,17 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         {
             // Create an exercise with muscles
             await page.Locator("#exercise-name").FillAsync("Bench Press");
-            await page.Locator(".muscle-toggle", new PageLocatorOptions { HasText = "Chest" }).ClickAsync();
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-muscles .muscle-toggle", new PageLocatorOptions { HasText = "Chest" }).ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
             await Expect(page.Locator(".exercise-list__item")).ToBeVisibleAsync();
 
             // Click edit
             await page.Locator(".exercise-list__edit-btn").First.ClickAsync();
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeVisibleAsync();
 
-            // Verify form populated
-            await Expect(page.Locator("#exercise-name")).ToHaveValueAsync("Bench Press");
-            var chestToggle = page.Locator(".muscle-toggle", new PageLocatorOptions { HasText = "Chest" });
+            // Verify modal form populated
+            await Expect(page.Locator("#edit-exercise-name")).ToHaveValueAsync("Bench Press");
+            var chestToggle = page.Locator("#edit-exercise-muscles .muscle-toggle", new PageLocatorOptions { HasText = "Chest" });
             await Expect(chestToggle).ToHaveAttributeAsync("aria-checked", "true");
         }
         finally
@@ -469,13 +470,14 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         try
         {
             await page.Locator("#exercise-name").FillAsync("Squat");
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
             await Expect(page.Locator(".exercise-list__item")).ToBeVisibleAsync();
 
             await page.Locator(".exercise-list__edit-btn").First.ClickAsync();
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeVisibleAsync();
 
-            await Expect(page.Locator(".exercise-form__submit")).ToHaveTextAsync("Update Exercise");
-            await Expect(page.Locator("#exercise-cancel")).ToBeVisibleAsync();
+            await Expect(page.Locator("#edit-modal-form .exercise-form__submit")).ToHaveTextAsync("Save Changes");
+            await Expect(page.Locator("#edit-modal-cancel")).ToBeVisibleAsync();
         }
         finally
         {
@@ -490,12 +492,14 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         try
         {
             await page.Locator("#exercise-name").FillAsync("Sqat");
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
             await Expect(page.Locator(".exercise-list__item")).ToBeVisibleAsync();
 
             await page.Locator(".exercise-list__edit-btn").First.ClickAsync();
-            await page.Locator("#exercise-name").FillAsync("Squat");
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeVisibleAsync();
+            await page.Locator("#edit-exercise-name").FillAsync("Squat");
+            await page.Locator("#edit-modal-form .exercise-form__submit").ClickAsync();
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeHiddenAsync();
 
             // Should update in list, not duplicate
             await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(1);
@@ -514,15 +518,17 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         try
         {
             await page.Locator("#exercise-name").FillAsync("Deadlift");
-            await page.Locator(".muscle-toggle", new PageLocatorOptions { HasText = "Back" }).ClickAsync();
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-muscles .muscle-toggle", new PageLocatorOptions { HasText = "Back" }).ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
             await Expect(page.Locator(".exercise-list__item")).ToBeVisibleAsync();
 
             await page.Locator(".exercise-list__edit-btn").First.ClickAsync();
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeVisibleAsync();
             // Add Hamstrings, remove Back
-            await page.Locator(".muscle-toggle", new PageLocatorOptions { HasText = "Back" }).ClickAsync();
-            await page.Locator(".muscle-toggle", new PageLocatorOptions { HasText = "Hamstrings" }).ClickAsync();
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#edit-exercise-muscles .muscle-toggle", new PageLocatorOptions { HasText = "Back" }).ClickAsync();
+            await page.Locator("#edit-exercise-muscles .muscle-toggle", new PageLocatorOptions { HasText = "Hamstrings" }).ClickAsync();
+            await page.Locator("#edit-modal-form .exercise-form__submit").ClickAsync();
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeHiddenAsync();
 
             await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(1);
             await Expect(page.Locator(".exercise-list__muscle-chip")).ToHaveTextAsync(["Hamstrings"]);
@@ -540,17 +546,17 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         try
         {
             await page.Locator("#exercise-name").FillAsync("Squat");
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
             await Expect(page.Locator(".exercise-list__item")).ToBeVisibleAsync();
 
             await page.Locator(".exercise-list__edit-btn").First.ClickAsync();
-            await Expect(page.Locator(".exercise-form__submit")).ToHaveTextAsync("Update Exercise");
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeVisibleAsync();
 
-            await page.Locator("#exercise-cancel").ClickAsync();
+            await page.Locator("#edit-modal-cancel").ClickAsync();
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeHiddenAsync();
 
-            await Expect(page.Locator(".exercise-form__submit")).ToHaveTextAsync("Add Exercise");
-            await Expect(page.Locator("#exercise-name")).ToHaveValueAsync("");
-            await Expect(page.Locator("#exercise-cancel")).ToBeHiddenAsync();
+            // Create form should remain unchanged
+            await Expect(page.Locator("#exercise-form .exercise-form__submit")).ToHaveTextAsync("Add Exercise");
         }
         finally
         {
@@ -565,14 +571,15 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         try
         {
             await page.Locator("#exercise-name").FillAsync("Squat");
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
             await Expect(page.Locator(".exercise-list__item")).ToBeVisibleAsync();
 
             await page.Locator(".exercise-list__edit-btn").First.ClickAsync();
-            await page.Locator("#exercise-name").FillAsync("");
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeVisibleAsync();
+            await page.Locator("#edit-exercise-name").FillAsync("");
+            await page.Locator("#edit-modal-form .exercise-form__submit").ClickAsync();
 
-            await Expect(page.Locator("#exercise-error")).ToHaveTextAsync("Exercise name is required.");
+            await Expect(page.Locator("#edit-exercise-error")).ToHaveTextAsync("Exercise name is required.");
         }
         finally
         {
@@ -588,19 +595,20 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         {
             // Create two exercises
             await page.Locator("#exercise-name").FillAsync("Alpha");
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
             await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(1);
 
             await page.Locator("#exercise-name").FillAsync("Beta");
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
             await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(2);
 
             // Edit Beta to Alpha (duplicate)
             await page.Locator(".exercise-list__edit-btn").Nth(1).ClickAsync();
-            await page.Locator("#exercise-name").FillAsync("alpha");
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeVisibleAsync();
+            await page.Locator("#edit-exercise-name").FillAsync("alpha");
+            await page.Locator("#edit-modal-form .exercise-form__submit").ClickAsync();
 
-            await Expect(page.Locator("#exercise-api-error")).ToHaveTextAsync("An exercise with this name already exists.");
+            await Expect(page.Locator("#edit-exercise-api-error")).ToHaveTextAsync("An exercise with this name already exists.");
         }
         finally
         {
@@ -615,15 +623,16 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         try
         {
             await page.Locator("#exercise-name").FillAsync("Squat");
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
             await Expect(page.Locator(".exercise-list__item")).ToBeVisibleAsync();
 
             await page.Locator(".exercise-list__edit-btn").First.ClickAsync();
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeVisibleAsync();
             // Submit without changing name
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#edit-modal-form .exercise-form__submit").ClickAsync();
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeHiddenAsync();
 
-            // Should succeed - back to create mode
-            await Expect(page.Locator(".exercise-form__submit")).ToHaveTextAsync("Add Exercise");
+            // Should succeed
             await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(1);
         }
         finally
@@ -640,20 +649,25 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         {
             // Create two exercises
             await page.Locator("#exercise-name").FillAsync("Alpha");
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
             await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(1);
 
             await page.Locator("#exercise-name").FillAsync("Beta");
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
             await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(2);
 
             // Edit first exercise
             await page.Locator(".exercise-list__edit-btn").First.ClickAsync();
-            await Expect(page.Locator("#exercise-name")).ToHaveValueAsync("Alpha");
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeVisibleAsync();
+            await Expect(page.Locator("#edit-exercise-name")).ToHaveValueAsync("Alpha");
 
-            // Switch to editing second exercise
+            // Close modal, then open for second exercise
+            await page.Locator("#edit-modal-cancel").ClickAsync();
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeHiddenAsync();
+
             await page.Locator(".exercise-list__edit-btn").Nth(1).ClickAsync();
-            await Expect(page.Locator("#exercise-name")).ToHaveValueAsync("Beta");
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeVisibleAsync();
+            await Expect(page.Locator("#edit-exercise-name")).ToHaveValueAsync("Beta");
         }
         finally
         {
@@ -677,7 +691,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
 
             // Tab to first muscle toggle
             await page.Keyboard.PressAsync("Tab");
-            var firstToggle = page.Locator(".muscle-toggle").First;
+            var firstToggle = page.Locator("#exercise-muscles .muscle-toggle").First;
             await Expect(firstToggle).ToBeFocusedAsync();
         }
         finally
@@ -692,7 +706,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         var page = await CreatePageAsync();
         try
         {
-            var firstToggle = page.Locator(".muscle-toggle").First;
+            var firstToggle = page.Locator("#exercise-muscles .muscle-toggle").First;
             await firstToggle.FocusAsync();
             await Expect(firstToggle).ToHaveAttributeAsync("aria-checked", "false");
 
@@ -750,7 +764,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         var page = await CreatePageAsync();
         try
         {
-            var toggles = page.Locator(".muscle-toggle");
+            var toggles = page.Locator("#exercise-muscles .muscle-toggle");
             var count = await toggles.CountAsync();
             Assert.Equal(11, count);
 
@@ -774,7 +788,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         try
         {
             await page.Locator("#exercise-name").FillAsync("Bench Press");
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
             await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(1);
 
             var editBtn = page.Locator(".exercise-list__edit-btn").First;
@@ -793,11 +807,11 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         try
         {
             await page.Locator("#exercise-name").FillAsync("Slow Save");
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
 
             // After successful save, button should be re-enabled
             await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(1);
-            var submitBtn = page.Locator(".exercise-form__submit");
+            var submitBtn = page.Locator("#exercise-form .exercise-form__submit");
             await Expect(submitBtn).Not.ToHaveAttributeAsync("aria-disabled", "true");
         }
         finally
@@ -830,7 +844,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         {
             await Expect(page.Locator(".exercises-page__title")).ToBeVisibleAsync();
             await Expect(page.Locator("#exercise-name")).ToBeVisibleAsync();
-            await Expect(page.Locator(".exercise-form__submit")).ToBeVisibleAsync();
+            await Expect(page.Locator("#exercise-form .exercise-form__submit")).ToBeVisibleAsync();
         }
         finally
         {
@@ -845,7 +859,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         try
         {
             await page.Locator("#exercise-name").FillAsync("Mobile Exercise");
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
             await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(1);
         }
         finally
@@ -864,7 +878,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
             await Expect(muscleGroup).ToBeVisibleAsync();
 
             // All 11 toggles should be visible even on narrow viewport
-            var toggles = page.Locator(".muscle-toggle");
+            var toggles = page.Locator("#exercise-muscles .muscle-toggle");
             var count = await toggles.CountAsync();
             Assert.Equal(11, count);
 
@@ -886,12 +900,12 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         try
         {
             // Submit button
-            var submitBox = await page.Locator(".exercise-form__submit").BoundingBoxAsync();
+            var submitBox = await page.Locator("#exercise-form .exercise-form__submit").BoundingBoxAsync();
             Assert.NotNull(submitBox);
             Assert.True(submitBox.Height >= 44, $"Submit button height {submitBox.Height}px < 44px");
 
             // Muscle toggle
-            var toggleBox = await page.Locator(".muscle-toggle").First.BoundingBoxAsync();
+            var toggleBox = await page.Locator("#exercise-muscles .muscle-toggle").First.BoundingBoxAsync();
             Assert.NotNull(toggleBox);
             Assert.True(toggleBox.Height >= 44, $"Muscle toggle height {toggleBox.Height}px < 44px");
         }
@@ -954,10 +968,10 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
 
             // Measure time from click to loading state
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            await page.Locator(".exercise-form__submit").ClickAsync();
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
 
             // Wait for the submit button to show loading state
-            await page.Locator(".exercise-form__submit[aria-disabled='true']").WaitForAsync(new LocatorWaitForOptions
+            await page.Locator("#exercise-form .exercise-form__submit[aria-disabled='true']").WaitForAsync(new LocatorWaitForOptions
             {
                 State = WaitForSelectorState.Attached,
                 Timeout = 200,

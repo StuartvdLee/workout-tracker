@@ -16,9 +16,13 @@ interface Muscle {
 
 let exercises: Exercise[] = [];
 let muscles: Muscle[] = [];
-let editingExerciseId: string | null = null;
 let selectedMuscleIds: Set<string> = new Set();
 let isSubmitting = false;
+
+// Edit modal state
+let editingExerciseId: string | null = null;
+let selectedEditMuscleIds: Set<string> = new Set();
+let isEditSubmitting = false;
 
 export async function render(container: HTMLElement): Promise<void> {
   container.innerHTML = `
@@ -45,7 +49,6 @@ export async function render(container: HTMLElement): Promise<void> {
         <div class="exercise-form__error" id="exercise-error" role="alert" aria-live="polite"></div>
         <div class="exercise-form__actions">
           <button class="exercise-form__submit" type="submit">Add Exercise</button>
-          <button class="exercise-form__cancel" type="button" id="exercise-cancel" style="display:none;">Cancel</button>
         </div>
         <div class="exercise-form__api-error" id="exercise-api-error" role="alert" aria-live="polite"></div>
       </form>
@@ -56,30 +59,104 @@ export async function render(container: HTMLElement): Promise<void> {
       <div class="exercise-list__empty" id="exercise-empty" style="display:none;">
         No exercises yet. Add your first exercise above!
       </div>
+      <div class="edit-modal-backdrop" id="edit-modal-backdrop" style="display:none;">
+        <div class="edit-modal" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
+          <h2 class="edit-modal__title" id="edit-modal-title">Edit Exercise</h2>
+          <form class="edit-modal__form" id="edit-modal-form" novalidate>
+            <div class="exercise-form__group">
+              <label class="exercise-form__label" for="edit-exercise-name">Exercise name</label>
+              <input class="exercise-form__input" type="text" id="edit-exercise-name" maxlength="150" autocomplete="off" aria-describedby="edit-exercise-error" />
+            </div>
+            <div class="exercise-form__group">
+              <label class="exercise-form__label">Targeted muscles (optional)</label>
+              <div class="exercise-form__muscles" id="edit-exercise-muscles" role="group" aria-label="Targeted muscles"></div>
+            </div>
+            <div class="exercise-form__error" id="edit-exercise-error" role="alert" aria-live="polite"></div>
+            <div class="edit-modal__actions">
+              <button class="exercise-form__submit" type="submit">Save Changes</button>
+              <button class="exercise-form__cancel edit-modal__cancel" type="button" id="edit-modal-cancel">Cancel</button>
+            </div>
+            <div class="exercise-form__api-error" id="edit-exercise-api-error" role="alert" aria-live="polite"></div>
+          </form>
+        </div>
+      </div>
     </div>
   `;
 
   editingExerciseId = null;
   selectedMuscleIds = new Set();
+  selectedEditMuscleIds = new Set();
   isSubmitting = false;
+  isEditSubmitting = false;
 
   initForm();
+  initEditModal();
   await loadData();
 }
 
 function initForm(): void {
   const form = document.getElementById("exercise-form") as HTMLFormElement | null;
-  const cancelBtn = document.getElementById("exercise-cancel") as HTMLButtonElement | null;
-
   if (!form) return;
 
   form.addEventListener("submit", (event: Event) => {
     event.preventDefault();
     void handleSubmit();
   });
+}
+
+function initEditModal(): void {
+  const form = document.getElementById("edit-modal-form") as HTMLFormElement | null;
+  const cancelBtn = document.getElementById("edit-modal-cancel") as HTMLButtonElement | null;
+  const backdrop = document.getElementById("edit-modal-backdrop") as HTMLElement | null;
+
+  if (!form || !backdrop) return;
+
+  form.addEventListener("submit", (event: Event) => {
+    event.preventDefault();
+    void handleEditSubmit();
+  });
 
   cancelBtn?.addEventListener("click", () => {
-    resetToCreateMode();
+    closeEditModal();
+  });
+
+  backdrop.addEventListener("click", (event: Event) => {
+    if (event.target === backdrop) {
+      closeEditModal();
+    }
+  });
+
+  backdrop.addEventListener("keydown", (event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      closeEditModal();
+      return;
+    }
+
+    // Focus trap
+    if (event.key === "Tab") {
+      const modal = backdrop.querySelector(".edit-modal") as HTMLElement | null;
+      if (!modal) return;
+
+      const focusable = modal.querySelectorAll<HTMLElement>(
+        'input, button, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (event.shiftKey) {
+        if (document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    }
   });
 }
 
@@ -190,7 +267,7 @@ function renderExerciseList(): void {
     editBtn.setAttribute("aria-label", `Edit ${exercise.name}`);
     editBtn.setAttribute("data-exercise-id", exercise.exerciseId);
     editBtn.addEventListener("click", () => {
-      enterEditMode(exercise);
+      openEditModal(exercise);
     });
 
     li.appendChild(editBtn);
@@ -204,7 +281,7 @@ async function handleSubmit(): Promise<void> {
   const nameInput = document.getElementById("exercise-name") as HTMLInputElement | null;
   const errorEl = document.getElementById("exercise-error") as HTMLElement | null;
   const apiErrorEl = document.getElementById("exercise-api-error") as HTMLElement | null;
-  const submitBtn = document.querySelector(".exercise-form__submit") as HTMLButtonElement | null;
+  const submitBtn = document.querySelector("#exercise-form .exercise-form__submit") as HTMLButtonElement | null;
 
   if (!nameInput || !errorEl || !apiErrorEl || !submitBtn) return;
 
@@ -234,24 +311,20 @@ async function handleSubmit(): Promise<void> {
 
   try {
     const muscleIds = Array.from(selectedMuscleIds);
-    const isEdit = editingExerciseId !== null;
-    const url = isEdit ? `/api/exercises/${editingExerciseId}` : "/api/exercises";
-    const method = isEdit ? "PUT" : "POST";
 
-    const response = await fetch(url, {
-      method,
+    const response = await fetch("/api/exercises", {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, muscleIds }),
     });
 
     if (response.ok) {
-      // Reload list
       const exercisesRes = await fetch("/api/exercises");
       if (exercisesRes.ok) {
         exercises = await exercisesRes.json();
       }
 
-      resetToCreateMode();
+      resetCreateForm();
       renderExerciseList();
     } else {
       const data = await response.json();
@@ -262,26 +335,21 @@ async function handleSubmit(): Promise<void> {
   } finally {
     isSubmitting = false;
     submitBtn.removeAttribute("aria-disabled");
-    submitBtn.textContent = originalText;
+    submitBtn.textContent = originalText ?? "Add Exercise";
     submitBtn.classList.remove("exercise-form__submit--loading");
-
-    // In edit mode, restore proper button text
-    if (editingExerciseId !== null) {
-      submitBtn.textContent = "Update Exercise";
-    } else {
-      submitBtn.textContent = "Add Exercise";
-    }
   }
 }
 
-function enterEditMode(exercise: Exercise): void {
-  const nameInput = document.getElementById("exercise-name") as HTMLInputElement | null;
-  const submitBtn = document.querySelector(".exercise-form__submit") as HTMLButtonElement | null;
-  const cancelBtn = document.getElementById("exercise-cancel") as HTMLButtonElement | null;
-  const errorEl = document.getElementById("exercise-error") as HTMLElement | null;
-  const apiErrorEl = document.getElementById("exercise-api-error") as HTMLElement | null;
+function openEditModal(exercise: Exercise): void {
+  const backdrop = document.getElementById("edit-modal-backdrop") as HTMLElement | null;
+  const nameInput = document.getElementById("edit-exercise-name") as HTMLInputElement | null;
+  const errorEl = document.getElementById("edit-exercise-error") as HTMLElement | null;
+  const apiErrorEl = document.getElementById("edit-exercise-api-error") as HTMLElement | null;
 
-  if (!nameInput || !submitBtn || !cancelBtn) return;
+  if (!backdrop || !nameInput) return;
+
+  editingExerciseId = exercise.exerciseId;
+  nameInput.value = exercise.name;
 
   // Clear errors
   if (errorEl) {
@@ -291,36 +359,129 @@ function enterEditMode(exercise: Exercise): void {
   }
   if (apiErrorEl) apiErrorEl.textContent = "";
 
-  editingExerciseId = exercise.exerciseId;
-  nameInput.value = exercise.name;
-  submitBtn.textContent = "Update Exercise";
-  cancelBtn.style.display = "block";
-
   // Set muscle toggle states
-  selectedMuscleIds = new Set(exercise.muscles.map(m => m.muscleId));
-  const toggleBtns = document.querySelectorAll<HTMLButtonElement>(".muscle-toggle");
-  for (const btn of toggleBtns) {
-    const muscleId = btn.getAttribute("data-muscle-id") ?? "";
-    if (selectedMuscleIds.has(muscleId)) {
-      btn.classList.add("muscle-toggle--active");
-      btn.setAttribute("aria-checked", "true");
-    } else {
-      btn.classList.remove("muscle-toggle--active");
-      btn.setAttribute("aria-checked", "false");
-    }
-  }
+  selectedEditMuscleIds = new Set(exercise.muscles.map(m => m.muscleId));
+  renderEditMuscleToggles();
 
+  backdrop.style.display = "";
   nameInput.focus();
 }
 
-function resetToCreateMode(): void {
+function closeEditModal(): void {
+  const backdrop = document.getElementById("edit-modal-backdrop") as HTMLElement | null;
+  if (backdrop) backdrop.style.display = "none";
+  editingExerciseId = null;
+  selectedEditMuscleIds = new Set();
+}
+
+function renderEditMuscleToggles(): void {
+  const container = document.getElementById("edit-exercise-muscles");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  for (const muscle of muscles) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "muscle-toggle";
+    btn.textContent = muscle.name;
+    btn.setAttribute("role", "checkbox");
+    btn.setAttribute("data-muscle-id", muscle.muscleId);
+
+    if (selectedEditMuscleIds.has(muscle.muscleId)) {
+      btn.classList.add("muscle-toggle--active");
+      btn.setAttribute("aria-checked", "true");
+    } else {
+      btn.setAttribute("aria-checked", "false");
+    }
+
+    btn.addEventListener("click", () => {
+      toggleEditMuscle(muscle.muscleId, btn);
+    });
+
+    container.appendChild(btn);
+  }
+}
+
+function toggleEditMuscle(muscleId: string, btn: HTMLButtonElement): void {
+  if (selectedEditMuscleIds.has(muscleId)) {
+    selectedEditMuscleIds.delete(muscleId);
+    btn.classList.remove("muscle-toggle--active");
+    btn.setAttribute("aria-checked", "false");
+  } else {
+    selectedEditMuscleIds.add(muscleId);
+    btn.classList.add("muscle-toggle--active");
+    btn.setAttribute("aria-checked", "true");
+  }
+}
+
+async function handleEditSubmit(): Promise<void> {
+  if (isEditSubmitting || editingExerciseId === null) return;
+
+  const nameInput = document.getElementById("edit-exercise-name") as HTMLInputElement | null;
+  const errorEl = document.getElementById("edit-exercise-error") as HTMLElement | null;
+  const apiErrorEl = document.getElementById("edit-exercise-api-error") as HTMLElement | null;
+  const submitBtn = document.querySelector("#edit-modal-form .exercise-form__submit") as HTMLButtonElement | null;
+
+  if (!nameInput || !errorEl || !apiErrorEl || !submitBtn) return;
+
+  clearValidationError(nameInput, errorEl);
+  apiErrorEl.textContent = "";
+
+  const name = nameInput.value.trim();
+
+  if (!name) {
+    showValidationError(nameInput, errorEl, "Exercise name is required.");
+    return;
+  }
+
+  if (name.length > 150) {
+    showValidationError(nameInput, errorEl, "Exercise name must be 150 characters or fewer.");
+    return;
+  }
+
+  isEditSubmitting = true;
+  submitBtn.setAttribute("aria-disabled", "true");
+  const originalText = submitBtn.textContent;
+  submitBtn.textContent = "Saving...";
+  submitBtn.classList.add("exercise-form__submit--loading");
+
+  try {
+    const muscleIds = Array.from(selectedEditMuscleIds);
+
+    const response = await fetch(`/api/exercises/${editingExerciseId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, muscleIds }),
+    });
+
+    if (response.ok) {
+      const exercisesRes = await fetch("/api/exercises");
+      if (exercisesRes.ok) {
+        exercises = await exercisesRes.json();
+      }
+
+      closeEditModal();
+      renderExerciseList();
+    } else {
+      const data = await response.json();
+      apiErrorEl.textContent = data.error || "An unexpected error occurred. Please try again.";
+    }
+  } catch {
+    apiErrorEl.textContent = "An unexpected error occurred. Please try again.";
+  } finally {
+    isEditSubmitting = false;
+    submitBtn.removeAttribute("aria-disabled");
+    submitBtn.textContent = originalText ?? "Save Changes";
+    submitBtn.classList.remove("exercise-form__submit--loading");
+  }
+}
+
+function resetCreateForm(): void {
   const nameInput = document.getElementById("exercise-name") as HTMLInputElement | null;
-  const submitBtn = document.querySelector(".exercise-form__submit") as HTMLButtonElement | null;
-  const cancelBtn = document.getElementById("exercise-cancel") as HTMLButtonElement | null;
   const errorEl = document.getElementById("exercise-error") as HTMLElement | null;
   const apiErrorEl = document.getElementById("exercise-api-error") as HTMLElement | null;
 
-  editingExerciseId = null;
   selectedMuscleIds = new Set();
 
   if (nameInput) {
@@ -328,13 +489,11 @@ function resetToCreateMode(): void {
     nameInput.classList.remove("exercise-form__input--error");
     nameInput.removeAttribute("aria-invalid");
   }
-  if (submitBtn) submitBtn.textContent = "Add Exercise";
-  if (cancelBtn) cancelBtn.style.display = "none";
   if (errorEl) errorEl.textContent = "";
   if (apiErrorEl) apiErrorEl.textContent = "";
 
-  // Reset all muscle toggles
-  const toggleBtns = document.querySelectorAll<HTMLButtonElement>(".muscle-toggle");
+  // Reset all muscle toggles in the create form
+  const toggleBtns = document.querySelectorAll<HTMLButtonElement>("#exercise-muscles .muscle-toggle");
   for (const btn of toggleBtns) {
     btn.classList.remove("muscle-toggle--active");
     btn.setAttribute("aria-checked", "false");
