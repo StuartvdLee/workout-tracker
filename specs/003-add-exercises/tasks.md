@@ -252,12 +252,75 @@ Task: T012 "Run US1 tests"
 Since stories build on each other sequentially:
 
 1. Complete Setup + Foundational phases
-2. Work through stories in priority order: US1 → US2 → US3 → US4
+2. Work through stories in priority order: US1 → US2 → US3 → US4 → US5
 3. Each story: write tests (fail) → implement → verify (pass)
 4. Polish phase for final cross-cutting validation
-5. Commit after each story checkpoint for incremental progress
+5. Bug fix phase for runtime issues discovered during testing
+6. Commit after each story checkpoint for incremental progress
 
 ---
+
+## Phase 8: US5 — Delete Exercise ✅ COMPLETED
+
+**Purpose**: Allow users to delete exercises with a confirmation dialog
+
+### T029 [US5] Add DELETE API endpoint
+- **File**: `src/WorkoutTracker.Api/Program.cs`
+- **Action**: Add `MapDelete("/api/exercises/{exerciseId:guid}")` endpoint that finds the exercise, removes it (CASCADE handles ExerciseMuscle rows), and returns 204 NoContent or 404
+- **Status**: ✅ Done
+
+### T030 [US5] Add DELETE proxy route
+- **File**: `src/WorkoutTracker.Web/Program.cs`
+- **Action**: Add `MapDelete("/api/exercises/{exerciseId}")` proxy route forwarding to API
+- **Status**: ✅ Done
+
+### T031 [US5] Add delete button and confirmation modal (TypeScript)
+- **File**: `src/WorkoutTracker.Web/wwwroot/ts/pages/exercises.ts`
+- **Action**: Add red trash icon button next to each edit button in exercise list; add delete confirmation modal with Delete (red) and Cancel (blue/white) buttons; implement `openDeleteModal()`, `closeDeleteModal()`, `handleDelete()` with Escape, backdrop click, and focus trapping support
+- **Status**: ✅ Done
+
+### T032 [US5] Add delete button and confirmation modal CSS
+- **File**: `src/WorkoutTracker.Web/wwwroot/css/styles.css`
+- **Action**: Add `.exercise-list__delete-btn` (red, trash icon), `.delete-modal-backdrop`, `.delete-modal`, `.delete-modal__delete` (red), `.delete-modal__cancel` (blue/white), `.delete-modal__error` styles following BEM convention
+- **Status**: ✅ Done
+
+### T033 [US5] Add mock DELETE endpoint
+- **File**: `src/WorkoutTracker.Tests/Infrastructure/WebAppFixture.cs`
+- **Action**: Add `MapDelete("/api/exercises/{exerciseId}")` mock endpoint that removes exercise from `_exercises` list and returns 204 or 404
+- **Status**: ✅ Done
+
+### T034 [US5] Add E2E tests for delete
+- **File**: `src/WorkoutTracker.Tests/E2E/ExercisesPageTests.cs`
+- **Action**: 8 new E2E tests: delete button visibility, confirmation modal opens, cancel closes without deleting, confirm deletes and closes, only targeted exercise deleted, Escape closes modal, backdrop click closes modal, ARIA alertdialog attributes
+- **Status**: ✅ Done (100 total tests passing)
+
+---
+
+## Phase 9: Bug Fixes & UI Polish ✅ COMPLETED
+
+### T035 [BUG] Fix missing API proxy routes
+- **Fix**: Web project only proxied `/api/workout-types` — exercises and muscles routes were missing, causing the fallback to return `index.html` as JSON
+- **Status**: ✅ Done
+
+### T036 [BUG] Fix EF Core PendingModelChangesWarning crash
+- **Fix**: Migration added index/constraint via raw SQL but DbContext didn't declare them — added `HasIndex` and `HasCheckConstraint` to fluent API
+- **Status**: ✅ Done
+
+### T037 [BUG] Fix EF Core DbUpdateConcurrencyException on PUT
+- **Fix**: `Include()` then `Clear()` on navigation collection confused EF Core change tracker — replaced with `ExecuteDeleteAsync()` (bulk SQL) then direct DbSet additions
+- **Status**: ✅ Done
+
+### T038 [UI] Convert edit from inline form to modal dialog
+- **Fix**: Edit mode originally reused the creation form; converted to a separate modal dialog with ARIA, focus trapping, Escape/backdrop close
+- **Status**: ✅ Done
+
+### T039 [UI] Replace Edit text with pencil SVG icon
+- **Fix**: Edit button changed from text "Edit" to pencil SVG icon with blue outline matching delete button style
+- **Status**: ✅ Done
+
+### T040 [BUG] Fix muscle toggle hover overriding active state
+- **Fix**: `:hover` was overriding `.muscle-toggle--active` color, making buttons appear all-blue while hovered. On touch devices, `:hover` sticks permanently. Added `.muscle-toggle--active:hover` override and `@media (hover: none)` media query
+- **Status**: ✅ Done
 
 ## Analysis Issue Resolution
 
@@ -275,8 +338,10 @@ This tasks.md addresses the following cross-artifact analysis findings:
 - [Story] label maps task to specific user story for traceability
 - E2E tests use mock API endpoints in WebAppFixture, not the real database
 - Real API endpoints (Program.cs) follow the same contract as mocks for production use
-- The exercises.ts file is modified across US1–US4; each story extends the previous implementation
-- All CSS is added once in foundational phase to avoid repeated edits to styles.css
-- All mock endpoints are added once in foundational phase to avoid repeated edits to WebAppFixture.cs
+- The exercises.ts file is modified across US1–US5; each story extends the previous implementation
+- All CSS is added once in foundational phase to avoid repeated edits to styles.css (except Phase 8–9 additions)
+- All mock endpoints are added once in foundational phase to avoid repeated edits to WebAppFixture.cs (except DELETE mock in Phase 8)
 - The single EF Core migration covers all schema changes (models, constraints, seed data)
 - Commit after each task or story checkpoint for incremental progress
+- Edit uses a modal dialog (role="dialog"), delete uses a confirmation dialog (role="alertdialog")
+- Muscle toggle CSS uses `@media (hover: none)` to prevent sticky hover on touch devices

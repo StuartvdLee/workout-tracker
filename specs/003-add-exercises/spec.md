@@ -2,7 +2,7 @@
 
 **Feature Branch**: `003-add-exercises`  
 **Created**: 2025-07-15  
-**Status**: Draft  
+**Status**: Implemented  
 **Input**: User description: "I want to add exercises through the app. An exercise should have a name (required) and which muscles are targeted by it (optional)."
 
 ## User Scenarios & Testing *(mandatory)*
@@ -60,19 +60,36 @@ The user can view all exercises they have created. Each exercise displays its na
 
 ### User Story 4 - Edit an Existing Exercise (Priority: P4)
 
-A user can edit an existing exercise directly from the exercise list. Clicking an edit icon/button on an exercise row populates the creation form with that exercise's current data (name and muscles), switching the form into "edit" mode. The user modifies the data and saves. A cancel button is available in edit mode to discard changes and return the form to "create" mode.
+A user can edit an existing exercise from the exercise list. Clicking a pencil icon on an exercise row opens a modal dialog pre-populated with that exercise's current data (name and muscles). The user modifies the data and saves within the modal. A cancel button or pressing Escape/clicking the backdrop closes the modal without saving.
 
 **Why this priority**: Editing exercises allows users to correct mistakes or update muscle associations after creation, but it depends on the creation and listing stories being in place first.
 
-**Independent Test**: Can be fully tested by creating an exercise, clicking its edit button, verifying the form populates with the exercise's data, modifying the name or muscles, saving, and verifying the updated exercise appears correctly in the list. Also test cancellation discards changes and returns to create mode.
+**Independent Test**: Can be fully tested by creating an exercise, clicking its edit (pencil) button, verifying the modal opens with the exercise's data, modifying the name or muscles, saving, and verifying the updated exercise appears correctly in the list. Also test that cancellation/Escape/backdrop click discards changes and closes the modal.
 
 **Acceptance Scenarios**:
 
-1. **Given** the user views the exercise list, **When** they click the edit icon/button on an exercise row, **Then** the creation form is populated with that exercise's current name and selected muscles, and the form switches to "edit" mode.
-2. **Given** the form is in edit mode, **When** the user modifies the exercise name and/or muscle selections and submits, **Then** the exercise is updated (not duplicated) and the list reflects the changes.
-3. **Given** the form is in edit mode, **When** the user clicks the cancel button, **Then** all unsaved changes are discarded and the form returns to empty "create" mode.
-4. **Given** the form is in edit mode, **When** the user clears the name and attempts to submit, **Then** the same validation rules apply (name required, max length, no duplicates) and the update is rejected with an appropriate message.
-5. **Given** the form is in edit mode, **When** the user changes the name to one that already exists (case-insensitive) for a different exercise, **Then** a duplicate-name validation message is displayed and the update is rejected.
+1. **Given** the user views the exercise list, **When** they click the pencil icon on an exercise row, **Then** a modal dialog opens pre-populated with that exercise's current name and selected muscles.
+2. **Given** the edit modal is open, **When** the user modifies the exercise name and/or muscle selections and submits, **Then** the exercise is updated (not duplicated) and the list reflects the changes.
+3. **Given** the edit modal is open, **When** the user clicks the cancel button, presses Escape, or clicks the backdrop, **Then** all unsaved changes are discarded and the modal closes.
+4. **Given** the edit modal is open, **When** the user clears the name and attempts to submit, **Then** the same validation rules apply (name required, max length, no duplicates) and the update is rejected with an appropriate message.
+5. **Given** the edit modal is open, **When** the user changes the name to one that already exists (case-insensitive) for a different exercise, **Then** a duplicate-name validation message is displayed and the update is rejected.
+
+---
+
+### User Story 5 - Delete an Exercise (Priority: P5)
+
+A user can delete an exercise from the exercise list. Each exercise row displays a red trash icon button to the right of the edit button. Clicking it opens a confirmation dialog asking whether the user is sure. A red "Delete" button confirms the action, and a blue/white "Cancel" button dismisses the dialog without deleting.
+
+**Why this priority**: Deleting exercises lets users keep their library clean, but it depends on creation, listing, and editing stories.
+
+**Independent Test**: Can be fully tested by creating an exercise, clicking its delete (trash) button, verifying the confirmation dialog opens, clicking Delete, and verifying the exercise is removed from the list. Also test that clicking Cancel/Escape/backdrop dismisses the dialog without deleting.
+
+**Acceptance Scenarios**:
+
+1. **Given** the user views the exercise list, **When** they click the red trash icon on an exercise row, **Then** a confirmation dialog opens asking whether they want to delete the exercise.
+2. **Given** the delete confirmation dialog is open, **When** the user clicks the "Delete" button, **Then** the exercise is permanently deleted and the list is updated.
+3. **Given** the delete confirmation dialog is open, **When** the user clicks "Cancel", presses Escape, or clicks the backdrop, **Then** the dialog closes and the exercise is not deleted.
+4. **Given** only one exercise exists and the user deletes it, **When** the deletion completes, **Then** the empty state message is displayed.
 
 ---
 
@@ -100,19 +117,25 @@ A user can edit an existing exercise directly from the exercise list. Clicking a
 - **FR-008**: System MUST display a clear empty state when no exercises exist, guiding the user to create their first exercise.
 - **FR-009**: System MUST clear the creation form after a successful save, ready for the next entry.
 - **FR-010**: System MUST provide a predefined list of muscles consisting of: Chest, Back, Shoulders, Biceps, Triceps, Forearms, Core, Quads, Hamstrings, Glutes, Calves.
-- **FR-011**: System MUST allow users to edit an existing exercise by clicking an edit icon/button on each exercise row in the list.
-- **FR-012**: System MUST reuse the creation form for editing: clicking edit populates the form with the exercise's current name and muscle selections, and the form switches to "edit" mode.
-- **FR-013**: System MUST update (not duplicate) the exercise when the user submits the form in edit mode.
+- **FR-011**: System MUST allow users to edit an existing exercise by clicking a pencil icon on each exercise row in the list.
+- **FR-012**: System MUST open a modal dialog for editing, pre-populated with the exercise's current name and muscle selections.
+- **FR-013**: System MUST update (not duplicate) the exercise when the user submits the edit modal form.
 - **FR-014**: System MUST apply the same validation rules (non-empty name, max 150 characters, no duplicate names for a different exercise) when editing as when creating.
-- **FR-015**: System MUST provide a cancel button in edit mode that discards unsaved changes and returns the form to empty "create" mode.
+- **FR-015**: System MUST allow closing the edit modal via a cancel button, pressing Escape, or clicking the backdrop, discarding unsaved changes.
+- **FR-016**: System MUST allow users to delete an exercise by clicking a red trash icon on each exercise row.
+- **FR-017**: System MUST show a confirmation dialog before deleting, with a red "Delete" button and a blue/white "Cancel" button.
+- **FR-018**: System MUST permanently delete the exercise and update the list when the user confirms deletion.
+- **FR-019**: System MUST allow dismissing the delete confirmation via Cancel, Escape, or backdrop click without deleting.
 
 ### User Experience Consistency Requirements
 
 - **UX-001**: The Exercises page MUST follow the existing layout patterns established by the app (sidebar navigation, content area, mobile-responsive design).
 - **UX-002**: Form validation messages MUST appear inline near the relevant field, consistent with the existing validation pattern on the Home page.
 - **UX-003**: The exercise creation form MUST define the following states: default (ready for input), loading (save in progress with submit disabled), success (form cleared, exercise added to list), and error (user-friendly message displayed, input preserved).
-- **UX-003a**: In edit mode, the form MUST visually indicate it is in edit mode (e.g., "Update Exercise" submit label instead of "Add Exercise"), display a cancel button, and pre-populate all fields with the exercise's current data.
+- **UX-003a**: Editing MUST use a modal dialog (not the creation form). The modal has ARIA attributes (role="dialog", aria-modal="true"), focus trapping, and can be dismissed via Cancel, Escape, or backdrop click.
+- **UX-003b**: The delete confirmation MUST use a modal dialog with role="alertdialog", a red Delete button, and a blue/white Cancel button.
 - **UX-004**: Touch targets for all interactive elements (buttons, muscle selections) MUST meet the existing minimum size standard used in the app for mobile usability.
+- **UX-005**: Muscle toggle buttons MUST clearly show their selected/deselected state on both desktop and touch devices, without hover state interference.
 
 ### Performance Requirements
 
@@ -140,8 +163,7 @@ A user can edit an existing exercise directly from the exercise list. Clicking a
 ## Assumptions
 
 - The predefined muscle list (Chest, Back, Shoulders, Biceps, Triceps, Forearms, Core, Quads, Hamstrings, Glutes, Calves) covers the needs of typical users. Custom muscles are out of scope for this feature.
-- Editing and deleting exercises were originally out of scope. Editing has been brought into scope via clarification; deleting exercises remains out of scope and will be addressed separately.
-- This feature does not include searching, filtering, or sorting the exercise list. A simple chronological list is sufficient for the initial version.
+- This feature does not include searching, filtering, or sorting the exercise list. A simple alphabetically-ordered list is sufficient for the initial version.
 - No authentication or multi-user support is required; the app is assumed to be single-user.
 - The Exercises page currently exists as a placeholder in the sidebar navigation; this feature replaces that placeholder with functional content.
 
@@ -149,6 +171,12 @@ A user can edit an existing exercise directly from the exercise list. Clicking a
 
 ### Session 2026-03-28
 
-- Q: What interaction pattern should editing use — a separate edit page, reuse the creation form, or inline editing in the list? → A: Reuse creation form. Clicking edit populates the existing form with the exercise's data; form toggles between "create" and "edit" mode.
-- Q: How does the user trigger an edit — edit icon/button on each row, clicking the exercise name, or a context/long-press menu? → A: Edit icon/button on each exercise row in the list.
-- Q: What happens when the user cancels an edit — cancel button discards changes and returns to create mode, or browser back navigation? → A: Cancel button appears in edit mode; clicking it discards changes and returns to create mode.
+- Q: What interaction pattern should editing use — a separate edit page, reuse the creation form, or inline editing in the list? → A: Initially reuse creation form; later changed to modal dialog for better UX separation between create and edit flows.
+- Q: How does the user trigger an edit — edit icon/button on each row, clicking the exercise name, or a context/long-press menu? → A: Pencil icon on each exercise row in the list.
+- Q: What happens when the user cancels an edit — cancel button discards changes and returns to create mode, or browser back navigation? → A: Cancel button in the edit modal; also dismissible via Escape or backdrop click.
+
+### Session 2026-03-29
+
+- Q: Should delete be supported? → A: Yes. Red trash icon button to the right of the edit button, with a confirmation dialog before deletion.
+- Q: What should the edit button look like? → A: Pencil SVG icon with a blue outline, matching the delete button's visual style.
+- Bug fix: Muscle toggle hover state was overriding the active (selected) state, making selected buttons appear all-blue on hover and permanently on touch devices. Fixed with `.muscle-toggle--active:hover` override and `@media (hover: none)` for touch devices.
