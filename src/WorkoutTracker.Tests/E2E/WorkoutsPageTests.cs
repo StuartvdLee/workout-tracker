@@ -52,11 +52,12 @@ public class WorkoutsPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pla
 
     private static async Task CreateWorkoutViaUIAsync(IPage page, string name, string exerciseName)
     {
+        await page.WaitForSelectorAsync("#workout-form .workout-form__exercises button[role='checkbox']");
         await page.FillAsync("#workout-name", name);
-        await page.Locator(".workout-form__exercises button[role='checkbox']")
+        await page.Locator("#workout-form .workout-form__exercises button[role='checkbox']")
             .Filter(new() { HasText = exerciseName }).ClickAsync();
-        await page.Locator(".workout-form__submit").ClickAsync();
-        await page.WaitForSelectorAsync(".workout-list__item");
+        await page.Locator("#workout-form .workout-form__submit").ClickAsync();
+        await page.Locator(".workout-list__name").Filter(new() { HasText = name }).WaitForAsync();
     }
 
     // ──────────────────────────────────────────
@@ -172,10 +173,11 @@ public class WorkoutsPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pla
             await SeedExerciseAsync(page, "Bench Press");
             await NavigateToWorkoutsAsync(page);
 
+            await page.WaitForSelectorAsync("#workout-form .workout-form__exercises button[role='checkbox']");
             await page.FillAsync("#workout-name", "Push Day");
-            await page.Locator(".workout-form__exercises button[role='checkbox']")
+            await page.Locator("#workout-form .workout-form__exercises button[role='checkbox']")
                 .Filter(new() { HasText = "Bench Press" }).ClickAsync();
-            await page.Locator(".workout-form__submit").ClickAsync();
+            await page.Locator("#workout-form .workout-form__submit").ClickAsync();
 
             var item = page.Locator(".workout-list__item");
             await Expect(item).ToBeVisibleAsync();
@@ -198,9 +200,10 @@ public class WorkoutsPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pla
             await NavigateToWorkoutsAsync(page);
 
             // Select an exercise but leave name empty
-            await page.Locator(".workout-form__exercises button[role='checkbox']")
+            await page.WaitForSelectorAsync("#workout-form .workout-form__exercises button[role='checkbox']");
+            await page.Locator("#workout-form .workout-form__exercises button[role='checkbox']")
                 .Filter(new() { HasText = "Squat" }).ClickAsync();
-            await page.Locator(".workout-form__submit").ClickAsync();
+            await page.Locator("#workout-form .workout-form__submit").ClickAsync();
 
             await Expect(page.Locator("#workout-error")).ToHaveTextAsync("Workout name is required.");
         }
@@ -219,10 +222,11 @@ public class WorkoutsPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pla
             await SeedExerciseAsync(page, "Squat");
             await NavigateToWorkoutsAsync(page);
 
+            await page.WaitForSelectorAsync("#workout-form .workout-form__exercises button[role='checkbox']");
             await page.FillAsync("#workout-name", "   ");
-            await page.Locator(".workout-form__exercises button[role='checkbox']")
+            await page.Locator("#workout-form .workout-form__exercises button[role='checkbox']")
                 .Filter(new() { HasText = "Squat" }).ClickAsync();
-            await page.Locator(".workout-form__submit").ClickAsync();
+            await page.Locator("#workout-form .workout-form__submit").ClickAsync();
 
             await Expect(page.Locator("#workout-error")).ToHaveTextAsync("Workout name is required.");
         }
@@ -241,13 +245,14 @@ public class WorkoutsPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pla
             await SeedExerciseAsync(page, "Squat");
             await NavigateToWorkoutsAsync(page);
 
+            await page.WaitForSelectorAsync("#workout-form .workout-form__exercises button[role='checkbox']");
             var longName = new string('A', 151);
             await page.Locator("#workout-name").EvaluateAsync(
                 "(el, name) => { el.removeAttribute('maxlength'); el.value = name; }",
                 longName);
-            await page.Locator(".workout-form__exercises button[role='checkbox']")
+            await page.Locator("#workout-form .workout-form__exercises button[role='checkbox']")
                 .Filter(new() { HasText = "Squat" }).ClickAsync();
-            await page.Locator(".workout-form__submit").ClickAsync();
+            await page.Locator("#workout-form .workout-form__submit").ClickAsync();
 
             await Expect(page.Locator("#workout-error")).ToHaveTextAsync("Workout name must be 150 characters or fewer.");
         }
@@ -270,9 +275,9 @@ public class WorkoutsPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pla
 
             // Try creating duplicate
             await page.FillAsync("#workout-name", "push day");
-            await page.Locator(".workout-form__exercises button[role='checkbox']")
+            await page.Locator("#workout-form .workout-form__exercises button[role='checkbox']")
                 .Filter(new() { HasText = "Bench Press" }).ClickAsync();
-            await page.Locator(".workout-form__submit").ClickAsync();
+            await page.Locator("#workout-form .workout-form__submit").ClickAsync();
 
             await Expect(page.Locator("#workout-api-error")).ToHaveTextAsync("A workout with this name already exists.");
         }
@@ -291,8 +296,9 @@ public class WorkoutsPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pla
             await SeedExerciseAsync(page, "Squat");
             await NavigateToWorkoutsAsync(page);
 
+            await page.WaitForSelectorAsync("#workout-form .workout-form__exercises button[role='checkbox']");
             await page.FillAsync("#workout-name", "Leg Day");
-            await page.Locator(".workout-form__submit").ClickAsync();
+            await page.Locator("#workout-form .workout-form__submit").ClickAsync();
 
             await Expect(page.Locator("#workout-error")).ToHaveTextAsync("At least one exercise is required.");
         }
@@ -315,7 +321,7 @@ public class WorkoutsPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pla
 
             await Expect(page.Locator("#workout-name")).ToHaveValueAsync("");
             // Exercise toggles should be unchecked
-            var toggle = page.Locator(".workout-form__exercises button[role='checkbox']")
+            var toggle = page.Locator("#workout-form .workout-form__exercises button[role='checkbox']")
                 .Filter(new() { HasText = "Bench Press" });
             await Expect(toggle).ToHaveAttributeAsync("aria-checked", "false");
         }
@@ -344,12 +350,13 @@ public class WorkoutsPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pla
                 await route.FallbackAsync();
             });
 
+            await page.WaitForSelectorAsync("#workout-form .workout-form__exercises button[role='checkbox']");
             await page.FillAsync("#workout-name", "Leg Day");
-            await page.Locator(".workout-form__exercises button[role='checkbox']")
+            await page.Locator("#workout-form .workout-form__exercises button[role='checkbox']")
                 .Filter(new() { HasText = "Squat" }).ClickAsync();
-            await page.Locator(".workout-form__submit").ClickAsync();
+            await page.Locator("#workout-form .workout-form__submit").ClickAsync();
 
-            var submitBtn = page.Locator(".workout-form__submit");
+            var submitBtn = page.Locator("#workout-form .workout-form__submit");
             await Expect(submitBtn).ToHaveAttributeAsync("aria-disabled", "true");
             await Expect(submitBtn).ToHaveTextAsync("Saving...");
 
@@ -372,10 +379,11 @@ public class WorkoutsPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pla
             await SeedExerciseAsync(page, "Squat");
             await NavigateToWorkoutsAsync(page);
 
+            await page.WaitForSelectorAsync("#workout-form .workout-form__exercises button[role='checkbox']");
             await page.FillAsync("#workout-name", "__MOCK_SERVER_ERROR");
-            await page.Locator(".workout-form__exercises button[role='checkbox']")
+            await page.Locator("#workout-form .workout-form__exercises button[role='checkbox']")
                 .Filter(new() { HasText = "Squat" }).ClickAsync();
-            await page.Locator(".workout-form__submit").ClickAsync();
+            await page.Locator("#workout-form .workout-form__submit").ClickAsync();
 
             var apiError = page.Locator("#workout-api-error");
             await Expect(apiError).ToBeVisibleAsync();
@@ -427,12 +435,13 @@ public class WorkoutsPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pla
             await NavigateToWorkoutsAsync(page);
 
             // Create workout with 2 exercises
+            await page.WaitForSelectorAsync("#workout-form .workout-form__exercises button[role='checkbox']");
             await page.FillAsync("#workout-name", "Full Body");
-            await page.Locator(".workout-form__exercises button[role='checkbox']")
+            await page.Locator("#workout-form .workout-form__exercises button[role='checkbox']")
                 .Filter(new() { HasText = "Bench Press" }).ClickAsync();
-            await page.Locator(".workout-form__exercises button[role='checkbox']")
+            await page.Locator("#workout-form .workout-form__exercises button[role='checkbox']")
                 .Filter(new() { HasText = "Squat" }).ClickAsync();
-            await page.Locator(".workout-form__submit").ClickAsync();
+            await page.Locator("#workout-form .workout-form__submit").ClickAsync();
             await page.WaitForSelectorAsync(".workout-list__item");
 
             await Expect(page.Locator(".workout-list__exercise-count")).ToContainTextAsync("2 exercises");
