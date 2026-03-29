@@ -108,6 +108,128 @@ app.MapDelete("/api/exercises/{exerciseId:guid}", async (Guid exerciseId, ILogge
     }
 });
 
+app.MapGet("/api/workouts", async (ILogger<Program> logger, IHttpClientFactory httpClientFactory) =>
+{
+    try
+    {
+        var client = httpClientFactory.CreateClient("api");
+        var response = await client.GetAsync("/api/workouts");
+        var content = await response.Content.ReadAsStringAsync();
+        return Results.Content(content, "application/json", statusCode: (int)response.StatusCode);
+    }
+    catch (Exception ex)
+    {
+        WebProxyLog.ProxyError(logger, "GET /api/workouts", ex);
+        return Results.Json(new { error = "API unavailable." }, statusCode: 502);
+    }
+});
+
+app.MapGet("/api/workouts/{workoutId:guid}", async (Guid workoutId, ILogger<Program> logger, IHttpClientFactory httpClientFactory) =>
+{
+    try
+    {
+        var client = httpClientFactory.CreateClient("api");
+        var response = await client.GetAsync($"/api/workouts/{workoutId}");
+        var content = await response.Content.ReadAsStringAsync();
+        return Results.Content(content, "application/json", statusCode: (int)response.StatusCode);
+    }
+    catch (Exception ex)
+    {
+        WebProxyLog.ProxyError(logger, $"GET /api/workouts/{workoutId}", ex);
+        return Results.Json(new { error = "API unavailable." }, statusCode: 502);
+    }
+});
+
+app.MapPost("/api/workouts", async (ILogger<Program> logger, HttpRequest request, IHttpClientFactory httpClientFactory) =>
+{
+    try
+    {
+        var client = httpClientFactory.CreateClient("api");
+        var body = await new StreamReader(request.Body).ReadToEndAsync();
+        var content = new StringContent(body, System.Text.Encoding.UTF8, "application/json");
+        var response = await client.PostAsync("/api/workouts", content);
+        var responseContent = await response.Content.ReadAsStringAsync();
+        return Results.Content(responseContent, "application/json", statusCode: (int)response.StatusCode);
+    }
+    catch (Exception ex)
+    {
+        WebProxyLog.ProxyError(logger, "POST /api/workouts", ex);
+        return Results.Json(new { error = "API unavailable." }, statusCode: 502);
+    }
+});
+
+app.MapPut("/api/workouts/{workoutId:guid}", async (Guid workoutId, ILogger<Program> logger, HttpRequest request, IHttpClientFactory httpClientFactory) =>
+{
+    try
+    {
+        var client = httpClientFactory.CreateClient("api");
+        var body = await new StreamReader(request.Body).ReadToEndAsync();
+        var content = new StringContent(body, System.Text.Encoding.UTF8, "application/json");
+        var response = await client.PutAsync($"/api/workouts/{workoutId}", content);
+        var responseContent = await response.Content.ReadAsStringAsync();
+        return Results.Content(responseContent, "application/json", statusCode: (int)response.StatusCode);
+    }
+    catch (Exception ex)
+    {
+        WebProxyLog.ProxyError(logger, $"PUT /api/workouts/{workoutId}", ex);
+        return Results.Json(new { error = "API unavailable." }, statusCode: 502);
+    }
+});
+
+app.MapDelete("/api/workouts/{workoutId:guid}", async (Guid workoutId, ILogger<Program> logger, IHttpClientFactory httpClientFactory) =>
+{
+    try
+    {
+        var client = httpClientFactory.CreateClient("api");
+        var response = await client.DeleteAsync($"/api/workouts/{workoutId}");
+        if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+        {
+            return Results.NoContent();
+        }
+        var responseContent = await response.Content.ReadAsStringAsync();
+        return Results.Content(responseContent, "application/json", statusCode: (int)response.StatusCode);
+    }
+    catch (Exception ex)
+    {
+        WebProxyLog.ProxyError(logger, $"DELETE /api/workouts/{workoutId}", ex);
+        return Results.Json(new { error = "API unavailable." }, statusCode: 502);
+    }
+});
+
+app.MapPost("/api/workouts/{workoutId:guid}/sessions", async (Guid workoutId, ILogger<Program> logger, HttpRequest request, IHttpClientFactory httpClientFactory) =>
+{
+    try
+    {
+        var client = httpClientFactory.CreateClient("api");
+        var body = await new StreamReader(request.Body).ReadToEndAsync();
+        var content = new StringContent(body, System.Text.Encoding.UTF8, "application/json");
+        var response = await client.PostAsync($"/api/workouts/{workoutId}/sessions", content);
+        var responseContent = await response.Content.ReadAsStringAsync();
+        return Results.Content(responseContent, "application/json", statusCode: (int)response.StatusCode);
+    }
+    catch (Exception ex)
+    {
+        WebProxyLog.ProxyError(logger, $"POST /api/workouts/{workoutId}/sessions", ex);
+        return Results.Json(new { error = "API unavailable." }, statusCode: 502);
+    }
+});
+
+app.MapGet("/api/sessions", async (ILogger<Program> logger, IHttpClientFactory httpClientFactory) =>
+{
+    try
+    {
+        var client = httpClientFactory.CreateClient("api");
+        var response = await client.GetAsync("/api/sessions");
+        var content = await response.Content.ReadAsStringAsync();
+        return Results.Content(content, "application/json", statusCode: (int)response.StatusCode);
+    }
+    catch (Exception ex)
+    {
+        WebProxyLog.ProxyError(logger, "GET /api/sessions", ex);
+        return Results.Json(new { error = "API unavailable." }, statusCode: 502);
+    }
+});
+
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
