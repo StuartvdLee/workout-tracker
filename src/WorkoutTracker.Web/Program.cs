@@ -20,7 +20,7 @@ app.MapGet("/api/workout-types", async (IHttpClientFactory httpClientFactory) =>
     return Results.Content(content, "application/json");
 });
 
-app.MapGet("/api/muscles", async (IHttpClientFactory httpClientFactory) =>
+app.MapGet("/api/muscles", async (ILogger<Program> logger, IHttpClientFactory httpClientFactory) =>
 {
     try
     {
@@ -31,11 +31,12 @@ app.MapGet("/api/muscles", async (IHttpClientFactory httpClientFactory) =>
     }
     catch (Exception ex)
     {
-        return Results.Json(new { error = $"API unavailable: {ex.Message}" }, statusCode: 502);
+        WebProxyLog.ProxyError(logger, "GET /api/muscles", ex);
+        return Results.Json(new { error = "API unavailable." }, statusCode: 502);
     }
 });
 
-app.MapGet("/api/exercises", async (IHttpClientFactory httpClientFactory) =>
+app.MapGet("/api/exercises", async (ILogger<Program> logger, IHttpClientFactory httpClientFactory) =>
 {
     try
     {
@@ -46,11 +47,12 @@ app.MapGet("/api/exercises", async (IHttpClientFactory httpClientFactory) =>
     }
     catch (Exception ex)
     {
-        return Results.Json(new { error = $"API unavailable: {ex.Message}" }, statusCode: 502);
+        WebProxyLog.ProxyError(logger, "GET /api/exercises", ex);
+        return Results.Json(new { error = "API unavailable." }, statusCode: 502);
     }
 });
 
-app.MapPost("/api/exercises", async (HttpRequest request, IHttpClientFactory httpClientFactory) =>
+app.MapPost("/api/exercises", async (ILogger<Program> logger, HttpRequest request, IHttpClientFactory httpClientFactory) =>
 {
     try
     {
@@ -63,11 +65,12 @@ app.MapPost("/api/exercises", async (HttpRequest request, IHttpClientFactory htt
     }
     catch (Exception ex)
     {
-        return Results.Json(new { error = $"API unavailable: {ex.Message}" }, statusCode: 502);
+        WebProxyLog.ProxyError(logger, "POST /api/exercises", ex);
+        return Results.Json(new { error = "API unavailable." }, statusCode: 502);
     }
 });
 
-app.MapPut("/api/exercises/{exerciseId}", async (string exerciseId, HttpRequest request, IHttpClientFactory httpClientFactory) =>
+app.MapPut("/api/exercises/{exerciseId:guid}", async (Guid exerciseId, ILogger<Program> logger, HttpRequest request, IHttpClientFactory httpClientFactory) =>
 {
     try
     {
@@ -80,11 +83,12 @@ app.MapPut("/api/exercises/{exerciseId}", async (string exerciseId, HttpRequest 
     }
     catch (Exception ex)
     {
-        return Results.Json(new { error = $"API unavailable: {ex.Message}" }, statusCode: 502);
+        WebProxyLog.ProxyError(logger, $"PUT /api/exercises/{exerciseId}", ex);
+        return Results.Json(new { error = "API unavailable." }, statusCode: 502);
     }
 });
 
-app.MapDelete("/api/exercises/{exerciseId}", async (string exerciseId, IHttpClientFactory httpClientFactory) =>
+app.MapDelete("/api/exercises/{exerciseId:guid}", async (Guid exerciseId, ILogger<Program> logger, IHttpClientFactory httpClientFactory) =>
 {
     try
     {
@@ -99,7 +103,8 @@ app.MapDelete("/api/exercises/{exerciseId}", async (string exerciseId, IHttpClie
     }
     catch (Exception ex)
     {
-        return Results.Json(new { error = $"API unavailable: {ex.Message}" }, statusCode: 502);
+        WebProxyLog.ProxyError(logger, $"DELETE /api/exercises/{exerciseId}", ex);
+        return Results.Json(new { error = "API unavailable." }, statusCode: 502);
     }
 });
 
@@ -111,3 +116,9 @@ app.MapFallbackToFile("index.html");
 app.Run();
 // Expose Program class for WebApplicationFactory in tests
 public partial class Program { }
+
+internal static partial class WebProxyLog
+{
+    [LoggerMessage(Level = LogLevel.Error, Message = "Error proxying {Route}")]
+    public static partial void ProxyError(ILogger logger, string route, Exception ex);
+}

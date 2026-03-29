@@ -547,23 +547,29 @@ function clearValidationError(input: HTMLInputElement, errorEl: HTMLElement): vo
 
 function initDeleteModal(): void {
   const backdrop = document.getElementById("delete-modal-backdrop");
+
+  if (!backdrop) {
+    return;
+  }
+
+  const backdropEl = backdrop;
   const cancelBtn = document.getElementById("delete-modal-cancel");
   const confirmBtn = document.getElementById("delete-modal-confirm");
 
-  backdrop?.addEventListener("click", (event: Event) => {
-    if (event.target === backdrop) {
+  backdropEl.addEventListener("click", (event: Event) => {
+    if (event.target === backdropEl) {
       closeDeleteModal();
     }
   });
 
-  backdrop?.addEventListener("keydown", (event: KeyboardEvent) => {
+  backdropEl.addEventListener("keydown", (event: KeyboardEvent) => {
     if (event.key === "Escape") {
       closeDeleteModal();
     }
 
     // Focus trapping
     if (event.key === "Tab") {
-      const focusable = backdrop.querySelectorAll<HTMLElement>(
+      const focusable = backdropEl.querySelectorAll<HTMLElement>(
         'button:not([disabled]), [tabindex]:not([tabindex="-1"])'
       );
       if (focusable.length === 0) return;

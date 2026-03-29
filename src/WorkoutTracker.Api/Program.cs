@@ -75,15 +75,16 @@ app.MapPost("/api/exercises", async (HttpContext context, WorkoutTrackerDbContex
         return Results.Json(new { error = "Exercise name must be 150 characters or fewer." }, statusCode: 400);
     }
 
+    var normalizedName = ExerciseQueryHelper.EscapeLike(name);
     var duplicate = await db.Exercises
-        .AnyAsync(e => EF.Functions.ILike(e.Name, name));
+        .AnyAsync(e => EF.Functions.ILike(e.Name, normalizedName, "\\"));
 
     if (duplicate)
     {
         return Results.Json(new { error = "An exercise with this name already exists." }, statusCode: 400);
     }
 
-    var muscleIds = body?.MuscleIds ?? [];
+    var muscleIds = (body?.MuscleIds ?? []).Distinct().ToArray();
     if (muscleIds.Length > 0)
     {
         var validMuscleCount = await db.Muscles
@@ -146,15 +147,16 @@ app.MapPut("/api/exercises/{exerciseId:guid}", async (Guid exerciseId, HttpConte
         return Results.Json(new { error = "Exercise name must be 150 characters or fewer." }, statusCode: 400);
     }
 
+    var normalizedName = ExerciseQueryHelper.EscapeLike(name);
     var duplicate = await db.Exercises
-        .AnyAsync(e => e.ExerciseId != exerciseId && EF.Functions.ILike(e.Name, name));
+        .AnyAsync(e => e.ExerciseId != exerciseId && EF.Functions.ILike(e.Name, normalizedName, "\\"));
 
     if (duplicate)
     {
         return Results.Json(new { error = "An exercise with this name already exists." }, statusCode: 400);
     }
 
-    var muscleIds = body?.MuscleIds ?? [];
+    var muscleIds = (body?.MuscleIds ?? []).Distinct().ToArray();
     if (muscleIds.Length > 0)
     {
         var validMuscleCount = await db.Muscles
@@ -216,4 +218,16 @@ internal sealed class ExerciseCreateRequest
 {
     public string? Name { get; set; }
     public Guid[] MuscleIds { get; set; } = [];
+}
+
+internal static class ExerciseQueryHelper
+{
+    /// <summary>
+    /// Escapes LIKE pattern special characters so the value is matched literally by ILike.
+    /// </summary>
+    internal static string EscapeLike(string value) =>
+        value
+            .Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("%", "\\%", StringComparison.Ordinal)
+            .Replace("_", "\\_", StringComparison.Ordinal);
 }
