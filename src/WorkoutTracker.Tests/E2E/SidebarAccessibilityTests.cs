@@ -55,7 +55,7 @@ public class SidebarAccessibilityTests : IClassFixture<WebAppFixture>, IClassFix
         await page.Locator(".sidebar__link[data-page='workouts']").FocusAsync();
         await page.Keyboard.PressAsync("Enter");
 
-        await Expect(page.Locator(".page-placeholder__title")).ToHaveTextAsync("Workouts");
+        await Expect(page.Locator(".workouts-page__title")).ToHaveTextAsync("Workouts");
 
         await page.CloseAsync();
     }

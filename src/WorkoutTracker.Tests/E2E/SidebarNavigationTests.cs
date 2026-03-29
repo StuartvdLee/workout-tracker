@@ -61,7 +61,7 @@ public class SidebarNavigationTests : IClassFixture<WebAppFixture>, IClassFixtur
         var page = await CreatePageAsync();
 
         await page.Locator(".sidebar__link[data-page='workouts']").ClickAsync();
-        await Expect(page.Locator(".page-placeholder__title")).ToHaveTextAsync("Workouts");
+        await Expect(page.Locator(".workouts-page__title")).ToHaveTextAsync("Workouts");
         Assert.EndsWith("/workouts", page.Url);
 
         await page.Locator(".sidebar__link[data-page='exercises']").ClickAsync();
@@ -107,7 +107,7 @@ public class SidebarNavigationTests : IClassFixture<WebAppFixture>, IClassFixtur
         await page.GotoAsync($"{_webApp.BaseUrl}/workouts");
         await page.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
 
-        await Expect(page.Locator(".page-placeholder__title")).ToHaveTextAsync("Workouts");
+        await Expect(page.Locator(".workouts-page__title")).ToHaveTextAsync("Workouts");
 
         var workoutsLink = page.Locator(".sidebar__link[data-page='workouts']");
         await Expect(workoutsLink).ToHaveClassAsync(new System.Text.RegularExpressions.Regex("sidebar__link--active"));
@@ -157,13 +157,13 @@ public class SidebarNavigationTests : IClassFixture<WebAppFixture>, IClassFixtur
         var page = await CreatePageAsync();
 
         await page.Locator(".sidebar__link[data-page='workouts']").ClickAsync();
-        await Expect(page.Locator(".page-placeholder__title")).ToHaveTextAsync("Workouts");
+        await Expect(page.Locator(".workouts-page__title")).ToHaveTextAsync("Workouts");
 
         await page.Locator(".sidebar__link[data-page='exercises']").ClickAsync();
         await Expect(page.Locator(".exercises-page__title")).ToHaveTextAsync("Exercises");
 
         await page.GoBackAsync();
-        await Expect(page.Locator(".page-placeholder__title")).ToHaveTextAsync("Workouts");
+        await Expect(page.Locator(".workouts-page__title")).ToHaveTextAsync("Workouts");
         var workoutsLink = page.Locator(".sidebar__link[data-page='workouts']");
         await Expect(workoutsLink).ToHaveClassAsync(new System.Text.RegularExpressions.Regex("sidebar__link--active"));
 

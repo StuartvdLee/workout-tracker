@@ -90,7 +90,7 @@ public class SidebarMobileTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         await page.Locator(".sidebar__link[data-page='workouts']").ClickAsync();
 
         await Expect(page.Locator(".sidebar")).Not.ToHaveClassAsync(new System.Text.RegularExpressions.Regex("sidebar--open"));
-        await Expect(page.Locator(".page-placeholder__title")).ToHaveTextAsync("Workouts");
+        await Expect(page.Locator(".workouts-page__title")).ToHaveTextAsync("Workouts");
 
         await page.CloseAsync();
     }
