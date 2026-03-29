@@ -1,5 +1,14 @@
 # workout-tracker
 
+A fitness application for tracking workouts and exercise progress. Built with C# / .NET 10, vanilla TypeScript, and .NET Aspire.
+
+## Features
+
+- **Exercises** — Create and manage exercises with muscle group tagging
+- **Planned Workouts** — Build reusable workout templates from your exercise library (create, edit, delete)
+- **Workout Logging** — Start a planned workout and log reps, weight, and notes for each exercise
+- **Workout History** — View completed workouts grouped by date with expandable session details
+
 ## Prerequisites
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)

@@ -4,7 +4,8 @@ using Xunit;
 
 namespace WorkoutTracker.Tests.E2E;
 
-public class SidebarNavigationTests : IClassFixture<WebAppFixture>, IClassFixture<PlaywrightFixture>
+[Collection("E2E")]
+public class SidebarNavigationTests
 {
     private readonly WebAppFixture _webApp;
     private readonly PlaywrightFixture _playwright;

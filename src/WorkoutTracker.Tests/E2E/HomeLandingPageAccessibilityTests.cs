@@ -4,7 +4,8 @@ using Xunit;
 
 namespace WorkoutTracker.Tests.E2E;
 
-public class HomeLandingPageAccessibilityTests : IClassFixture<WebAppFixture>, IClassFixture<PlaywrightFixture>
+[Collection("E2E")]
+public class HomeLandingPageAccessibilityTests
 {
     private readonly WebAppFixture _webApp;
     private readonly PlaywrightFixture _playwright;
