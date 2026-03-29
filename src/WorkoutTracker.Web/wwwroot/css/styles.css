@@ -577,6 +577,31 @@ body {
   background-color: var(--color-primary-light);
 }
 
+.exercise-list__edit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--min-touch-target);
+  min-height: var(--min-touch-target);
+  padding: var(--spacing-xs);
+  color: var(--color-primary);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.exercise-list__edit-btn svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.exercise-list__edit-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 .exercise-list__actions {
   display: flex;
   gap: var(--spacing-xs);

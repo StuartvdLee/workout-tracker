@@ -283,10 +283,11 @@ function renderExerciseList(): void {
     actionsDiv.className = "exercise-list__actions";
 
     const editBtn = document.createElement("button");
+    editBtn.type = "button";
     editBtn.className = "exercise-list__edit-btn";
-    editBtn.textContent = "Edit";
     editBtn.setAttribute("aria-label", `Edit ${exercise.name}`);
     editBtn.setAttribute("data-exercise-id", exercise.exerciseId);
+    editBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-3.5L17.5 4l3.5 3.5L7.5 21H4z"/><path d="M14.5 5.5l3 3"/></svg>`;
     editBtn.addEventListener("click", () => {
       openEditModal(exercise);
     });
