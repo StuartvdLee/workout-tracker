@@ -27,7 +27,7 @@ public class SidebarNavigationTests : IClassFixture<WebAppFixture>, IClassFixtur
     }
 
     [Fact]
-    public async Task Sidebar_IsVisible_WithThreeMenuItems()
+    public async Task Sidebar_IsVisible_WithFourMenuItems()
     {
         var page = await CreatePageAsync();
 
@@ -35,7 +35,7 @@ public class SidebarNavigationTests : IClassFixture<WebAppFixture>, IClassFixtur
         await Expect(sidebar).ToBeVisibleAsync();
 
         var links = page.Locator(".sidebar__link");
-        await Expect(links).ToHaveCountAsync(3);
+        await Expect(links).ToHaveCountAsync(4);
 
         await page.CloseAsync();
     }
@@ -47,10 +47,10 @@ public class SidebarNavigationTests : IClassFixture<WebAppFixture>, IClassFixtur
 
         var labels = page.Locator(".sidebar__label");
         var texts = await labels.AllTextContentsAsync();
-        Assert.Equal(["Home", "Workouts", "Exercises"], texts);
+        Assert.Equal(["Home", "Workouts", "Exercises", "History"], texts);
 
         var icons = page.Locator(".sidebar__icon");
-        await Expect(icons).ToHaveCountAsync(3);
+        await Expect(icons).ToHaveCountAsync(4);
 
         await page.CloseAsync();
     }
