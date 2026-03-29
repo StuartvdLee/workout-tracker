@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using WorkoutTracker.Infrastructure.Data;
+using WorkoutTracker.Infrastructure.Data.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,4 +30,204 @@ app.MapGet("/api/workout-types", async (WorkoutTrackerDbContext db) =>
     return Results.Ok(workoutTypes);
 });
 
+app.MapGet("/api/muscles", async (WorkoutTrackerDbContext db) =>
+{
+    var muscles = await db.Muscles
+        .OrderBy(m => m.Name)
+        .Select(m => new { m.MuscleId, m.Name })
+        .ToListAsync();
+
+    return Results.Ok(muscles);
+});
+
+app.MapGet("/api/exercises", async (WorkoutTrackerDbContext db) =>
+{
+    var exercises = await db.Exercises
+        .Include(e => e.ExerciseMuscles)
+        .ThenInclude(em => em.Muscle)
+        .OrderBy(e => e.Name)
+        .Select(e => new
+        {
+            e.ExerciseId,
+            e.Name,
+            Muscles = e.ExerciseMuscles
+                .Select(em => new { em.Muscle.MuscleId, em.Muscle.Name })
+                .OrderBy(m => m.Name)
+                .ToList(),
+        })
+        .ToListAsync();
+
+    return Results.Ok(exercises);
+});
+
+app.MapPost("/api/exercises", async (HttpContext context, WorkoutTrackerDbContext db) =>
+{
+    var body = await context.Request.ReadFromJsonAsync<ExerciseCreateRequest>();
+    var name = body?.Name?.Trim() ?? "";
+
+    if (string.IsNullOrWhiteSpace(name))
+    {
+        return Results.Json(new { error = "Exercise name is required." }, statusCode: 400);
+    }
+
+    if (name.Length > 150)
+    {
+        return Results.Json(new { error = "Exercise name must be 150 characters or fewer." }, statusCode: 400);
+    }
+
+    var normalizedName = ExerciseQueryHelper.EscapeLike(name);
+    var duplicate = await db.Exercises
+        .AnyAsync(e => EF.Functions.ILike(e.Name, normalizedName, "\\"));
+
+    if (duplicate)
+    {
+        return Results.Json(new { error = "An exercise with this name already exists." }, statusCode: 400);
+    }
+
+    var muscleIds = (body?.MuscleIds ?? []).Distinct().ToArray();
+    if (muscleIds.Length > 0)
+    {
+        var validMuscleCount = await db.Muscles
+            .CountAsync(m => muscleIds.Contains(m.MuscleId));
+
+        if (validMuscleCount != muscleIds.Length)
+        {
+            return Results.Json(new { error = "One or more selected muscles are invalid." }, statusCode: 400);
+        }
+    }
+
+    var exercise = new Exercise
+    {
+        ExerciseId = Guid.NewGuid(),
+        Name = name,
+    };
+
+    foreach (var muscleId in muscleIds)
+    {
+        exercise.ExerciseMuscles.Add(new ExerciseMuscle
+        {
+            ExerciseMuscleId = Guid.NewGuid(),
+            ExerciseId = exercise.ExerciseId,
+            MuscleId = muscleId,
+        });
+    }
+
+    db.Exercises.Add(exercise);
+    await db.SaveChangesAsync();
+
+    var muscles = await db.ExerciseMuscles
+        .Where(em => em.ExerciseId == exercise.ExerciseId)
+        .Include(em => em.Muscle)
+        .Select(em => new { em.Muscle.MuscleId, em.Muscle.Name })
+        .ToListAsync();
+
+    return Results.Json(new { exercise.ExerciseId, exercise.Name, Muscles = muscles }, statusCode: 201);
+});
+
+app.MapPut("/api/exercises/{exerciseId:guid}", async (Guid exerciseId, HttpContext context, WorkoutTrackerDbContext db) =>
+{
+    var exercise = await db.Exercises
+        .FirstOrDefaultAsync(e => e.ExerciseId == exerciseId);
+
+    if (exercise is null)
+    {
+        return Results.Json(new { error = "Exercise not found." }, statusCode: 404);
+    }
+
+    var body = await context.Request.ReadFromJsonAsync<ExerciseCreateRequest>();
+    var name = body?.Name?.Trim() ?? "";
+
+    if (string.IsNullOrWhiteSpace(name))
+    {
+        return Results.Json(new { error = "Exercise name is required." }, statusCode: 400);
+    }
+
+    if (name.Length > 150)
+    {
+        return Results.Json(new { error = "Exercise name must be 150 characters or fewer." }, statusCode: 400);
+    }
+
+    var normalizedName = ExerciseQueryHelper.EscapeLike(name);
+    var duplicate = await db.Exercises
+        .AnyAsync(e => e.ExerciseId != exerciseId && EF.Functions.ILike(e.Name, normalizedName, "\\"));
+
+    if (duplicate)
+    {
+        return Results.Json(new { error = "An exercise with this name already exists." }, statusCode: 400);
+    }
+
+    var muscleIds = (body?.MuscleIds ?? []).Distinct().ToArray();
+    if (muscleIds.Length > 0)
+    {
+        var validMuscleCount = await db.Muscles
+            .CountAsync(m => muscleIds.Contains(m.MuscleId));
+
+        if (validMuscleCount != muscleIds.Length)
+        {
+            return Results.Json(new { error = "One or more selected muscles are invalid." }, statusCode: 400);
+        }
+    }
+
+    exercise.Name = name;
+
+    // Delete existing muscles via bulk operation (bypasses change tracker)
+    await db.ExerciseMuscles
+        .Where(em => em.ExerciseId == exerciseId)
+        .ExecuteDeleteAsync();
+
+    foreach (var muscleId in muscleIds)
+    {
+        db.ExerciseMuscles.Add(new ExerciseMuscle
+        {
+            ExerciseMuscleId = Guid.NewGuid(),
+            ExerciseId = exerciseId,
+            MuscleId = muscleId,
+        });
+    }
+
+    await db.SaveChangesAsync();
+
+    var muscles = await db.ExerciseMuscles
+        .Where(em => em.ExerciseId == exercise.ExerciseId)
+        .Include(em => em.Muscle)
+        .Select(em => new { em.Muscle.MuscleId, em.Muscle.Name })
+        .ToListAsync();
+
+    return Results.Ok(new { exercise.ExerciseId, exercise.Name, Muscles = muscles });
+});
+
+app.MapDelete("/api/exercises/{exerciseId:guid}", async (Guid exerciseId, WorkoutTrackerDbContext db) =>
+{
+    var exercise = await db.Exercises
+        .FirstOrDefaultAsync(e => e.ExerciseId == exerciseId);
+
+    if (exercise is null)
+    {
+        return Results.Json(new { error = "Exercise not found." }, statusCode: 404);
+    }
+
+    db.Exercises.Remove(exercise);
+    await db.SaveChangesAsync();
+
+    return Results.NoContent();
+});
+
 app.Run();
+
+internal sealed class ExerciseCreateRequest
+{
+    public string? Name { get; set; }
+    public Guid[] MuscleIds { get; set; } = [];
+}
+
+internal static class ExerciseQueryHelper
+{
+    /// <summary>
+    /// Escapes LIKE pattern special characters so the value is matched literally by ILike.
+    /// </summary>
+    internal static string EscapeLike(string value) =>
+        value
+            .Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("%", "\\%", StringComparison.Ordinal)
+            .Replace("_", "\\_", StringComparison.Ordinal);
+}
