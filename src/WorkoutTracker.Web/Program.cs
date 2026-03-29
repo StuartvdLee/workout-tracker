@@ -84,6 +84,25 @@ app.MapPut("/api/exercises/{exerciseId}", async (string exerciseId, HttpRequest 
     }
 });
 
+app.MapDelete("/api/exercises/{exerciseId}", async (string exerciseId, IHttpClientFactory httpClientFactory) =>
+{
+    try
+    {
+        var client = httpClientFactory.CreateClient("api");
+        var response = await client.DeleteAsync($"/api/exercises/{exerciseId}");
+        if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+        {
+            return Results.NoContent();
+        }
+        var responseContent = await response.Content.ReadAsStringAsync();
+        return Results.Content(responseContent, "application/json", statusCode: (int)response.StatusCode);
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new { error = $"API unavailable: {ex.Message}" }, statusCode: 502);
+    }
+});
+
 app.UseDefaultFiles();
 app.UseStaticFiles();
 

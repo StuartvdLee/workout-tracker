@@ -232,6 +232,24 @@ public class WebAppFixture : WebApplicationFactory<Program>
             }
         });
 
+        // Mock API endpoint to delete an exercise
+        app.MapDelete("/api/exercises/{exerciseId}", (string exerciseId) =>
+        {
+            lock (_exercisesLock)
+            {
+                var exercise = _exercises.FirstOrDefault(e =>
+                    string.Equals(e.ExerciseId, exerciseId, StringComparison.OrdinalIgnoreCase));
+
+                if (exercise is null)
+                {
+                    return Results.Json(new { error = "Exercise not found." }, statusCode: 404);
+                }
+
+                _exercises.Remove(exercise);
+                return Results.NoContent();
+            }
+        });
+
         app.UseDefaultFiles();
         app.UseStaticFiles();
         app.MapFallbackToFile("index.html");

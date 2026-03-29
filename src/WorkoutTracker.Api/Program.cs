@@ -126,7 +126,6 @@ app.MapPost("/api/exercises", async (HttpContext context, WorkoutTrackerDbContex
 app.MapPut("/api/exercises/{exerciseId:guid}", async (Guid exerciseId, HttpContext context, WorkoutTrackerDbContext db) =>
 {
     var exercise = await db.Exercises
-        .Include(e => e.ExerciseMuscles)
         .FirstOrDefaultAsync(e => e.ExerciseId == exerciseId);
 
     if (exercise is null)
@@ -168,14 +167,18 @@ app.MapPut("/api/exercises/{exerciseId:guid}", async (Guid exerciseId, HttpConte
     }
 
     exercise.Name = name;
-    db.ExerciseMuscles.RemoveRange(exercise.ExerciseMuscles);
+
+    // Delete existing muscles via bulk operation (bypasses change tracker)
+    await db.ExerciseMuscles
+        .Where(em => em.ExerciseId == exerciseId)
+        .ExecuteDeleteAsync();
 
     foreach (var muscleId in muscleIds)
     {
-        exercise.ExerciseMuscles.Add(new ExerciseMuscle
+        db.ExerciseMuscles.Add(new ExerciseMuscle
         {
             ExerciseMuscleId = Guid.NewGuid(),
-            ExerciseId = exercise.ExerciseId,
+            ExerciseId = exerciseId,
             MuscleId = muscleId,
         });
     }
@@ -189,6 +192,22 @@ app.MapPut("/api/exercises/{exerciseId:guid}", async (Guid exerciseId, HttpConte
         .ToListAsync();
 
     return Results.Ok(new { exercise.ExerciseId, exercise.Name, Muscles = muscles });
+});
+
+app.MapDelete("/api/exercises/{exerciseId:guid}", async (Guid exerciseId, WorkoutTrackerDbContext db) =>
+{
+    var exercise = await db.Exercises
+        .FirstOrDefaultAsync(e => e.ExerciseId == exerciseId);
+
+    if (exercise is null)
+    {
+        return Results.Json(new { error = "Exercise not found." }, statusCode: 404);
+    }
+
+    db.Exercises.Remove(exercise);
+    await db.SaveChangesAsync();
+
+    return Results.NoContent();
 });
 
 app.Run();

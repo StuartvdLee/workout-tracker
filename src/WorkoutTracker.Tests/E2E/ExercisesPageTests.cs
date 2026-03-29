@@ -738,6 +738,209 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
+    // === Delete Exercise Tests ===
+
+    [Fact]
+    public async Task Delete_ButtonIsVisibleForEachExercise()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.Locator("#exercise-name").FillAsync("Push Ups");
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
+            await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(1);
+
+            var deleteBtn = page.Locator(".exercise-list__delete-btn");
+            await Expect(deleteBtn).ToHaveCountAsync(1);
+            await Expect(deleteBtn).ToBeVisibleAsync();
+            await Expect(deleteBtn).ToHaveAttributeAsync("aria-label", "Delete Push Ups");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task Delete_ConfirmationModalOpensOnClick()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.Locator("#exercise-name").FillAsync("Squats");
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
+            await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(1);
+
+            await page.Locator(".exercise-list__delete-btn").ClickAsync();
+
+            var backdrop = page.Locator("#delete-modal-backdrop");
+            await Expect(backdrop).ToBeVisibleAsync();
+
+            var desc = page.Locator("#delete-modal-desc");
+            await Expect(desc).ToContainTextAsync("Squats");
+
+            await Expect(page.Locator("#delete-modal-confirm")).ToBeVisibleAsync();
+            await Expect(page.Locator("#delete-modal-cancel")).ToBeVisibleAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task Delete_CancelClosesModalWithoutDeleting()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.Locator("#exercise-name").FillAsync("Lunges");
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
+            await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(1);
+
+            await page.Locator(".exercise-list__delete-btn").ClickAsync();
+            await Expect(page.Locator("#delete-modal-backdrop")).ToBeVisibleAsync();
+
+            await page.Locator("#delete-modal-cancel").ClickAsync();
+
+            await Expect(page.Locator("#delete-modal-backdrop")).Not.ToBeVisibleAsync();
+            await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(1);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task Delete_ConfirmDeletesExerciseAndClosesModal()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.Locator("#exercise-name").FillAsync("Deadlift");
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
+            await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(1);
+
+            await page.Locator(".exercise-list__delete-btn").ClickAsync();
+            await Expect(page.Locator("#delete-modal-backdrop")).ToBeVisibleAsync();
+
+            await page.Locator("#delete-modal-confirm").ClickAsync();
+
+            await Expect(page.Locator("#delete-modal-backdrop")).Not.ToBeVisibleAsync();
+            await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(0);
+
+            // Empty state should reappear
+            await Expect(page.Locator("#exercise-empty")).ToBeVisibleAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task Delete_OnlyDeletesTargetedExercise()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            // Add two exercises
+            await page.Locator("#exercise-name").FillAsync("Exercise A");
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
+            await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(1);
+
+            await page.Locator("#exercise-name").FillAsync("Exercise B");
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
+            await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(2);
+
+            // Delete the first one (Exercise A is alphabetically first)
+            await page.Locator(".exercise-list__delete-btn").First.ClickAsync();
+            await page.Locator("#delete-modal-confirm").ClickAsync();
+
+            await Expect(page.Locator("#delete-modal-backdrop")).Not.ToBeVisibleAsync();
+            await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(1);
+            await Expect(page.Locator(".exercise-list__name")).ToHaveTextAsync("Exercise B");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task Delete_EscapeClosesModal()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.Locator("#exercise-name").FillAsync("Rows");
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
+            await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(1);
+
+            await page.Locator(".exercise-list__delete-btn").ClickAsync();
+            await Expect(page.Locator("#delete-modal-backdrop")).ToBeVisibleAsync();
+
+            await page.Keyboard.PressAsync("Escape");
+
+            await Expect(page.Locator("#delete-modal-backdrop")).Not.ToBeVisibleAsync();
+            await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(1);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task Delete_BackdropClickClosesModal()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.Locator("#exercise-name").FillAsync("Curls");
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
+            await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(1);
+
+            await page.Locator(".exercise-list__delete-btn").ClickAsync();
+            var backdrop = page.Locator("#delete-modal-backdrop");
+            await Expect(backdrop).ToBeVisibleAsync();
+
+            // Click the backdrop (not the modal itself) to close
+            await backdrop.ClickAsync(new LocatorClickOptions { Position = new Position { X = 5, Y = 5 } });
+
+            await Expect(backdrop).Not.ToBeVisibleAsync();
+            await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(1);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task Delete_ModalHasCorrectAriaAttributes()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.Locator("#exercise-name").FillAsync("Plank");
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
+            await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(1);
+
+            await page.Locator(".exercise-list__delete-btn").ClickAsync();
+            var modal = page.Locator(".delete-modal");
+            await Expect(modal).ToHaveAttributeAsync("role", "alertdialog");
+            await Expect(modal).ToHaveAttributeAsync("aria-modal", "true");
+            await Expect(modal).ToHaveAttributeAsync("aria-labelledby", "delete-modal-title");
+            await Expect(modal).ToHaveAttributeAsync("aria-describedby", "delete-modal-desc");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
     [Fact]
     public async Task Aria_ErrorMessagesHaveAlertRole()
     {

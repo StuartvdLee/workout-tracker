@@ -24,6 +24,10 @@ let editingExerciseId: string | null = null;
 let selectedEditMuscleIds: Set<string> = new Set();
 let isEditSubmitting = false;
 
+// Delete confirmation state
+let deletingExerciseId: string | null = null;
+let isDeleting = false;
+
 export async function render(container: HTMLElement): Promise<void> {
   container.innerHTML = `
     <div class="exercises-page">
@@ -80,6 +84,17 @@ export async function render(container: HTMLElement): Promise<void> {
           </form>
         </div>
       </div>
+      <div class="delete-modal-backdrop" id="delete-modal-backdrop" style="display:none;">
+        <div class="delete-modal" role="alertdialog" aria-modal="true" aria-labelledby="delete-modal-title" aria-describedby="delete-modal-desc">
+          <h2 class="delete-modal__title" id="delete-modal-title">Delete Exercise</h2>
+          <p class="delete-modal__desc" id="delete-modal-desc"></p>
+          <div class="delete-modal__actions">
+            <button class="delete-modal__delete" type="button" id="delete-modal-confirm">Delete</button>
+            <button class="delete-modal__cancel" type="button" id="delete-modal-cancel">Cancel</button>
+          </div>
+          <div class="delete-modal__error" id="delete-modal-error" role="alert" aria-live="polite"></div>
+        </div>
+      </div>
     </div>
   `;
 
@@ -88,9 +103,12 @@ export async function render(container: HTMLElement): Promise<void> {
   selectedEditMuscleIds = new Set();
   isSubmitting = false;
   isEditSubmitting = false;
+  deletingExerciseId = null;
+  isDeleting = false;
 
   initForm();
   initEditModal();
+  initDeleteModal();
   await loadData();
 }
 
@@ -261,6 +279,9 @@ function renderExerciseList(): void {
 
     li.appendChild(details);
 
+    const actionsDiv = document.createElement("div");
+    actionsDiv.className = "exercise-list__actions";
+
     const editBtn = document.createElement("button");
     editBtn.className = "exercise-list__edit-btn";
     editBtn.textContent = "Edit";
@@ -270,7 +291,18 @@ function renderExerciseList(): void {
       openEditModal(exercise);
     });
 
-    li.appendChild(editBtn);
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "exercise-list__delete-btn";
+    deleteBtn.setAttribute("aria-label", `Delete ${exercise.name}`);
+    deleteBtn.setAttribute("data-exercise-id", exercise.exerciseId);
+    deleteBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
+    deleteBtn.addEventListener("click", () => {
+      openDeleteModal(exercise);
+    });
+
+    actionsDiv.appendChild(editBtn);
+    actionsDiv.appendChild(deleteBtn);
+    li.appendChild(actionsDiv);
     listEl.appendChild(li);
   }
 }
@@ -510,4 +542,132 @@ function clearValidationError(input: HTMLInputElement, errorEl: HTMLElement): vo
   errorEl.textContent = "";
   input.classList.remove("exercise-form__input--error");
   input.removeAttribute("aria-invalid");
+}
+
+function initDeleteModal(): void {
+  const backdrop = document.getElementById("delete-modal-backdrop");
+  const cancelBtn = document.getElementById("delete-modal-cancel");
+  const confirmBtn = document.getElementById("delete-modal-confirm");
+
+  backdrop?.addEventListener("click", (event: Event) => {
+    if (event.target === backdrop) {
+      closeDeleteModal();
+    }
+  });
+
+  backdrop?.addEventListener("keydown", (event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      closeDeleteModal();
+    }
+
+    // Focus trapping
+    if (event.key === "Tab") {
+      const focusable = backdrop.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (event.shiftKey) {
+        if (document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    }
+  });
+
+  cancelBtn?.addEventListener("click", () => {
+    closeDeleteModal();
+  });
+
+  confirmBtn?.addEventListener("click", () => {
+    void handleDelete();
+  });
+}
+
+function openDeleteModal(exercise: Exercise): void {
+  const backdrop = document.getElementById("delete-modal-backdrop");
+  const descEl = document.getElementById("delete-modal-desc");
+  const errorEl = document.getElementById("delete-modal-error");
+  const confirmBtn = document.getElementById("delete-modal-confirm") as HTMLButtonElement | null;
+
+  if (!backdrop || !descEl) return;
+
+  deletingExerciseId = exercise.exerciseId;
+  descEl.textContent = `Are you sure you want to delete "${exercise.name}"? This action cannot be undone.`;
+  if (errorEl) errorEl.textContent = "";
+  if (confirmBtn) {
+    confirmBtn.textContent = "Delete";
+    confirmBtn.removeAttribute("aria-disabled");
+    confirmBtn.classList.remove("delete-modal__delete--loading");
+  }
+
+  backdrop.style.display = "flex";
+
+  // Focus the cancel button (safer default)
+  const cancelBtn = document.getElementById("delete-modal-cancel");
+  cancelBtn?.focus();
+}
+
+function closeDeleteModal(): void {
+  const backdrop = document.getElementById("delete-modal-backdrop");
+  if (backdrop) backdrop.style.display = "none";
+
+  deletingExerciseId = null;
+  isDeleting = false;
+}
+
+async function handleDelete(): Promise<void> {
+  if (isDeleting || deletingExerciseId === null) return;
+
+  const confirmBtn = document.getElementById("delete-modal-confirm") as HTMLButtonElement | null;
+  const errorEl = document.getElementById("delete-modal-error");
+
+  isDeleting = true;
+  if (confirmBtn) {
+    confirmBtn.setAttribute("aria-disabled", "true");
+    confirmBtn.textContent = "Deleting...";
+    confirmBtn.classList.add("delete-modal__delete--loading");
+  }
+  if (errorEl) errorEl.textContent = "";
+
+  try {
+    const response = await fetch(`/api/exercises/${deletingExerciseId}`, {
+      method: "DELETE",
+    });
+
+    if (response.ok || response.status === 204) {
+      const exercisesRes = await fetch("/api/exercises");
+      if (exercisesRes.ok) {
+        exercises = await exercisesRes.json();
+      }
+
+      closeDeleteModal();
+      renderExerciseList();
+    } else {
+      const data = await response.json();
+      if (errorEl) {
+        errorEl.textContent = data.error || "An unexpected error occurred. Please try again.";
+      }
+    }
+  } catch {
+    if (errorEl) {
+      errorEl.textContent = "An unexpected error occurred. Please try again.";
+    }
+  } finally {
+    isDeleting = false;
+    if (confirmBtn) {
+      confirmBtn.removeAttribute("aria-disabled");
+      confirmBtn.textContent = "Delete";
+      confirmBtn.classList.remove("delete-modal__delete--loading");
+    }
+  }
 }
