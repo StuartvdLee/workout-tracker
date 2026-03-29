@@ -335,7 +335,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
                             return new
                             {
                                 we.ExerciseId,
-                                ExerciseName = ex?.Name ?? "",
+                                Name = ex?.Name ?? "",
                                 we.TargetReps,
                                 we.TargetWeight,
                             };
@@ -572,10 +572,10 @@ public class WebAppFixture : WebApplicationFactory<Program>
                 .Select(s => new
                 {
                     s.SessionId,
-                    s.PlannedWorkoutId,
+                    WorkoutId = s.PlannedWorkoutId,
                     s.WorkoutName,
                     s.CompletedAt,
-                    LoggedExercises = s.LoggedExercises
+                    Exercises = s.LoggedExercises
                         .Select(le =>
                         {
                             var ex = exerciseSnapshot.FirstOrDefault(e =>
