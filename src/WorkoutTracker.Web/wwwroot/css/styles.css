@@ -500,6 +500,25 @@ body {
   border-color: var(--color-primary);
 }
 
+.muscle-toggle--active:hover {
+  background-color: var(--color-primary-hover);
+  color: var(--color-white);
+}
+
+/* Prevent sticky :hover on touch devices */
+@media (hover: none) {
+  .muscle-toggle:hover {
+    border-color: var(--color-border);
+    color: var(--color-text-light);
+  }
+
+  .muscle-toggle--active:hover {
+    background-color: var(--color-primary);
+    color: var(--color-white);
+    border-color: var(--color-primary);
+  }
+}
+
 /* === Exercise List === */
 .exercise-list {
   width: 100%;
