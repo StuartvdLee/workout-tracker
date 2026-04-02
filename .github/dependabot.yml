@@ -15,6 +15,22 @@ updates:
       day: "monday"
       time: "07:00"
       timezone: "Europe/Amsterdam"
+    groups:
+      aspire:
+        patterns:
+          - "Aspire.*"
+      opentelemetry:
+        patterns:
+          - "OpenTelemetry.*"
+      efcore:
+        patterns:
+          - "Microsoft.EntityFrameworkCore.*"
+          - "Microsoft.AspNetCore.Mvc.Testing"
+      testing:
+        patterns:
+          - "xunit*"
+          - "coverlet.*"
+          - "Microsoft.NET.Test.Sdk"
 
   - package-ecosystem: "npm"
     directory: "/src/WorkoutTracker.Web"
@@ -23,3 +39,7 @@ updates:
       day: "monday"
       time: "07:00"
       timezone: "Europe/Amsterdam"
+    groups:
+      typescript:
+        patterns:
+          - "typescript"
