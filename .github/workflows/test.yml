@@ -57,7 +57,7 @@ jobs:
       # Upload test result artifacts so they are visible in the workflow summary
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v7.0.0
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: test-results
           path: src/WorkoutTracker.Tests/TestResults/
