@@ -1,7 +1,10 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-var postgres = builder.AddPostgres("postgres")
-    .WithLifetime(ContainerLifetime.Persistent);
+var postgresPassword = builder.AddParameter("postgres-password", secret: true);
+
+var postgres = builder.AddPostgres("postgres", password: postgresPassword)
+    .WithLifetime(ContainerLifetime.Persistent)
+    .WithDataVolume();
 
 var workoutDb = postgres.AddDatabase("workout-tracker-db", databaseName: "workout_tracker");
 
