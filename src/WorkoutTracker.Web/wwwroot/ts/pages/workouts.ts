@@ -50,8 +50,14 @@ export async function render(container: HTMLElement): Promise<void> {
           />
         </div>
         <div class="workout-form__group">
-          <label class="workout-form__label">Select exercises</label>
-          <div class="workout-form__exercises" id="workout-exercises" role="group" aria-label="Select exercises"></div>
+          <label class="workout-form__label" for="workout-exercise-select">Add exercise</label>
+          <select class="workout-form__select" id="workout-exercise-select">
+            <option value="" disabled selected>Select an exercise</option>
+          </select>
+        </div>
+        <div id="workout-selected-section" style="display:none;">
+          <h3 class="workout-selected__heading">Selected exercises</h3>
+          <ul class="workout-selected__list" id="workout-selected-list"></ul>
         </div>
         <div class="workout-form__error" id="workout-error" role="alert" aria-live="polite"></div>
         <div class="workout-form__actions">
@@ -75,8 +81,14 @@ export async function render(container: HTMLElement): Promise<void> {
               <input class="workout-form__input" type="text" id="edit-workout-name" maxlength="150" autocomplete="off" aria-describedby="edit-workout-error" />
             </div>
             <div class="workout-form__group">
-              <label class="workout-form__label">Select exercises</label>
-              <div class="workout-form__exercises" id="edit-workout-exercises" role="group" aria-label="Select exercises"></div>
+              <label class="workout-form__label" for="edit-exercise-select">Add exercise</label>
+              <select class="workout-form__select" id="edit-exercise-select">
+                <option value="" disabled selected>Select an exercise</option>
+              </select>
+            </div>
+            <div id="edit-selected-section" style="display:none;">
+              <h3 class="workout-selected__heading">Selected exercises</h3>
+              <ul class="workout-selected__list" id="edit-selected-list"></ul>
             </div>
             <div class="workout-form__error" id="edit-workout-error" role="alert" aria-live="polite"></div>
             <div class="edit-modal__actions">
@@ -117,11 +129,20 @@ export async function render(container: HTMLElement): Promise<void> {
 
 function initForm(): void {
   const form = document.getElementById("workout-form") as HTMLFormElement | null;
+  const exerciseSelect = document.getElementById("workout-exercise-select") as HTMLSelectElement | null;
   if (!form) return;
 
   form.addEventListener("submit", (event: Event) => {
     event.preventDefault();
     void handleSubmit();
+  });
+
+  exerciseSelect?.addEventListener("change", () => {
+    const exerciseId = exerciseSelect.value;
+    if (exerciseId) {
+      selectedExercises.add(exerciseId);
+      renderExerciseDropdown();
+    }
   });
 }
 
@@ -254,42 +275,44 @@ async function loadData(): Promise<void> {
     // API unavailable
   }
 
-  renderExerciseToggles();
+  renderExerciseDropdown();
   renderWorkoutList();
 }
 
-function renderExerciseToggles(): void {
-  const container = document.getElementById("workout-exercises");
-  if (!container) return;
+function renderExerciseDropdown(): void {
+  const select = document.getElementById("workout-exercise-select") as HTMLSelectElement | null;
+  if (!select) return;
 
-  container.innerHTML = "";
+  while (select.options.length > 1) select.remove(1);
 
   for (const exercise of availableExercises) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "muscle-toggle";
-    btn.textContent = exercise.name;
-    btn.setAttribute("role", "checkbox");
-    btn.setAttribute("aria-checked", "false");
-    btn.setAttribute("data-exercise-id", exercise.exerciseId);
-
-    btn.addEventListener("click", () => {
-      toggleExercise(exercise.exerciseId, btn);
-    });
-
-    container.appendChild(btn);
+    if (!selectedExercises.has(exercise.exerciseId)) {
+      const option = document.createElement("option");
+      option.value = exercise.exerciseId;
+      option.textContent = exercise.name;
+      select.appendChild(option);
+    }
   }
+
+  select.value = "";
+  renderSelectedExercisesList();
 }
 
-function toggleExercise(exerciseId: string, btn: HTMLButtonElement): void {
-  if (selectedExercises.has(exerciseId)) {
-    selectedExercises.delete(exerciseId);
-    btn.classList.remove("muscle-toggle--active");
-    btn.setAttribute("aria-checked", "false");
-  } else {
-    selectedExercises.add(exerciseId);
-    btn.classList.add("muscle-toggle--active");
-    btn.setAttribute("aria-checked", "true");
+function renderSelectedExercisesList(): void {
+  const list = document.getElementById("workout-selected-list");
+  const section = document.getElementById("workout-selected-section");
+  if (!list || !section) return;
+
+  list.innerHTML = "";
+  section.style.display = selectedExercises.size > 0 ? "" : "none";
+
+  for (const exerciseId of selectedExercises) {
+    const exercise = availableExercises.find(e => e.exerciseId === exerciseId);
+    if (!exercise) continue;
+    list.appendChild(buildSelectedExerciseItem(exercise.name, () => {
+      selectedExercises.delete(exerciseId);
+      renderExerciseDropdown();
+    }));
   }
 }
 
@@ -477,7 +500,7 @@ async function fetchAndPopulateEditModal(workoutId: string, nameInput: HTMLInput
       editSelectedExercises.add(ex.exerciseId);
     }
 
-    renderEditExerciseToggles();
+    renderEditExerciseDropdown();
 
     backdrop.style.display = "";
     nameInput.focus();
@@ -493,45 +516,73 @@ function closeEditModal(): void {
   editSelectedExercises = new Set();
 }
 
-function renderEditExerciseToggles(): void {
-  const container = document.getElementById("edit-workout-exercises");
-  if (!container) return;
+function renderEditExerciseDropdown(): void {
+  const select = document.getElementById("edit-exercise-select") as HTMLSelectElement | null;
+  if (!select) return;
 
-  container.innerHTML = "";
+  // Attach change listener once (remove old one by replacing the element's listener via a flag)
+  if (!select.dataset["listenerAttached"]) {
+    select.dataset["listenerAttached"] = "1";
+    select.addEventListener("change", () => {
+      const exerciseId = select.value;
+      if (exerciseId) {
+        editSelectedExercises.add(exerciseId);
+        renderEditExerciseDropdown();
+      }
+    });
+  }
+
+  while (select.options.length > 1) select.remove(1);
 
   for (const exercise of availableExercises) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "muscle-toggle";
-    btn.textContent = exercise.name;
-    btn.setAttribute("role", "checkbox");
-    btn.setAttribute("data-exercise-id", exercise.exerciseId);
-
-    if (editSelectedExercises.has(exercise.exerciseId)) {
-      btn.classList.add("muscle-toggle--active");
-      btn.setAttribute("aria-checked", "true");
-    } else {
-      btn.setAttribute("aria-checked", "false");
+    if (!editSelectedExercises.has(exercise.exerciseId)) {
+      const option = document.createElement("option");
+      option.value = exercise.exerciseId;
+      option.textContent = exercise.name;
+      select.appendChild(option);
     }
+  }
 
-    btn.addEventListener("click", () => {
-      toggleEditExercise(exercise.exerciseId, btn);
-    });
+  select.value = "";
+  renderEditSelectedExercisesList();
+}
 
-    container.appendChild(btn);
+function renderEditSelectedExercisesList(): void {
+  const list = document.getElementById("edit-selected-list");
+  const section = document.getElementById("edit-selected-section");
+  if (!list || !section) return;
+
+  list.innerHTML = "";
+  section.style.display = editSelectedExercises.size > 0 ? "" : "none";
+
+  for (const exerciseId of editSelectedExercises) {
+    const exercise = availableExercises.find(e => e.exerciseId === exerciseId);
+    if (!exercise) continue;
+    list.appendChild(buildSelectedExerciseItem(exercise.name, () => {
+      editSelectedExercises.delete(exerciseId);
+      renderEditExerciseDropdown();
+    }));
   }
 }
 
-function toggleEditExercise(exerciseId: string, btn: HTMLButtonElement): void {
-  if (editSelectedExercises.has(exerciseId)) {
-    editSelectedExercises.delete(exerciseId);
-    btn.classList.remove("muscle-toggle--active");
-    btn.setAttribute("aria-checked", "false");
-  } else {
-    editSelectedExercises.add(exerciseId);
-    btn.classList.add("muscle-toggle--active");
-    btn.setAttribute("aria-checked", "true");
-  }
+function buildSelectedExerciseItem(name: string, onRemove: () => void): HTMLLIElement {
+  const li = document.createElement("li");
+  li.className = "workout-selected__item";
+
+  const nameSpan = document.createElement("span");
+  nameSpan.className = "workout-selected__name";
+  nameSpan.textContent = name;
+  li.appendChild(nameSpan);
+
+  const removeBtn = document.createElement("button");
+  removeBtn.type = "button";
+  removeBtn.className = "workout-form__remove-btn";
+  removeBtn.setAttribute("aria-label", `Remove ${name}`);
+  removeBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+  removeBtn.addEventListener("click", onRemove);
+  li.appendChild(removeBtn);
+
+  return li;
 }
 
 async function handleEditSubmit(): Promise<void> {
@@ -620,12 +671,7 @@ function resetCreateForm(): void {
   if (errorEl) errorEl.textContent = "";
   if (apiErrorEl) apiErrorEl.textContent = "";
 
-  // Reset all exercise toggles in the create form
-  const toggleBtns = document.querySelectorAll<HTMLButtonElement>("#workout-exercises .muscle-toggle");
-  for (const btn of toggleBtns) {
-    btn.classList.remove("muscle-toggle--active");
-    btn.setAttribute("aria-checked", "false");
-  }
+  renderExerciseDropdown();
 }
 
 function openDeleteModal(workout: Workout): void {
