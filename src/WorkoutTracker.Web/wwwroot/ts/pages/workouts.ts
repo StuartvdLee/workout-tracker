@@ -21,12 +21,12 @@ interface Exercise {
 
 let workouts: Workout[] = [];
 let availableExercises: Exercise[] = [];
-let selectedExercises: Map<string, { targetReps: string; targetWeight: string }> = new Map();
+let selectedExercises: Set<string> = new Set();
 let isSubmitting = false;
 
 // Edit modal state
 let editingWorkoutId: string | null = null;
-let editSelectedExercises: Map<string, { targetReps: string; targetWeight: string }> = new Map();
+let editSelectedExercises: Set<string> = new Set();
 let isEditSubmitting = false;
 
 // Delete confirmation state
@@ -53,7 +53,6 @@ export async function render(container: HTMLElement): Promise<void> {
           <label class="workout-form__label">Select exercises</label>
           <div class="workout-form__exercises" id="workout-exercises" role="group" aria-label="Select exercises"></div>
         </div>
-        <div id="workout-selected-exercises"></div>
         <div class="workout-form__error" id="workout-error" role="alert" aria-live="polite"></div>
         <div class="workout-form__actions">
           <button class="workout-form__submit" type="submit">Create Workout</button>
@@ -79,7 +78,6 @@ export async function render(container: HTMLElement): Promise<void> {
               <label class="workout-form__label">Select exercises</label>
               <div class="workout-form__exercises" id="edit-workout-exercises" role="group" aria-label="Select exercises"></div>
             </div>
-            <div id="edit-workout-selected-exercises"></div>
             <div class="workout-form__error" id="edit-workout-error" role="alert" aria-live="polite"></div>
             <div class="edit-modal__actions">
               <button class="workout-form__submit" type="submit">Save Changes</button>
@@ -104,8 +102,8 @@ export async function render(container: HTMLElement): Promise<void> {
   `;
 
   editingWorkoutId = null;
-  selectedExercises = new Map();
-  editSelectedExercises = new Map();
+  selectedExercises = new Set();
+  editSelectedExercises = new Set();
   isSubmitting = false;
   isEditSubmitting = false;
   deletingWorkoutId = null;
@@ -289,65 +287,9 @@ function toggleExercise(exerciseId: string, btn: HTMLButtonElement): void {
     btn.classList.remove("muscle-toggle--active");
     btn.setAttribute("aria-checked", "false");
   } else {
-    selectedExercises.set(exerciseId, { targetReps: "", targetWeight: "" });
+    selectedExercises.add(exerciseId);
     btn.classList.add("muscle-toggle--active");
     btn.setAttribute("aria-checked", "true");
-  }
-  renderSelectedExercises();
-}
-
-function renderSelectedExercises(): void {
-  const container = document.getElementById("workout-selected-exercises");
-  if (!container) return;
-
-  container.innerHTML = "";
-
-  for (const [exerciseId, targets] of selectedExercises) {
-    const exercise = availableExercises.find(e => e.exerciseId === exerciseId);
-    if (!exercise) continue;
-
-    const item = document.createElement("div");
-    item.className = "workout-form__exercise-item";
-    item.setAttribute("data-exercise-id", exerciseId);
-
-    const nameSpan = document.createElement("span");
-    nameSpan.className = "workout-form__exercise-name";
-    nameSpan.textContent = exercise.name;
-    item.appendChild(nameSpan);
-
-    const targetsDiv = document.createElement("div");
-    targetsDiv.className = "workout-form__exercise-targets";
-
-    const repsInput = document.createElement("input");
-    repsInput.className = "workout-form__target-input";
-    repsInput.type = "text";
-    repsInput.placeholder = "Reps (e.g. 8-12)";
-    repsInput.setAttribute("data-field", "targetReps");
-    repsInput.value = targets.targetReps;
-    repsInput.addEventListener("input", () => {
-      const current = selectedExercises.get(exerciseId);
-      if (current) {
-        current.targetReps = repsInput.value;
-      }
-    });
-
-    const weightInput = document.createElement("input");
-    weightInput.className = "workout-form__target-input";
-    weightInput.type = "text";
-    weightInput.placeholder = "Weight (e.g. 135 lbs)";
-    weightInput.setAttribute("data-field", "targetWeight");
-    weightInput.value = targets.targetWeight;
-    weightInput.addEventListener("input", () => {
-      const current = selectedExercises.get(exerciseId);
-      if (current) {
-        current.targetWeight = weightInput.value;
-      }
-    });
-
-    targetsDiv.appendChild(repsInput);
-    targetsDiv.appendChild(weightInput);
-    item.appendChild(targetsDiv);
-    container.appendChild(item);
   }
 }
 
@@ -464,10 +406,10 @@ async function handleSubmit(): Promise<void> {
   submitBtn.classList.add("workout-form__submit--loading");
 
   try {
-    const exercises = Array.from(selectedExercises.entries()).map(([exerciseId, targets]) => ({
+    const exercises = Array.from(selectedExercises).map(exerciseId => ({
       exerciseId,
-      targetReps: targets.targetReps || null,
-      targetWeight: targets.targetWeight || null,
+      targetReps: null as string | null,
+      targetWeight: null as string | null,
     }));
 
     const response = await fetch("/api/workouts", {
@@ -530,16 +472,12 @@ async function fetchAndPopulateEditModal(workoutId: string, nameInput: HTMLInput
     nameInput.value = fullWorkout.name;
 
     // Populate selected exercises from the workout
-    editSelectedExercises = new Map();
+    editSelectedExercises = new Set();
     for (const ex of fullWorkout.exercises) {
-      editSelectedExercises.set(ex.exerciseId, {
-        targetReps: ex.targetReps ?? "",
-        targetWeight: ex.targetWeight ?? "",
-      });
+      editSelectedExercises.add(ex.exerciseId);
     }
 
     renderEditExerciseToggles();
-    renderEditSelectedExercises();
 
     backdrop.style.display = "";
     nameInput.focus();
@@ -552,7 +490,7 @@ function closeEditModal(): void {
   const backdrop = document.getElementById("workout-edit-backdrop") as HTMLElement | null;
   if (backdrop) backdrop.style.display = "none";
   editingWorkoutId = null;
-  editSelectedExercises = new Map();
+  editSelectedExercises = new Set();
 }
 
 function renderEditExerciseToggles(): void {
@@ -590,65 +528,9 @@ function toggleEditExercise(exerciseId: string, btn: HTMLButtonElement): void {
     btn.classList.remove("muscle-toggle--active");
     btn.setAttribute("aria-checked", "false");
   } else {
-    editSelectedExercises.set(exerciseId, { targetReps: "", targetWeight: "" });
+    editSelectedExercises.add(exerciseId);
     btn.classList.add("muscle-toggle--active");
     btn.setAttribute("aria-checked", "true");
-  }
-  renderEditSelectedExercises();
-}
-
-function renderEditSelectedExercises(): void {
-  const container = document.getElementById("edit-workout-selected-exercises");
-  if (!container) return;
-
-  container.innerHTML = "";
-
-  for (const [exerciseId, targets] of editSelectedExercises) {
-    const exercise = availableExercises.find(e => e.exerciseId === exerciseId);
-    if (!exercise) continue;
-
-    const item = document.createElement("div");
-    item.className = "workout-form__exercise-item";
-    item.setAttribute("data-exercise-id", exerciseId);
-
-    const nameSpan = document.createElement("span");
-    nameSpan.className = "workout-form__exercise-name";
-    nameSpan.textContent = exercise.name;
-    item.appendChild(nameSpan);
-
-    const targetsDiv = document.createElement("div");
-    targetsDiv.className = "workout-form__exercise-targets";
-
-    const repsInput = document.createElement("input");
-    repsInput.className = "workout-form__target-input";
-    repsInput.type = "text";
-    repsInput.placeholder = "Reps (e.g. 8-12)";
-    repsInput.setAttribute("data-field", "targetReps");
-    repsInput.value = targets.targetReps;
-    repsInput.addEventListener("input", () => {
-      const current = editSelectedExercises.get(exerciseId);
-      if (current) {
-        current.targetReps = repsInput.value;
-      }
-    });
-
-    const weightInput = document.createElement("input");
-    weightInput.className = "workout-form__target-input";
-    weightInput.type = "text";
-    weightInput.placeholder = "Weight (e.g. 135 lbs)";
-    weightInput.setAttribute("data-field", "targetWeight");
-    weightInput.value = targets.targetWeight;
-    weightInput.addEventListener("input", () => {
-      const current = editSelectedExercises.get(exerciseId);
-      if (current) {
-        current.targetWeight = weightInput.value;
-      }
-    });
-
-    targetsDiv.appendChild(repsInput);
-    targetsDiv.appendChild(weightInput);
-    item.appendChild(targetsDiv);
-    container.appendChild(item);
   }
 }
 
@@ -689,10 +571,10 @@ async function handleEditSubmit(): Promise<void> {
   submitBtn.classList.add("workout-form__submit--loading");
 
   try {
-    const exercises = Array.from(editSelectedExercises.entries()).map(([exerciseId, targets]) => ({
+    const exercises = Array.from(editSelectedExercises).map(exerciseId => ({
       exerciseId,
-      targetReps: targets.targetReps || null,
-      targetWeight: targets.targetWeight || null,
+      targetReps: null as string | null,
+      targetWeight: null as string | null,
     }));
 
     const response = await fetch(`/api/workouts/${editingWorkoutId}`, {
@@ -728,7 +610,7 @@ function resetCreateForm(): void {
   const errorEl = document.getElementById("workout-error") as HTMLElement | null;
   const apiErrorEl = document.getElementById("workout-api-error") as HTMLElement | null;
 
-  selectedExercises = new Map();
+  selectedExercises = new Set();
 
   if (nameInput) {
     nameInput.value = "";
@@ -744,10 +626,6 @@ function resetCreateForm(): void {
     btn.classList.remove("muscle-toggle--active");
     btn.setAttribute("aria-checked", "false");
   }
-
-  // Clear selected exercises display
-  const selectedContainer = document.getElementById("workout-selected-exercises");
-  if (selectedContainer) selectedContainer.innerHTML = "";
 }
 
 function openDeleteModal(workout: Workout): void {
