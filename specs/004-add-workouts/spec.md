@@ -170,7 +170,7 @@ The user can view all completed workout sessions in a history view. Each session
 - **FR-004**: System MUST prevent duplicate planned workout names (case-insensitive comparison).
 - **FR-005**: System MUST require at least one exercise to be added to a planned workout; a workout without exercises cannot be saved.
 - **FR-006**: System MUST allow users to add one or more exercises from the exercise library to a planned workout.
-- **FR-007**: System MUST allow users to specify optional target rep range (e.g., "8-12") and/or target weight for each exercise in a planned workout.
+- **FR-007**: System MUST allow users to specify optional target rep range (e.g., "8-12") and/or target weight for each exercise in a planned workout. *(Note: The backend API supports `targetReps`/`targetWeight` fields, but the current UI does not expose inputs for them. This is a known gap — the UI uses a simple exercise dropdown without target fields.)*
 - **FR-008**: System MUST prevent the same exercise from being added to a planned workout more than once.
 - **FR-009**: System MUST persist planned workouts and their associated exercises so they are available across sessions.
 - **FR-010**: System MUST display all created planned workouts in a list on the Workouts page, showing each workout's name and exercise count.
