@@ -11,5 +11,9 @@ public class Exercise
 
     public ICollection<WorkoutExercise> WorkoutExercises { get; set; } = [];
 
+    public ICollection<PlannedWorkoutExercise> PlannedWorkoutExercises { get; set; } = [];
+
+    public ICollection<LoggedExercise> LoggedExercises { get; set; } = [];
+
     public ICollection<ExerciseMuscle> ExerciseMuscles { get; set; } = [];
 }

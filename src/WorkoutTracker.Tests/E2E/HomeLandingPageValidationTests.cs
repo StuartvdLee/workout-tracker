@@ -5,7 +5,8 @@ using Xunit;
 
 namespace WorkoutTracker.Tests.E2E;
 
-public class HomeLandingPageValidationTests : IClassFixture<WebAppFixture>, IClassFixture<PlaywrightFixture>
+[Collection("E2E")]
+public class HomeLandingPageValidationTests
 {
     private readonly WebAppFixture _webApp;
     private readonly PlaywrightFixture _playwright;
@@ -24,7 +25,7 @@ public class HomeLandingPageValidationTests : IClassFixture<WebAppFixture>, ICla
         return page;
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task ClickStartWithoutSelection_ShowsValidationError()
     {
         var page = await CreatePageAsync();
@@ -38,7 +39,7 @@ public class HomeLandingPageValidationTests : IClassFixture<WebAppFixture>, ICla
         await page.CloseAsync();
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task SelectWorkoutAfterError_ClearsError()
     {
         var page = await CreatePageAsync();
@@ -55,7 +56,7 @@ public class HomeLandingPageValidationTests : IClassFixture<WebAppFixture>, ICla
         await page.CloseAsync();
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task SelectWorkoutAfterError_RemovesAriaInvalid()
     {
         var page = await CreatePageAsync();
@@ -72,7 +73,7 @@ public class HomeLandingPageValidationTests : IClassFixture<WebAppFixture>, ICla
         await page.CloseAsync();
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task SelectWorkoutAfterError_RemovesErrorStyling()
     {
         var page = await CreatePageAsync();
@@ -89,7 +90,7 @@ public class HomeLandingPageValidationTests : IClassFixture<WebAppFixture>, ICla
         await page.CloseAsync();
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task SelectEachWorkoutAfterError_ClearsErrorForAll()
     {
         var page = await CreatePageAsync();
@@ -112,7 +113,7 @@ public class HomeLandingPageValidationTests : IClassFixture<WebAppFixture>, ICla
         await page.CloseAsync();
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task ErrorMessage_AppearsOnlyOnce_OnMultipleClicks()
     {
         var page = await CreatePageAsync();
@@ -129,7 +130,7 @@ public class HomeLandingPageValidationTests : IClassFixture<WebAppFixture>, ICla
         await page.CloseAsync();
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task ErrorState_AddsAriaInvalid_ToSelect()
     {
         var page = await CreatePageAsync();

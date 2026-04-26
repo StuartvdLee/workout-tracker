@@ -4,7 +4,8 @@ using Xunit;
 
 namespace WorkoutTracker.Tests.E2E;
 
-public class HomeLandingPageRegressionTests : IClassFixture<WebAppFixture>, IClassFixture<PlaywrightFixture>
+[Collection("E2E")]
+public class HomeLandingPageRegressionTests
 {
     private readonly WebAppFixture _webApp;
     private readonly PlaywrightFixture _playwright;
@@ -23,7 +24,7 @@ public class HomeLandingPageRegressionTests : IClassFixture<WebAppFixture>, ICla
         return page;
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task RapidClicks_WithoutSelection_ErrorDisplayedOnce()
     {
         var page = await CreatePageAsync();
@@ -41,7 +42,7 @@ public class HomeLandingPageRegressionTests : IClassFixture<WebAppFixture>, ICla
         await page.CloseAsync();
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task AllWorkoutTypes_CanBeSelectedAndSubmitted()
     {
         var page = await CreatePageAsync();

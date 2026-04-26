@@ -12,6 +12,10 @@ public class WorkoutTrackerDbContext(DbContextOptions<WorkoutTrackerDbContext> o
     public DbSet<WorkoutExercise> WorkoutExercises => Set<WorkoutExercise>();
     public DbSet<Muscle> Muscles => Set<Muscle>();
     public DbSet<ExerciseMuscle> ExerciseMuscles => Set<ExerciseMuscle>();
+    public DbSet<PlannedWorkout> PlannedWorkouts => Set<PlannedWorkout>();
+    public DbSet<PlannedWorkoutExercise> PlannedWorkoutExercises => Set<PlannedWorkoutExercise>();
+    public DbSet<WorkoutSession> WorkoutSessions => Set<WorkoutSession>();
+    public DbSet<LoggedExercise> LoggedExercises => Set<LoggedExercise>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -92,6 +96,62 @@ public class WorkoutTrackerDbContext(DbContextOptions<WorkoutTrackerDbContext> o
 
             entity.HasOne(e => e.Exercise)
                 .WithMany(ex => ex.WorkoutExercises)
+                .HasForeignKey(e => e.ExerciseId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PlannedWorkout>(entity =>
+        {
+            entity.HasKey(e => e.PlannedWorkoutId);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(150);
+            entity.HasIndex(e => e.Name).IsUnique();
+            entity.ToTable(t => t.HasCheckConstraint("ck_planned_workouts_name_length", "length(name) <= 150"));
+            entity.Property<DateTime>("CreatedAt").HasDefaultValueSql("now()");
+            entity.Property<DateTime>("UpdatedAt").HasDefaultValueSql("now()");
+        });
+
+        modelBuilder.Entity<PlannedWorkoutExercise>(entity =>
+        {
+            entity.HasKey(e => e.PlannedWorkoutExerciseId);
+
+            entity.HasOne(e => e.PlannedWorkout)
+                .WithMany(pw => pw.Exercises)
+                .HasForeignKey(e => e.PlannedWorkoutId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Exercise)
+                .WithMany(ex => ex.PlannedWorkoutExercises)
+                .HasForeignKey(e => e.ExerciseId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => new { e.PlannedWorkoutId, e.ExerciseId }).IsUnique();
+        });
+
+        modelBuilder.Entity<WorkoutSession>(entity =>
+        {
+            entity.HasKey(e => e.WorkoutSessionId);
+
+            entity.Property(e => e.WorkoutName).HasMaxLength(150);
+
+            entity.HasOne(e => e.PlannedWorkout)
+                .WithMany(pw => pw.Sessions)
+                .HasForeignKey(e => e.PlannedWorkoutId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.Property<DateTime>("CompletedAt").HasDefaultValueSql("now()");
+        });
+
+        modelBuilder.Entity<LoggedExercise>(entity =>
+        {
+            entity.HasKey(e => e.LoggedExerciseId);
+
+            entity.HasOne(e => e.WorkoutSession)
+                .WithMany(ws => ws.LoggedExercises)
+                .HasForeignKey(e => e.WorkoutSessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Exercise)
+                .WithMany(ex => ex.LoggedExercises)
                 .HasForeignKey(e => e.ExerciseId)
                 .OnDelete(DeleteBehavior.Cascade);
         });

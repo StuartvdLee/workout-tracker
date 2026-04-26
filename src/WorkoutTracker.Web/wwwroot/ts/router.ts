@@ -19,11 +19,13 @@ export function onNavigate(callback: (path: string) => void): void {
 }
 
 export function navigate(path: string): void {
-  const normalised = normalisePath(path);
-  if (normalised === getCurrentPath()) {
+  const [pathname, search] = path.split("?");
+  const normalised = normalisePath(pathname);
+  const fullPath = search ? `${normalised}?${search}` : normalised;
+  if (normalised === getCurrentPath() && window.location.search === (search ? `?${search}` : "")) {
     return;
   }
-  history.pushState(null, "", normalised);
+  history.pushState(null, "", fullPath);
   void renderCurrentRoute();
 }
 
@@ -66,7 +68,7 @@ async function renderCurrentRoute(): Promise<void> {
   }
 }
 
-function normalisePath(path: string): string {
+export function normalisePath(path: string): string {
   if (path === "/" || path === "") {
     return "/";
   }

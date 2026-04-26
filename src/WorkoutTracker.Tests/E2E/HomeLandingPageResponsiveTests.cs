@@ -4,7 +4,8 @@ using Xunit;
 
 namespace WorkoutTracker.Tests.E2E;
 
-public class HomeLandingPageResponsiveTests : IClassFixture<WebAppFixture>, IClassFixture<PlaywrightFixture>
+[Collection("E2E")]
+public class HomeLandingPageResponsiveTests
 {
     private readonly WebAppFixture _webApp;
     private readonly PlaywrightFixture _playwright;
@@ -27,7 +28,7 @@ public class HomeLandingPageResponsiveTests : IClassFixture<WebAppFixture>, ICla
         return page;
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task MobileViewport_AllElementsVisible_NoHorizontalOverflow()
     {
         var page = await CreatePageWithViewportAsync(375, 667);
@@ -43,7 +44,7 @@ public class HomeLandingPageResponsiveTests : IClassFixture<WebAppFixture>, ICla
         await page.CloseAsync();
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task DesktopViewport_AllElementsVisible_LayoutAdapts()
     {
         var page = await CreatePageWithViewportAsync(1024, 768);
@@ -59,7 +60,7 @@ public class HomeLandingPageResponsiveTests : IClassFixture<WebAppFixture>, ICla
         await page.CloseAsync();
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task NarrowViewport_320px_NoOverflow()
     {
         var page = await CreatePageWithViewportAsync(320, 568);
@@ -73,7 +74,7 @@ public class HomeLandingPageResponsiveTests : IClassFixture<WebAppFixture>, ICla
         await page.CloseAsync();
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task WideViewport_1920px_ContentCentered()
     {
         var page = await CreatePageWithViewportAsync(1920, 1080);

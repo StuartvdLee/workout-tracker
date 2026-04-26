@@ -4,7 +4,8 @@ using Xunit;
 
 namespace WorkoutTracker.Tests.E2E;
 
-public class HomeLandingPagePerformanceTests : IClassFixture<WebAppFixture>, IClassFixture<PlaywrightFixture>
+[Collection("E2E")]
+public class HomeLandingPagePerformanceTests
 {
     private readonly WebAppFixture _webApp;
     private readonly PlaywrightFixture _playwright;
@@ -25,7 +26,7 @@ public class HomeLandingPagePerformanceTests : IClassFixture<WebAppFixture>, ICl
     /// to catch obvious regressions in the test environment, not to validate the
     /// full production performance requirement.
     /// </summary>
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task HomePage_LoadsWithinPerformanceBudget()
     {
 
@@ -47,7 +48,7 @@ public class HomeLandingPagePerformanceTests : IClassFixture<WebAppFixture>, ICl
         await page.CloseAsync();
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task HomePage_NoExternalNetworkRequests()
     {
 

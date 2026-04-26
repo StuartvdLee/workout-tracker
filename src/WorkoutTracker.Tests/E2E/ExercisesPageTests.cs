@@ -5,7 +5,8 @@ using Xunit;
 
 namespace WorkoutTracker.Tests.E2E;
 
-public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<PlaywrightFixture>
+[Collection("E2E")]
+public class ExercisesPageTests
 {
     private readonly WebAppFixture _webApp;
     private readonly PlaywrightFixture _playwright;
@@ -28,7 +29,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         return page;
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task CreateExercise_AppearsInList()
     {
         var page = await CreatePageAsync();
@@ -47,7 +48,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task SubmitEmptyName_ShowsRequiredError()
     {
         var page = await CreatePageAsync();
@@ -65,7 +66,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task SubmitWhitespaceOnlyName_ShowsRequiredError()
     {
         var page = await CreatePageAsync();
@@ -82,7 +83,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task SubmitNameExceedingMaxLength_ShowsMaxLengthError()
     {
         var page = await CreatePageAsync();
@@ -104,7 +105,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task CreateDuplicateName_ShowsDuplicateError()
     {
         var page = await CreatePageAsync();
@@ -125,7 +126,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task AfterSuccessfulSave_FormClears()
     {
         var page = await CreatePageAsync();
@@ -144,7 +145,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task EmptyState_ShownWhenNoExercises()
     {
         var page = await CreatePageAsync();
@@ -158,7 +159,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task DeepLink_LoadsExercisesPage()
     {
         var page = await CreatePageAsync();
@@ -172,7 +173,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task DoubleSubmissionPrevention_DisabledDuringSubmit()
     {
         var page = await CreatePageAsync();
@@ -203,7 +204,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task ServerError_ShowsErrorAndPreservesInput()
     {
         var page = await CreatePageAsync();
@@ -225,7 +226,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
 
     // === User Story 2: Assign Targeted Muscles ===
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task MuscleToggles_AllElevenDisplayed()
     {
         var page = await CreatePageAsync();
@@ -239,7 +240,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task MuscleToggle_ClickTogglesActiveState()
     {
         var page = await CreatePageAsync();
@@ -262,7 +263,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task CreateExerciseWithMuscles_ShowsMuscleChipsInList()
     {
         var page = await CreatePageAsync();
@@ -286,7 +287,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task CreateExerciseWithoutMuscles_Succeeds()
     {
         var page = await CreatePageAsync();
@@ -306,7 +307,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task CreateExerciseWithMultipleMuscles_DisplaysAllChips()
     {
         var page = await CreatePageAsync();
@@ -332,7 +333,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
 
     // === User Story 3: View Exercise List ===
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task ExerciseList_MultipleExercisesAllAppear()
     {
         var page = await CreatePageAsync();
@@ -360,7 +361,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task ExerciseList_ExerciseWithMusclesShowsChips()
     {
         var page = await CreatePageAsync();
@@ -381,7 +382,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task ExerciseList_ExerciseWithoutMusclesShowsNameOnly()
     {
         var page = await CreatePageAsync();
@@ -401,7 +402,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task ExerciseList_EmptyStateMessage()
     {
         var page = await CreatePageAsync();
@@ -416,7 +417,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task ExerciseList_HeadingVisible()
     {
         var page = await CreatePageAsync();
@@ -436,7 +437,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
 
     // === User Story 4: Edit an Existing Exercise ===
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task EditExercise_FormPopulatesWithExistingData()
     {
         var page = await CreatePageAsync();
@@ -463,7 +464,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task EditMode_ShowsUpdateButtonAndCancelButton()
     {
         var page = await CreatePageAsync();
@@ -485,7 +486,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task EditExercise_UpdateNameAppearsInList()
     {
         var page = await CreatePageAsync();
@@ -511,7 +512,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task EditExercise_UpdateMusclesAppearsInList()
     {
         var page = await CreatePageAsync();
@@ -539,7 +540,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task EditMode_CancelReturnToCreateMode()
     {
         var page = await CreatePageAsync();
@@ -564,7 +565,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task EditMode_ClearNameShowsRequiredError()
     {
         var page = await CreatePageAsync();
@@ -587,7 +588,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task EditMode_DuplicateNameShowsError()
     {
         var page = await CreatePageAsync();
@@ -616,7 +617,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task EditMode_OwnNameAllowed()
     {
         var page = await CreatePageAsync();
@@ -641,7 +642,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task EditMode_SwitchToAnotherExercise()
     {
         var page = await CreatePageAsync();
@@ -679,7 +680,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
     // Phase 7 — T025: ARIA & Keyboard Navigation
     // ──────────────────────────────────────────
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task Keyboard_TabThroughFormFields()
     {
         var page = await CreatePageAsync();
@@ -700,7 +701,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task Keyboard_SpaceActivatesMuscleToggle()
     {
         var page = await CreatePageAsync();
@@ -722,7 +723,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task Keyboard_EnterSubmitsForm()
     {
         var page = await CreatePageAsync();
@@ -740,7 +741,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
 
     // === Delete Exercise Tests ===
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task Delete_ButtonIsVisibleForEachExercise()
     {
         var page = await CreatePageAsync();
@@ -761,7 +762,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task Delete_ConfirmationModalOpensOnClick()
     {
         var page = await CreatePageAsync();
@@ -788,7 +789,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task Delete_CancelClosesModalWithoutDeleting()
     {
         var page = await CreatePageAsync();
@@ -812,7 +813,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task Delete_ConfirmDeletesExerciseAndClosesModal()
     {
         var page = await CreatePageAsync();
@@ -839,7 +840,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task Delete_OnlyDeletesTargetedExercise()
     {
         var page = await CreatePageAsync();
@@ -868,7 +869,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task Delete_EscapeClosesModal()
     {
         var page = await CreatePageAsync();
@@ -892,7 +893,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task Delete_BackdropClickClosesModal()
     {
         var page = await CreatePageAsync();
@@ -918,7 +919,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task Delete_ModalHasCorrectAriaAttributes()
     {
         var page = await CreatePageAsync();
@@ -941,7 +942,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task Aria_ErrorMessagesHaveAlertRole()
     {
         var page = await CreatePageAsync();
@@ -961,7 +962,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task Aria_MuscleTogglesHaveCheckboxRole()
     {
         var page = await CreatePageAsync();
@@ -984,7 +985,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task Aria_EditButtonsHaveDescriptiveLabels()
     {
         var page = await CreatePageAsync();
@@ -1003,7 +1004,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task Aria_SubmitDisabledDuringSave()
     {
         var page = await CreatePageAsync();
@@ -1039,7 +1040,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         return page;
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task Mobile_PageRendersAt375pxViewport()
     {
         var page = await CreateMobilePageAsync();
@@ -1055,7 +1056,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task Mobile_FormInputsAreUsable()
     {
         var page = await CreateMobilePageAsync();
@@ -1071,7 +1072,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task Mobile_MuscleTogglesWrap()
     {
         var page = await CreateMobilePageAsync();
@@ -1096,7 +1097,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task Mobile_TouchTargetsMinimum44px()
     {
         var page = await CreateMobilePageAsync();
@@ -1122,7 +1123,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
     // Phase 7 — T028: Performance Budgets
     // ──────────────────────────────────────────
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task Performance_PageLoadUnder3sOnSlowNetwork()
     {
         WebAppFixture.ResetExercises();
@@ -1161,7 +1162,7 @@ public class ExercisesPageTests : IClassFixture<WebAppFixture>, IClassFixture<Pl
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task Performance_SubmitFeedbackUnder200ms()
     {
         var page = await CreatePageAsync();

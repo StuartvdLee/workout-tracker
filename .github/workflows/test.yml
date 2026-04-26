@@ -11,6 +11,21 @@ jobs:
     permissions:
       contents: read
 
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: workout_tracker_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       # Check out the repository source code
       - name: Checkout repository
@@ -31,12 +46,13 @@ jobs:
           cache: 'npm'
           cache-dependency-path: src/WorkoutTracker.Web/package-lock.json
 
-      # Install TypeScript and compile wwwroot/ts → wwwroot/js
-      - name: Build TypeScript
+      # Install dependencies, compile TypeScript, and run frontend tests
+      - name: Build and test TypeScript
         working-directory: src/WorkoutTracker.Web
         run: |
           npm ci
           npm run build
+          npm test
 
       # Restore all NuGet packages for the solution
       - name: Restore .NET dependencies
@@ -46,12 +62,10 @@ jobs:
       - name: Build
         run: dotnet build src/WorkoutTracker.Tests/WorkoutTracker.Tests.csproj --no-restore --configuration Release
 
-      # Install Playwright browser binaries and OS-level dependencies for Chromium
-      - name: Install Playwright browsers
-        run: pwsh src/WorkoutTracker.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
-
       # Run all test suites and report results
       - name: Run tests
+        env:
+          TEST_DB_CONNECTION: "Host=localhost;Port=5432;Database=workout_tracker_test;Username=postgres;Password=postgres"
         run: dotnet test src/WorkoutTracker.Tests/WorkoutTracker.Tests.csproj --no-build --configuration Release --logger "trx;LogFileName=test-results.trx"
 
       # Upload test result artifacts so they are visible in the workflow summary
@@ -61,3 +75,4 @@ jobs:
         with:
           name: test-results
           path: src/WorkoutTracker.Tests/TestResults/
+

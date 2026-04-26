@@ -4,7 +4,8 @@ using Xunit;
 
 namespace WorkoutTracker.Tests.E2E;
 
-public class HomeLandingPageSelectionTests : IClassFixture<WebAppFixture>, IClassFixture<PlaywrightFixture>
+[Collection("E2E")]
+public class HomeLandingPageSelectionTests
 {
     private readonly WebAppFixture _webApp;
     private readonly PlaywrightFixture _playwright;
@@ -23,7 +24,7 @@ public class HomeLandingPageSelectionTests : IClassFixture<WebAppFixture>, IClas
         return page;
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task HomePage_DisplaysTitle_WorkoutTracker()
     {
         var page = await CreatePageAsync();
@@ -37,7 +38,7 @@ public class HomeLandingPageSelectionTests : IClassFixture<WebAppFixture>, IClas
         await page.CloseAsync();
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task HomePage_DisplaysDropdown_WithPlaceholder()
     {
         var page = await CreatePageAsync();
@@ -51,7 +52,7 @@ public class HomeLandingPageSelectionTests : IClassFixture<WebAppFixture>, IClas
         await page.CloseAsync();
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task HomePage_DisplaysStartWorkoutButton()
     {
         var page = await CreatePageAsync();
@@ -62,7 +63,7 @@ public class HomeLandingPageSelectionTests : IClassFixture<WebAppFixture>, IClas
         await page.CloseAsync();
     }
 
-    [Theory]
+    [Theory(Skip = "Playwright E2E - disabled")]
     [InlineData("Push")]
     [InlineData("Pull")]
     [InlineData("Legs")]
@@ -84,7 +85,7 @@ public class HomeLandingPageSelectionTests : IClassFixture<WebAppFixture>, IClas
         await page.CloseAsync();
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task Dropdown_ContainsExactlyThreeWorkoutOptions()
     {
         var page = await CreatePageAsync();

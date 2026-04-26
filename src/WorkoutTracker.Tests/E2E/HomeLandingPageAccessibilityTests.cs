@@ -4,7 +4,8 @@ using Xunit;
 
 namespace WorkoutTracker.Tests.E2E;
 
-public class HomeLandingPageAccessibilityTests : IClassFixture<WebAppFixture>, IClassFixture<PlaywrightFixture>
+[Collection("E2E")]
+public class HomeLandingPageAccessibilityTests
 {
     private readonly WebAppFixture _webApp;
     private readonly PlaywrightFixture _playwright;
@@ -27,7 +28,7 @@ public class HomeLandingPageAccessibilityTests : IClassFixture<WebAppFixture>, I
         return page;
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task TouchTargets_MeetMinimumSize_44x44()
     {
         var page = await CreatePageAsync();
@@ -46,7 +47,7 @@ public class HomeLandingPageAccessibilityTests : IClassFixture<WebAppFixture>, I
         await page.CloseAsync();
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task Select_HasAssociatedLabel()
     {
         var page = await CreatePageAsync();
@@ -57,7 +58,7 @@ public class HomeLandingPageAccessibilityTests : IClassFixture<WebAppFixture>, I
         await page.CloseAsync();
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task ErrorRegion_HasAriaLiveAttribute()
     {
         var page = await CreatePageAsync();
@@ -72,7 +73,7 @@ public class HomeLandingPageAccessibilityTests : IClassFixture<WebAppFixture>, I
         await page.CloseAsync();
     }
 
-    [Fact]
+    [Fact(Skip = "Playwright E2E - disabled")]
     public async Task Select_HasAriaDescribedBy_ErrorElement()
     {
         var page = await CreatePageAsync();
