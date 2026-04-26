@@ -68,7 +68,7 @@ async function renderCurrentRoute(): Promise<void> {
   }
 }
 
-function normalisePath(path: string): string {
+export function normalisePath(path: string): string {
   if (path === "/" || path === "") {
     return "/";
   }

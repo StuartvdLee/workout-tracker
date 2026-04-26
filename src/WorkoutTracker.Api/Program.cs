@@ -514,6 +514,9 @@ app.MapGet("/api/sessions", async (WorkoutTrackerDbContext db) =>
 
 app.Run();
 
+// Expose Program class for WebApplicationFactory in tests
+public partial class Program { }
+
 internal sealed class WorkoutCreateRequest
 {
     public string? Name { get; set; }
