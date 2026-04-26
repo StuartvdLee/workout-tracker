@@ -264,15 +264,11 @@ async function loadData(): Promise<void> {
       fetch("/api/workouts"),
     ]);
 
-    if (exercisesRes.ok) {
-      availableExercises = await exercisesRes.json();
-    }
-
-    if (workoutsRes.ok) {
-      workouts = await workoutsRes.json();
-    }
+    availableExercises = exercisesRes.ok ? await exercisesRes.json() : [];
+    workouts = workoutsRes.ok ? await workoutsRes.json() : [];
   } catch {
-    // API unavailable
+    availableExercises = [];
+    workouts = [];
   }
 
   renderExerciseDropdown();

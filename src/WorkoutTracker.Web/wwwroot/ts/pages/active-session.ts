@@ -307,11 +307,14 @@ async function handleSave(): Promise<void> {
   try {
     const loggedExercises = workout.exercises.map((exercise) => {
       const entry = logEntries.get(exercise.exerciseId);
+      const repsStr = entry?.loggedReps ?? "";
+      const weightStr = entry?.loggedWeight ?? "";
+      const notesStr = entry?.notes ?? "";
       return {
         exerciseId: exercise.exerciseId,
-        loggedReps: entry?.loggedReps ?? "",
-        loggedWeight: entry?.loggedWeight ?? "",
-        notes: entry?.notes ?? "",
+        loggedReps: repsStr !== "" ? parseInt(repsStr, 10) : null,
+        loggedWeight: weightStr !== "" ? weightStr : null,
+        notes: notesStr !== "" ? notesStr : null,
       };
     });
 

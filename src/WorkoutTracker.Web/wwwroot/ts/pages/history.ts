@@ -1,4 +1,5 @@
 interface LoggedExercise {
+  readonly loggedExerciseId: string;
   readonly exerciseId: string;
   readonly exerciseName: string;
   readonly loggedReps: number | null;
@@ -7,11 +8,11 @@ interface LoggedExercise {
 }
 
 interface WorkoutSession {
-  readonly sessionId: string;
-  readonly workoutId: string;
+  readonly workoutSessionId: string;
+  readonly plannedWorkoutId: string | null;
   readonly workoutName: string;
   readonly completedAt: string;
-  readonly exercises: LoggedExercise[];
+  readonly loggedExercises: LoggedExercise[];
 }
 
 export async function render(container: HTMLElement): Promise<void> {
@@ -68,7 +69,7 @@ function getDateLabel(isoDate: string): string {
     (today.getTime() - sessionDate.getTime()) / (1000 * 60 * 60 * 24)
   );
 
-  if (diffDays === 0) return "Today";
+  if (diffDays <= 0) return "Today";
   if (diffDays === 1) return "Yesterday";
   return `${diffDays} days ago`;
 }
@@ -118,13 +119,13 @@ function renderSessions(sessions: WorkoutSession[], container: HTMLElement): voi
 }
 
 function renderSession(session: WorkoutSession): string {
-  const exerciseCount = session.exercises.length;
+  const exerciseCount = session.loggedExercises.length;
   const exerciseLabel = exerciseCount === 1 ? "1 exercise" : `${exerciseCount} exercises`;
 
   const exercisesHtml =
     exerciseCount === 0
       ? `<div class="history-session__exercise"><span class="history-session__exercise-name">No exercises logged</span></div>`
-      : session.exercises
+      : session.loggedExercises
           .map((ex) => {
             const parts: string[] = [];
             if (ex.loggedReps !== null) parts.push(`${ex.loggedReps} reps`);
@@ -141,14 +142,14 @@ function renderSession(session: WorkoutSession): string {
           .join("");
 
   return `
-    <div class="history-session" data-session-id="${escapeHtml(session.sessionId)}">
-      <button class="history-session__header" type="button" aria-expanded="false" aria-controls="session-details-${escapeHtml(session.sessionId)}">
+    <div class="history-session" data-session-id="${escapeHtml(session.workoutSessionId)}">
+      <button class="history-session__header" type="button" aria-expanded="false" aria-controls="session-details-${escapeHtml(session.workoutSessionId)}">
         <span class="history-session__workout-name">${escapeHtml(session.workoutName)}</span>
         <span class="history-session__time">${formatTime(session.completedAt)}</span>
         <span class="history-session__exercise-count">${exerciseLabel}</span>
         <span class="history-session__toggle">▸</span>
       </button>
-      <div class="history-session__details" id="session-details-${escapeHtml(session.sessionId)}" style="display:none;">
+      <div class="history-session__details" id="session-details-${escapeHtml(session.workoutSessionId)}" style="display:none;">
         ${exercisesHtml}
       </div>
     </div>`;

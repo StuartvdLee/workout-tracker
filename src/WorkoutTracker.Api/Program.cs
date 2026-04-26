@@ -287,9 +287,15 @@ app.MapPost("/api/workouts", async (HttpContext context, WorkoutTrackerDbContext
         return Results.Json(new { error = "At least one exercise is required." }, statusCode: 400);
     }
 
-    var exerciseIds = exercises.Select(e => e.ExerciseId).Distinct().ToArray();
-    var validExerciseCount = await db.Exercises.CountAsync(e => exerciseIds.Contains(e.ExerciseId));
-    if (validExerciseCount != exerciseIds.Length)
+    var exerciseIds = exercises.Select(e => e.ExerciseId).ToArray();
+    var distinctExerciseIds = exerciseIds.Distinct().ToArray();
+    if (distinctExerciseIds.Length != exerciseIds.Length)
+    {
+        return Results.Json(new { error = "Each exercise may only be included once in a workout." }, statusCode: 400);
+    }
+
+    var validExerciseCount = await db.Exercises.CountAsync(e => distinctExerciseIds.Contains(e.ExerciseId));
+    if (validExerciseCount != distinctExerciseIds.Length)
     {
         return Results.Json(new { error = "One or more selected exercises are invalid." }, statusCode: 400);
     }
@@ -371,9 +377,15 @@ app.MapPut("/api/workouts/{workoutId:guid}", async (Guid workoutId, HttpContext 
         return Results.Json(new { error = "At least one exercise is required." }, statusCode: 400);
     }
 
-    var exerciseIds = exercises.Select(e => e.ExerciseId).Distinct().ToArray();
-    var validExerciseCount = await db.Exercises.CountAsync(e => exerciseIds.Contains(e.ExerciseId));
-    if (validExerciseCount != exerciseIds.Length)
+    var exerciseIds = exercises.Select(e => e.ExerciseId).ToArray();
+    var distinctExerciseIds = exerciseIds.Distinct().ToArray();
+    if (distinctExerciseIds.Length != exerciseIds.Length)
+    {
+        return Results.Json(new { error = "Each exercise may only be included once in a workout." }, statusCode: 400);
+    }
+
+    var validExerciseCount = await db.Exercises.CountAsync(e => distinctExerciseIds.Contains(e.ExerciseId));
+    if (validExerciseCount != distinctExerciseIds.Length)
     {
         return Results.Json(new { error = "One or more selected exercises are invalid." }, statusCode: 400);
     }
@@ -444,6 +456,21 @@ app.MapPost("/api/workouts/{workoutId:guid}/sessions", async (Guid workoutId, Ht
 
     var body = await context.Request.ReadFromJsonAsync<SessionCreateRequest>();
     var loggedExercises = body?.LoggedExercises ?? [];
+
+    if (loggedExercises.Length > 0)
+    {
+        var loggedExerciseIds = loggedExercises.Select(le => le.ExerciseId).Distinct().ToArray();
+        var validPlannedExerciseIds = await db.PlannedWorkoutExercises
+            .Where(pwe => pwe.PlannedWorkoutId == workoutId)
+            .Select(pwe => pwe.ExerciseId)
+            .ToListAsync();
+
+        var invalidIds = loggedExerciseIds.Except(validPlannedExerciseIds).ToArray();
+        if (invalidIds.Length > 0)
+        {
+            return Results.Json(new { error = "One or more logged exercises are not part of this workout." }, statusCode: 400);
+        }
+    }
 
     var session = new WorkoutSession
     {

@@ -290,7 +290,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
                             return new
                             {
                                 we.ExerciseId,
-                                ExerciseName = ex?.Name ?? "",
+                                Name = ex?.Name ?? "",
                                 we.TargetReps,
                                 we.TargetWeight,
                             };
