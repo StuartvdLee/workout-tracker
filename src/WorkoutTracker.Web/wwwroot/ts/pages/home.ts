@@ -1,9 +1,11 @@
-interface WorkoutType {
-  readonly workoutTypeId: string;
+import { navigate } from "../router.js";
+
+interface PlannedWorkout {
+  readonly plannedWorkoutId: string;
   readonly name: string;
 }
 
-let loadedWorkoutTypeIds: Set<string> = new Set();
+let loadedWorkoutIds: Set<string> = new Set();
 
 export function render(container: HTMLElement): void {
   container.innerHTML = `
@@ -38,7 +40,7 @@ export function render(container: HTMLElement): void {
     </div>
   `;
 
-  loadedWorkoutTypeIds = new Set();
+  loadedWorkoutIds = new Set();
   initForm();
 }
 
@@ -67,18 +69,18 @@ function initForm(): void {
 
 async function populateWorkoutOptions(select: HTMLSelectElement): Promise<void> {
   try {
-    const response = await fetch("/api/workout-types");
+    const response = await fetch("/api/workouts");
     if (!response.ok) {
       return;
     }
 
-    const workoutTypes: WorkoutType[] = await response.json();
-    loadedWorkoutTypeIds = new Set(workoutTypes.map((wt) => wt.workoutTypeId));
+    const workouts: PlannedWorkout[] = await response.json();
+    loadedWorkoutIds = new Set(workouts.map((w) => w.plannedWorkoutId));
 
-    for (const wt of workoutTypes) {
+    for (const w of workouts) {
       const optionEl = document.createElement("option");
-      optionEl.value = wt.workoutTypeId;
-      optionEl.textContent = wt.name;
+      optionEl.value = w.plannedWorkoutId;
+      optionEl.textContent = w.name;
       select.appendChild(optionEl);
     }
   } catch {
@@ -95,10 +97,11 @@ function handleStartWorkout(select: HTMLSelectElement, errorEl: HTMLElement): vo
   }
 
   clearError(select, errorEl);
+  navigate(`/active-session?id=${selectedValue}`);
 }
 
 function isValidWorkoutValue(value: string): boolean {
-  return loadedWorkoutTypeIds.has(value);
+  return loadedWorkoutIds.has(value);
 }
 
 function showError(select: HTMLSelectElement, errorEl: HTMLElement, message: string): void {
