@@ -1,6 +1,6 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-var postgresPassword = builder.AddParameter("postgres-password", secret: true);
+var postgresPassword = builder.AddParameter("postgresPassword", secret: true);
 
 var postgres = builder.AddPostgres("postgres", password: postgresPassword)
     .WithLifetime(ContainerLifetime.Persistent)

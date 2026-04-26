@@ -17,6 +17,16 @@ A fitness application for tracking workouts and exercise progress. Built with C#
 
 ## Getting Started
 
+### Local secrets (first-time setup)
+
+The AppHost requires a persistent PostgreSQL password stored in user secrets. Run this once from the `src/WorkoutTracker.AppHost` directory:
+
+```bash
+dotnet user-secrets set "Parameters:postgresPassword" "<your-dev-password>"
+```
+
+This password is stored locally and never committed to the repo.
+
 ```bash
 cd src
 dotnet run --project WorkoutTracker.AppHost
