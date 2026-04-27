@@ -70,6 +70,7 @@ jobs:
       - name: Run tests
         env:
           TEST_DB_CONNECTION: "Host=localhost;Port=5432;Database=workout_tracker_test;Username=postgres;Password=postgres"
+          ASPNETCORE_ENVIRONMENT: Development
         run: dotnet test src/WorkoutTracker.Tests/WorkoutTracker.Tests.csproj --no-build --configuration Release --logger "trx;LogFileName=test-results.trx"
 
       # Upload test result artifacts so they are visible in the workflow summary
