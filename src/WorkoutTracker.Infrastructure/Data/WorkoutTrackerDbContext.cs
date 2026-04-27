@@ -63,7 +63,8 @@ public class WorkoutTrackerDbContext(DbContextOptions<WorkoutTrackerDbContext> o
                 new Muscle { MuscleId = Guid.Parse("a1000000-0000-0000-0000-000000000008"), Name = "Hamstrings" },
                 new Muscle { MuscleId = Guid.Parse("a1000000-0000-0000-0000-000000000009"), Name = "Quads" },
                 new Muscle { MuscleId = Guid.Parse("a1000000-0000-0000-0000-00000000000a"), Name = "Shoulders" },
-                new Muscle { MuscleId = Guid.Parse("a1000000-0000-0000-0000-00000000000b"), Name = "Triceps" }
+                new Muscle { MuscleId = Guid.Parse("a1000000-0000-0000-0000-00000000000b"), Name = "Triceps" },
+                new Muscle { MuscleId = Guid.Parse("a1000000-0000-0000-0000-00000000000c"), Name = "Adductors" }
             );
         });
 
