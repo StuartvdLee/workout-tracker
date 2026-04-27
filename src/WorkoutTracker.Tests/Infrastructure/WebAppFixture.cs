@@ -3,6 +3,9 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Hosting;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using WorkoutTracker.Infrastructure.Data;
 
 namespace WorkoutTracker.Tests.Infrastructure;
 
@@ -86,6 +89,43 @@ public class WebAppFixture : WebApplicationFactory<Program>
                     _workouts.Add(workout);
             }
         }
+    }
+
+    private static string ConnectionString =>
+        Environment.GetEnvironmentVariable("TEST_DB_CONNECTION")
+        ?? "Host=localhost;Port=5432;Database=workout_tracker_test;Username=postgres;Password=postgres";
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        // Use a non-Development environment so the app doesn't auto-run migrations or seed data
+        builder.UseEnvironment("Test");
+
+        // Inject the test database connection string so AddNpgsqlDbContext picks it up
+        builder.UseSetting("ConnectionStrings:workout-tracker-db", ConnectionString);
+
+        // Suppress OTLP exporter connection errors in tests
+        builder.UseSetting("OTEL_SDK_DISABLED", "true");
+
+        // Remove the Aspire-registered DbContext and replace with a plain Npgsql registration
+        // so tests don't need the Aspire service bus running
+        builder.ConfigureServices(services =>
+        {
+            var descriptors = services
+                .Where(d =>
+                    d.ServiceType == typeof(WorkoutTrackerDbContext) ||
+                    d.ServiceType == typeof(DbContextOptions<WorkoutTrackerDbContext>) ||
+                    d.ServiceType == typeof(DbContextOptions))
+                .ToList();
+
+            foreach (var d in descriptors)
+                services.Remove(d);
+
+            services.AddDbContext<WorkoutTrackerDbContext>(options =>
+                options
+                    .UseNpgsql(ConnectionString)
+                    .UseSnakeCaseNamingConvention());
+        });
+
     }
 
     public WebAppFixture()
