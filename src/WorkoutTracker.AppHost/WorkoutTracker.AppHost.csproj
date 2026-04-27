@@ -9,8 +9,8 @@
     <UserSecretsId>10e6c8c8-12e7-4a72-8817-53a3f0843fcc</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Aspire.Hosting.AppHost" Version="13.2.2" />
-    <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="13.2.2" />
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="13.2.4" />
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="13.2.4" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\WorkoutTracker.Api\WorkoutTracker.Api.csproj" />
