@@ -29,7 +29,7 @@ public class MusclesApiTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var muscles = await response.Content.ReadFromJsonAsync<List<MuscleDto>>();
         Assert.NotNull(muscles);
-        Assert.Equal(11, muscles.Count);
+        Assert.Equal(12, muscles.Count);
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public class MusclesApiTests : IAsyncLifetime
         var muscles = await response.Content.ReadFromJsonAsync<List<MuscleDto>>();
 
         Assert.NotNull(muscles);
-        Assert.Equal("Back", muscles[0].Name);
+        Assert.Equal("Adductors", muscles[0].Name);
     }
 
     private sealed record MuscleDto(Guid MuscleId, string Name);
