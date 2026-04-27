@@ -17,7 +17,6 @@ interface WorkoutDetail {
 interface LogEntry {
   loggedWeight: string;
   loggedEffort: number | null;
-  notes: string;
 }
 
 let workout: WorkoutDetail | null = null;
@@ -47,7 +46,6 @@ export async function render(container: HTMLElement): Promise<void> {
   container.innerHTML = `
     <div class="active-session">
       <div class="active-session__header">
-        <button class="active-session__back-btn" type="button" id="session-back">← Back to Workouts</button>
         <h1 class="active-session__title" id="session-title">Loading...</h1>
       </div>
       <div class="active-session__exercises" id="session-exercises" role="form" aria-label="Log workout exercises"></div>
@@ -78,17 +76,12 @@ export async function render(container: HTMLElement): Promise<void> {
 function initEventListeners(): void {
   const saveBtn = document.getElementById("session-save") as HTMLButtonElement | null;
   const cancelBtn = document.getElementById("session-cancel") as HTMLButtonElement | null;
-  const backBtn = document.getElementById("session-back") as HTMLButtonElement | null;
 
   saveBtn?.addEventListener("click", () => {
     void handleSave();
   });
 
   cancelBtn?.addEventListener("click", () => {
-    handleCancel();
-  });
-
-  backBtn?.addEventListener("click", () => {
     handleCancel();
   });
 }
@@ -193,7 +186,7 @@ function renderExerciseInputs(): void {
   logEntries = new Map();
 
   for (const exercise of workout.exercises) {
-    logEntries.set(exercise.exerciseId, { loggedWeight: "", loggedEffort: null, notes: "" });
+    logEntries.set(exercise.exerciseId, { loggedWeight: "", loggedEffort: null });
 
     const item = document.createElement("div");
     item.className = "active-session__exercise-item";
@@ -240,27 +233,7 @@ function renderExerciseInputs(): void {
     weightGroup.appendChild(weightInput);
     inputsDiv.appendChild(weightGroup);
 
-    // Notes input
-    const notesGroup = document.createElement("div");
-    notesGroup.className = "active-session__input-group";
-    const notesLabel = document.createElement("label");
-    notesLabel.className = "active-session__input-label";
-    notesLabel.setAttribute("for", `notes-${exercise.exerciseId}`);
-    notesLabel.textContent = "Notes";
-    const notesInput = document.createElement("input");
-    notesInput.className = "active-session__notes-input";
-    notesInput.type = "text";
-    notesInput.id = `notes-${exercise.exerciseId}`;
-    notesInput.placeholder = "Notes (optional)";
-    notesInput.setAttribute("aria-label", `Notes for ${exercise.name}`);
-    notesInput.addEventListener("input", () => {
-      hasChanges = true;
-      const entry = logEntries.get(exercise.exerciseId);
-      if (entry) entry.notes = notesInput.value;
-    });
-    notesGroup.appendChild(notesLabel);
-    notesGroup.appendChild(notesInput);
-    inputsDiv.appendChild(notesGroup);
+    // Notes input removed — not in use
 
     // Effort slider
     const effortGroup = document.createElement("div");
@@ -287,7 +260,8 @@ function renderExerciseInputs(): void {
     effortSlider.setAttribute("aria-label", `Effort for ${exercise.name}`);
     effortSlider.setAttribute("aria-valuemin", "1");
     effortSlider.setAttribute("aria-valuemax", "10");
-    // aria-valuenow intentionally absent until first touch
+    // Set value=1 so slider renders at the left; aria-valuenow stays absent until touched
+    effortSlider.value = "1";
     effortSlider.removeAttribute("aria-valuenow");
 
     const effortBandEl = document.createElement("span");
@@ -339,11 +313,9 @@ async function handleSave(): Promise<void> {
     const loggedExercises = workout.exercises.map((exercise) => {
       const entry = logEntries.get(exercise.exerciseId);
       const weightStr = entry?.loggedWeight ?? "";
-      const notesStr = entry?.notes ?? "";
       return {
         exerciseId: exercise.exerciseId,
         loggedWeight: weightStr !== "" ? weightStr : null,
-        notes: notesStr !== "" ? notesStr : null,
         effort: entry?.loggedEffort ?? null,
       };
     });
