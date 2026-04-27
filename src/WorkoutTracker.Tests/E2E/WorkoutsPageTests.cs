@@ -22,7 +22,6 @@ public class WorkoutsPageTests
         WebAppFixture.ResetExercises();
         WebAppFixture.SeedDefaultExercises();
         WebAppFixture.ResetWorkouts();
-        WebAppFixture.SeedDefaultWorkouts();
 
         var page = await _playwright.Browser.NewPageAsync(new BrowserNewPageOptions
         {
