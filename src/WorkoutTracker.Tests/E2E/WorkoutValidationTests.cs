@@ -218,7 +218,7 @@ public class WorkoutValidationTests
     }
 
     [Fact]
-    public async Task CreateWorkout_ToggleExerciseTwice_DeselectsIt()
+    public async Task CreateWorkout_SelectThenRemoveExercise_LeavesNoExercisesSelected()
     {
         var page = await CreatePageAsync();
         try

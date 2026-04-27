@@ -227,7 +227,7 @@ public class ExercisesPageTests
     // === User Story 2: Assign Targeted Muscles ===
 
     [Fact]
-    public async Task MuscleToggles_AllElevenDisplayed()
+    public async Task MuscleToggles_AllTwelveDisplayed()
     {
         var page = await CreatePageAsync();
         try

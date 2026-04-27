@@ -534,7 +534,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
 
             var body = await request.ReadFromJsonAsync<SessionRequest>();
             var loggedExercises = (body?.LoggedExercises ?? [])
-                .Select(e => new MockLoggedExercise(e.ExerciseId, e.LoggedReps, e.LoggedWeight, e.Notes))
+                .Select(e => new MockLoggedExercise(Guid.NewGuid().ToString(), e.ExerciseId, e.LoggedReps, e.LoggedWeight, e.Notes, e.Effort))
                 .ToList();
 
             string workoutName;
@@ -589,7 +589,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
                 }
 
                 session.LoggedExercises = (body?.LoggedExercises ?? [])
-                    .Select(e => new MockLoggedExercise(e.ExerciseId, e.LoggedReps, e.LoggedWeight, e.Notes))
+                    .Select(e => new MockLoggedExercise(Guid.NewGuid().ToString(), e.ExerciseId, e.LoggedReps, e.LoggedWeight, e.Notes, e.Effort))
                     .ToList();
 
                 return Results.Ok(new { session.SessionId, session.PlannedWorkoutId, session.WorkoutName, session.CompletedAt });
@@ -626,11 +626,12 @@ public class WebAppFixture : WebApplicationFactory<Program>
                                 string.Equals(e.ExerciseId, le.ExerciseId, StringComparison.OrdinalIgnoreCase));
                             return new
                             {
+                                le.LoggedExerciseId,
                                 le.ExerciseId,
                                 ExerciseName = ex?.Name ?? "",
                                 le.LoggedWeight,
                                 le.Notes,
-                                Effort = (int?)null,
+                                le.Effort,
                             };
                         })
                         .ToList(),
@@ -710,6 +711,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
         public int? LoggedReps { get; set; }
         public string? LoggedWeight { get; set; }
         public string? Notes { get; set; }
+        public int? Effort { get; set; }
     }
 }
 
@@ -733,7 +735,7 @@ public record MockPlannedWorkout(string PlannedWorkoutId, string Name, List<Mock
     public List<MockPlannedWorkoutExercise> Exercises { get; set; } = Exercises;
 }
 
-public record MockLoggedExercise(string ExerciseId, int? LoggedReps, string? LoggedWeight, string? Notes);
+public record MockLoggedExercise(string LoggedExerciseId, string ExerciseId, int? LoggedReps, string? LoggedWeight, string? Notes, int? Effort);
 
 public record MockWorkoutSession(string SessionId, string PlannedWorkoutId, string WorkoutName, DateTime CompletedAt, List<MockLoggedExercise> LoggedExercises)
 {

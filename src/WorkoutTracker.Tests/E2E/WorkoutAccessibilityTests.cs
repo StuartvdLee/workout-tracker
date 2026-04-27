@@ -71,7 +71,7 @@ public class WorkoutAccessibilityTests
     // ──────────────────────────────────────────
 
     [Fact]
-    public async Task Aria_ExerciseTogglesHaveCheckboxRole()
+    public async Task Aria_ExerciseSelectAndLabelArePresent()
     {
         var page = await CreatePageAsync();
         try
@@ -94,7 +94,7 @@ public class WorkoutAccessibilityTests
     }
 
     [Fact]
-    public async Task Aria_ExerciseToggle_SpaceActivatesCheckbox()
+    public async Task Aria_ExerciseSelect_SelectAndRemoveExercise()
     {
         var page = await CreatePageAsync();
         try
