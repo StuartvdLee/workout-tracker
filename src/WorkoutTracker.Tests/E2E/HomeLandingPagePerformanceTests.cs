@@ -26,7 +26,7 @@ public class HomeLandingPagePerformanceTests
     /// to catch obvious regressions in the test environment, not to validate the
     /// full production performance requirement.
     /// </summary>
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task HomePage_LoadsWithinPerformanceBudget()
     {
 
@@ -48,7 +48,7 @@ public class HomeLandingPagePerformanceTests
         await page.CloseAsync();
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task HomePage_NoExternalNetworkRequests()
     {
 

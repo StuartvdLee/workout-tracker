@@ -18,13 +18,17 @@ public class HomeLandingPageSelectionTests
 
     private async Task<IPage> CreatePageAsync()
     {
+        WebAppFixture.ResetWorkouts();
+        WebAppFixture.SeedWorkout("Legs");
+        WebAppFixture.SeedWorkout("Pull");
+        WebAppFixture.SeedWorkout("Push");
         var page = await _playwright.Browser.NewPageAsync();
         await page.GotoAsync(_webApp.BaseUrl);
         await page.Locator("#workout-select option:not([disabled])").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
         return page;
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task HomePage_DisplaysTitle_WorkoutTracker()
     {
         var page = await CreatePageAsync();
@@ -38,7 +42,7 @@ public class HomeLandingPageSelectionTests
         await page.CloseAsync();
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task HomePage_DisplaysDropdown_WithPlaceholder()
     {
         var page = await CreatePageAsync();
@@ -52,7 +56,7 @@ public class HomeLandingPageSelectionTests
         await page.CloseAsync();
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task HomePage_DisplaysStartWorkoutButton()
     {
         var page = await CreatePageAsync();
@@ -85,7 +89,7 @@ public class HomeLandingPageSelectionTests
         await page.CloseAsync();
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Dropdown_ContainsExactlyThreeWorkoutOptions()
     {
         var page = await CreatePageAsync();
