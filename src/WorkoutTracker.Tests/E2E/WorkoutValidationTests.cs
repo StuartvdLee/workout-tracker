@@ -20,7 +20,9 @@ public class WorkoutValidationTests
     private async Task<IPage> CreatePageAsync()
     {
         WebAppFixture.ResetExercises();
+        WebAppFixture.SeedDefaultExercises();
         WebAppFixture.ResetWorkouts();
+        WebAppFixture.SeedDefaultWorkouts();
         var page = await _playwright.Browser.NewPageAsync(new BrowserNewPageOptions
         {
             ViewportSize = new ViewportSize { Width = 1024, Height = 768 },

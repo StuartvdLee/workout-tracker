@@ -71,9 +71,13 @@ public class WebAppFixture : WebApplicationFactory<Program>
     /// Seeds Legs, Pull, and Push planned workouts for home page tests.
     /// Idempotent: existing entries with the same IDs are skipped, so the
     /// method is safe to call multiple times without a preceding ResetWorkouts().
+    /// If default exercises exist they will be associated with the workouts.
     /// </summary>
     public static void SeedDefaultWorkouts()
     {
+        // Ensure a minimal set of exercises exist so workouts can reference them
+        SeedDefaultExercises();
+
         var defaults = new[]
         {
             new MockPlannedWorkout("workout-legs-id", "Legs", []),
@@ -85,8 +89,67 @@ public class WebAppFixture : WebApplicationFactory<Program>
         {
             foreach (var workout in defaults)
             {
-                if (!_workouts.Any(w => w.PlannedWorkoutId == workout.PlannedWorkoutId))
+                var existing = _workouts.FirstOrDefault(w => string.Equals(w.PlannedWorkoutId, workout.PlannedWorkoutId, StringComparison.OrdinalIgnoreCase));
+                if (existing is null)
+                {
                     _workouts.Add(workout);
+                    existing = workout;
+                }
+
+                // If the workout has no exercises, attach sensible defaults from the seeded exercises
+                if (existing.Exercises is null || existing.Exercises.Count == 0)
+                {
+                    var exerciseEntries = new List<MockPlannedWorkoutExercise>();
+                    lock (_exercisesLock)
+                    {
+                        var bench = _exercises.FirstOrDefault(e => string.Equals(e.Name, "Bench Press", StringComparison.OrdinalIgnoreCase));
+                        var squat = _exercises.FirstOrDefault(e => string.Equals(e.Name, "Squat", StringComparison.OrdinalIgnoreCase));
+                        var deadlift = _exercises.FirstOrDefault(e => string.Equals(e.Name, "Deadlift", StringComparison.OrdinalIgnoreCase));
+
+                        if (string.Equals(existing.Name, "Push", StringComparison.OrdinalIgnoreCase) && bench is not null)
+                            exerciseEntries.Add(new MockPlannedWorkoutExercise(bench.ExerciseId, null, null));
+
+                        if (string.Equals(existing.Name, "Pull", StringComparison.OrdinalIgnoreCase) && deadlift is not null)
+                            exerciseEntries.Add(new MockPlannedWorkoutExercise(deadlift.ExerciseId, null, null));
+
+                        if (string.Equals(existing.Name, "Legs", StringComparison.OrdinalIgnoreCase) && squat is not null)
+                            exerciseEntries.Add(new MockPlannedWorkoutExercise(squat.ExerciseId, null, null));
+                    }
+
+                    if (exerciseEntries.Count > 0)
+                        existing.Exercises = exerciseEntries;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Seeds a small set of exercises commonly used by tests.
+    /// Idempotent: existing exercises with the same ID or name are skipped.
+    /// </summary>
+    public static void SeedDefaultExercises()
+    {
+        var chestId = Muscles.First(m => string.Equals(m.Name, "Chest", StringComparison.OrdinalIgnoreCase)).MuscleId;
+        var quadsId = Muscles.First(m => string.Equals(m.Name, "Quads", StringComparison.OrdinalIgnoreCase)).MuscleId;
+        var backId = Muscles.First(m => string.Equals(m.Name, "Back", StringComparison.OrdinalIgnoreCase)).MuscleId;
+
+        var defaults = new[]
+        {
+            new MockExercise("exercise-bench-press-id", "Bench Press", new List<string> { chestId }),
+            new MockExercise("exercise-squat-id", "Squat", new List<string> { quadsId }),
+            new MockExercise("exercise-deadlift-id", "Deadlift", new List<string> { backId }),
+        };
+
+        lock (_exercisesLock)
+        {
+            foreach (var exercise in defaults)
+            {
+                if (!_exercises.Any(e =>
+                    string.Equals(e.ExerciseId, exercise.ExerciseId, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(e.Name, exercise.Name, StringComparison.OrdinalIgnoreCase)))
+                {
+                    _exercises.Add(exercise);
+                }
             }
         }
     }

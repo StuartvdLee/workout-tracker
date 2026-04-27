@@ -20,7 +20,9 @@ public class WorkoutsPageTests
     private async Task<IPage> CreatePageAsync()
     {
         WebAppFixture.ResetExercises();
+        WebAppFixture.SeedDefaultExercises();
         WebAppFixture.ResetWorkouts();
+        WebAppFixture.SeedDefaultWorkouts();
 
         var page = await _playwright.Browser.NewPageAsync(new BrowserNewPageOptions
         {
