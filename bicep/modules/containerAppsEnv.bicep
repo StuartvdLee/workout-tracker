@@ -1,0 +1,33 @@
+@description('Azure region for the resources.')
+param location string
+
+@description('Prefix used for resource names.')
+param prefix string
+
+resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
+  name: '${prefix}-logs'
+  location: location
+  properties: {
+    sku: {
+      name: 'PerGB2018'
+    }
+    retentionInDays: 30
+  }
+}
+
+resource containerAppsEnv 'Microsoft.App/managedEnvironments@2024-03-01' = {
+  name: '${prefix}-env'
+  location: location
+  properties: {
+    appLogsConfiguration: {
+      destination: 'log-analytics'
+      logAnalyticsConfiguration: {
+        customerId: logAnalytics.properties.customerId
+        sharedKey: logAnalytics.listKeys().primarySharedKey
+      }
+    }
+  }
+}
+
+output environmentId string = containerAppsEnv.id
+output defaultDomain string = containerAppsEnv.properties.defaultDomain
