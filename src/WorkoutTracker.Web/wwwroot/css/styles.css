@@ -1247,17 +1247,14 @@ body {
 }
 
 .active-session__header {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
   margin-bottom: var(--spacing-lg);
+  text-align: center;
 }
 
 .active-session__title {
   font-size: var(--font-size-xl);
   font-weight: 700;
   color: var(--color-text);
-  flex: 1;
 }
 
 .active-session__back-btn {
@@ -1395,7 +1392,7 @@ body {
   width: 100%;
   min-height: var(--min-touch-target);
   cursor: pointer;
-  accent-color: var(--color-primary);
+  accent-color: var(--effort-color, hsl(120, 70%, 40%));
 }
 
 .active-session__actions {

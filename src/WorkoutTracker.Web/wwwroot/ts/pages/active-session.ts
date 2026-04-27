@@ -1,6 +1,12 @@
 import { navigate } from "../router.js";
 import { getEffortLabel } from "../utils.js";
 
+function effortColor(value: number): string {
+  // Interpolate hue from 120 (green) at 1 to 0 (red) at 10
+  const hue = Math.round(120 - ((value - 1) / 9) * 120);
+  return `hsl(${hue}, 70%, 40%)`;
+}
+
 interface WorkoutExercise {
   readonly exerciseId: string;
   readonly name: string;
@@ -262,6 +268,7 @@ function renderExerciseInputs(): void {
     effortSlider.setAttribute("aria-valuemax", "10");
     // Set value=1 so slider renders at the left; aria-valuenow stays absent until touched
     effortSlider.value = "1";
+    effortSlider.style.setProperty("--effort-color", effortColor(1));
     effortSlider.removeAttribute("aria-valuenow");
 
     const effortBandEl = document.createElement("span");
@@ -278,6 +285,7 @@ function renderExerciseInputs(): void {
         effortSlider.setAttribute("data-touched", "true");
       }
       effortSlider.setAttribute("aria-valuenow", String(value));
+      effortSlider.style.setProperty("--effort-color", effortColor(value));
 
       effortValueEl.textContent = String(value);
       effortBandEl.textContent = getEffortLabel(value);
