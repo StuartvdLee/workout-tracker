@@ -55,6 +55,7 @@ export async function render(container: HTMLElement): Promise<void> {
             <option value="" disabled selected>Select an exercise</option>
           </select>
         </div>
+        <div class="workout-form__exercises" id="workout-exercises" aria-label="Available exercises"></div>
         <div id="workout-selected-section" style="display:none;">
           <h3 class="workout-selected__heading">Selected exercises</h3>
           <ul class="workout-selected__list" id="workout-selected-list"></ul>
@@ -86,6 +87,7 @@ export async function render(container: HTMLElement): Promise<void> {
                 <option value="" disabled selected>Select an exercise</option>
               </select>
             </div>
+            <div class="workout-form__exercises" id="edit-workout-exercises" aria-label="Available exercises"></div>
             <div id="edit-selected-section" style="display:none;">
               <h3 class="workout-selected__heading">Selected exercises</h3>
               <ul class="workout-selected__list" id="edit-selected-list"></ul>
@@ -292,6 +294,7 @@ function renderExerciseDropdown(): void {
 
   select.value = "";
   renderSelectedExercisesList();
+  renderExerciseToggles();
 }
 
 function renderSelectedExercisesList(): void {
@@ -309,6 +312,71 @@ function renderSelectedExercisesList(): void {
       selectedExercises.delete(exerciseId);
       renderExerciseDropdown();
     }));
+  }
+}
+
+function renderExerciseToggles(): void {
+  const container = document.getElementById("workout-exercises") as HTMLElement | null;
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  for (const exercise of availableExercises) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "workout-form__exercise-item";
+    btn.setAttribute("role", "checkbox");
+    btn.setAttribute("data-exercise-id", exercise.exerciseId);
+    btn.setAttribute("aria-checked", selectedExercises.has(exercise.exerciseId) ? "true" : "false");
+    btn.textContent = exercise.name;
+
+    btn.addEventListener("click", () => {
+      if (selectedExercises.has(exercise.exerciseId)) {
+        selectedExercises.delete(exercise.exerciseId);
+        btn.setAttribute("aria-checked", "false");
+      } else {
+        selectedExercises.add(exercise.exerciseId);
+        btn.setAttribute("aria-checked", "true");
+      }
+
+      // Keep other UI in sync
+      renderExerciseDropdown();
+      renderSelectedExercisesList();
+    });
+
+    container.appendChild(btn);
+  }
+}
+
+function renderEditExerciseToggles(): void {
+  const container = document.getElementById("edit-workout-exercises") as HTMLElement | null;
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  for (const exercise of availableExercises) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "workout-form__exercise-item";
+    btn.setAttribute("role", "checkbox");
+    btn.setAttribute("data-exercise-id", exercise.exerciseId);
+    btn.setAttribute("aria-checked", editSelectedExercises.has(exercise.exerciseId) ? "true" : "false");
+    btn.textContent = exercise.name;
+
+    btn.addEventListener("click", () => {
+      if (editSelectedExercises.has(exercise.exerciseId)) {
+        editSelectedExercises.delete(exercise.exerciseId);
+        btn.setAttribute("aria-checked", "false");
+      } else {
+        editSelectedExercises.add(exercise.exerciseId);
+        btn.setAttribute("aria-checked", "true");
+      }
+
+      renderEditExerciseDropdown();
+      renderEditSelectedExercisesList();
+    });
+
+    container.appendChild(btn);
   }
 }
 
@@ -541,6 +609,7 @@ function renderEditExerciseDropdown(): void {
 
   select.value = "";
   renderEditSelectedExercisesList();
+  renderEditExerciseToggles();
 }
 
 function renderEditSelectedExercisesList(): void {
