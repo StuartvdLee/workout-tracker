@@ -970,7 +970,7 @@ public class ExercisesPageTests
         {
             var toggles = page.Locator("#exercise-muscles .muscle-toggle");
             var count = await toggles.CountAsync();
-            Assert.Equal(11, count);
+            Assert.Equal(12, count);
 
             for (var i = 0; i < count; i++)
             {
@@ -1084,7 +1084,7 @@ public class ExercisesPageTests
             // All 11 toggles should be visible even on narrow viewport
             var toggles = page.Locator("#exercise-muscles .muscle-toggle");
             var count = await toggles.CountAsync();
-            Assert.Equal(11, count);
+            Assert.Equal(12, count);
 
             for (var i = 0; i < count; i++)
             {

@@ -51,7 +51,7 @@ export async function render(container: HTMLElement): Promise<void> {
         </div>
         <div class="workout-form__group">
           <label class="workout-form__label" for="workout-exercise-select">Add exercise</label>
-          <select class="workout-form__select" id="workout-exercise-select">
+          <select class="workout-form__select" id="workout-exercise-select" tabindex="-1">
             <option value="" disabled selected>Select an exercise</option>
           </select>
         </div>
@@ -83,7 +83,7 @@ export async function render(container: HTMLElement): Promise<void> {
             </div>
             <div class="workout-form__group">
               <label class="workout-form__label" for="edit-exercise-select">Add exercise</label>
-              <select class="workout-form__select" id="edit-exercise-select">
+              <select class="workout-form__select" id="edit-exercise-select" tabindex="-1">
                 <option value="" disabled selected>Select an exercise</option>
               </select>
             </div>
@@ -150,7 +150,7 @@ function initForm(): void {
   // Attach a single global keydown handler to support keyboard activation
   if (!document.body.dataset["exerciseKeydownAttached"]) {
     document.addEventListener("keydown", (e: KeyboardEvent) => {
-      if (e.key === " " || e.key === "Spacebar" || e.key === "Enter") {
+      if (e.key === " " || e.key === "Space" || e.key === "Spacebar" || e.key === "Enter") {
         const active = document.activeElement as HTMLElement | null;
         if (active && active.matches && active.matches("#workout-form .workout-form__exercises button[role='checkbox']")) {
           e.preventDefault();
@@ -348,7 +348,7 @@ function renderExerciseToggles(): void {
 
     // Support keyboard activation (Space / Enter) for ARIA checkbox role
     btn.addEventListener("keydown", (e: KeyboardEvent) => {
-      if (e.key === " " || e.key === "Spacebar" || e.key === "Enter") {
+      if (e.key === " " || e.key === "Space" || e.key === "Spacebar" || e.key === "Enter") {
         e.preventDefault();
         btn.click();
       }
@@ -394,7 +394,7 @@ function renderEditExerciseToggles(): void {
 
     // Support keyboard activation (Space / Enter) for ARIA checkbox role
     btn.addEventListener("keydown", (e: KeyboardEvent) => {
-      if (e.key === " " || e.key === "Spacebar" || e.key === "Enter") {
+      if (e.key === " " || e.key === "Space" || e.key === "Spacebar" || e.key === "Enter") {
         e.preventDefault();
         btn.click();
       }
