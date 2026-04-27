@@ -40,7 +40,7 @@ experience consistency, and performance verification where applicable.
 
 - [ ] T005 Add `Effort` (`int?`) field to `SessionLoggedExerciseItem` request DTO at the bottom of `src/WorkoutTracker.Api/Program.cs`
 - [ ] T006 Add server-side effort range validation to `POST /api/workouts/{workoutId}/sessions` in `src/WorkoutTracker.Api/Program.cs` — reject with `400 { "error": "Effort must be between 1 and 10." }` if any provided effort is outside [1, 10]
-- [ ] T006b Add server-side weight string validation to `POST /api/workouts/{workoutId}/sessions` in `src/WorkoutTracker.Api/Program.cs` — reject with `400 { "error": "Weight must not exceed 100 characters." }` if any provided `loggedWeight` string exceeds 100 characters (SR-001; weight remains a free-form string per Decision 5)
+- [ ] T006b Add server-side weight string validation to `POST /api/workouts/{workoutId}/sessions` in `src/WorkoutTracker.Api/Program.cs` — reject with `400 { "error": "Logged weight must not exceed 100 characters." }` if any provided `loggedWeight` string exceeds 100 characters (SR-001; weight remains a free-form string per Decision 5)
 - [ ] T007 Persist `item.Effort` into `LoggedExercise.Effort` in the `POST /api/workouts/{workoutId}/sessions` handler in `src/WorkoutTracker.Api/Program.cs`
 - [ ] T008 Project `le.Effort` in, **and remove `le.LoggedReps` from**, the `POST /api/workouts/{workoutId}/sessions` response anonymous object in `src/WorkoutTracker.Api/Program.cs` (reps are no longer part of the response contract per api-contract.md)
 - [ ] T009 Project `le.Effort` in the `GET /api/sessions` response anonymous object in `src/WorkoutTracker.Api/Program.cs`

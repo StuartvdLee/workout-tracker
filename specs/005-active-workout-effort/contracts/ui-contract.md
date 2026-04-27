@@ -43,45 +43,34 @@ Each exercise in the session renders as a `div.active-session__exercise-item`. T
     </div>
 
     <!-- Effort Slider -->
-    <div class="active-session__input-group active-session__input-group--effort">
+    <div class="active-session__input-group active-session__effort-group">
       <label class="active-session__input-label" for="effort-{exerciseId}">
         Effort
       </label>
-      <div class="active-session__effort-slider-wrap">
-        <input
-          class="active-session__effort-slider"
-          type="range"
-          id="effort-{exerciseId}"
-          min="1"
-          max="10"
-          step="1"
-          aria-label="Effort rating for {Exercise Name}"
-          aria-valuemin="1"
-          aria-valuemax="10"
-          aria-valuetext="Not rated"
-          data-touched="false"
-        />
-        <div
-          class="active-session__effort-label"
-          id="effort-label-{exerciseId}"
-          aria-live="polite"
-        >
-          Rate effort
-        </div>
-      </div>
+      <span
+        class="active-session__effort-value"
+        id="effort-value-{exerciseId}"
+      >Not rated</span>
+      <input
+        class="active-session__effort-slider"
+        type="range"
+        id="effort-{exerciseId}"
+        min="1"
+        max="10"
+        step="1"
+        aria-label="Effort for {Exercise Name}"
+        aria-valuemin="1"
+        aria-valuemax="10"
+        aria-valuetext="Not rated"
+        data-touched="false"
+      />
+      <span
+        class="active-session__effort-band"
+        id="effort-band-{exerciseId}"
+      ></span>
     </div>
 
-    <!-- Notes (unchanged) -->
-    <div class="active-session__input-group">
-      <label class="active-session__input-label" for="notes-{exerciseId}">Notes</label>
-      <input
-        class="active-session__notes-input"
-        type="text"
-        id="notes-{exerciseId}"
-        placeholder="Notes (optional)"
-        aria-label="Notes for {Exercise Name}"
-      />
-    </div>
+    <!-- Notes: removed — not submitted or stored in this feature -->
 
   </div>
 </div>
@@ -91,39 +80,36 @@ Each exercise in the session renders as a `div.active-session__exercise-item`. T
 
 > **Note on `aria-valuenow`**: HTML `<input type="range">` always has an implicit DOM value (browser default = midpoint = 5 for range 1–10). The untouched state is tracked via `data-touched="false"`, not by the DOM value. On first user interaction, JS sets `aria-valuenow` and updates `aria-valuetext` to the selected label. Before interaction, `aria-valuenow` must be **removed** via `removeAttribute("aria-valuenow")` when the slider is first rendered, so screen readers announce "Not rated" rather than a misleading "5".
 
-| State            | `data-touched` | `aria-valuenow`   | `aria-valuetext`  | Label text       | Submitted value |
-|------------------|----------------|-------------------|-------------------|------------------|-----------------|
-| Not interacted   | `false`        | *(absent)*        | `"Not rated"`     | "Rate effort"    | `null`          |
-| Value 1–3        | `true`         | `1`–`3`           | `"1, Easy"` etc.  | "Easy"           | 1–3             |
-| Value 4–6        | `true`         | `4`–`6`           | `"4, Moderate"` etc. | "Moderate"    | 4–6             |
-| Value 7–8        | `true`         | `7`–`8`           | `"7, Hard"` etc.  | "Hard"           | 7–8             |
-| Value 9–10       | `true`         | `9`–`10`          | `"9, All Out"` etc. | "All Out"      | 9–10            |
+| State            | `data-touched` | `aria-valuenow`   | `aria-valuetext`      | Value span text  | Band span text   | Submitted value |
+|------------------|----------------|-------------------|-----------------------|------------------|------------------|-----------------|
+| Not interacted   | `false`        | *(absent)*        | `"Not rated"`         | "Not rated"      | *(empty)*        | `null`          |
+| Value 1–3        | `true`         | `1`–`3`           | `"1, Easy"` etc.      | `"1"` etc.       | "Easy"           | 1–3             |
+| Value 4–6        | `true`         | `4`–`6`           | `"4, Moderate"` etc.  | `"4"` etc.       | "Moderate"       | 4–6             |
+| Value 7–8        | `true`         | `7`–`8`           | `"7, Hard"` etc.      | `"7"` etc.       | "Hard"           | 7–8             |
+| Value 9–10       | `true`         | `9`–`10`          | `"9, All Out"` etc.   | `"9"` etc.       | "All Out"        | 9–10            |
 
 ### CSS Classes (new additions to `styles.css`)
 
 ```css
-/* Effort slider container */
-.active-session__input-group--effort { /* layout modifier */ }
+/* Effort slider + value/band group */
+.active-session__effort-group { /* layout modifier on input-group */ }
 
-/* Slider wrap: positions slider + label vertically */
-.active-session__effort-slider-wrap { display: flex; flex-direction: column; gap: var(--space-xs); }
-
-/* The range input itself */
+/* The range input */
 .active-session__effort-slider { width: 100%; cursor: pointer; }
 
-/* The live label beneath the slider */
-.active-session__effort-label {
+/* Numeric value shown above the slider */
+.active-session__effort-value {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
-  min-height: 1.2em; /* prevent layout shift when text appears */
-  text-align: center;
 }
 
-/* Intensity band colour modifiers (applied by JS) */
-.active-session__effort-label--easy     { color: var(--color-success, green); }
-.active-session__effort-label--moderate { color: var(--color-warning, orange); }
-.active-session__effort-label--hard     { color: var(--color-danger, red); }
-.active-session__effort-label--all-out  { color: var(--color-danger-dark, darkred); }
+/* Band label shown below the slider */
+.active-session__effort-band {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  min-height: 1.2em;
+  text-align: center;
+}
 ```
 
 ### Weight Input Type Change
@@ -195,8 +181,8 @@ interface LoggedExercise {
 ## Accessibility Notes
 
 - The effort slider uses `aria-valuetext` to expose the intensity label to screen readers (e.g., "7, Hard") rather than just the numeric value.
-- In the untouched state, `aria-valuenow` is absent (removed via `removeAttribute`) and `aria-valuetext` is `"Not rated"`. On first interaction, JS sets `aria-valuenow` to the current value and updates `aria-valuetext` to `"{value}, {label}"`.
-- The effort label `div` has `aria-live="polite"` so screen reader users hear the label update as the slider moves.
+- In the untouched state, `aria-valuenow` is absent (removed via `removeAttribute`) and `aria-valuetext` is `"Not rated"`. On first interaction, JS sets `aria-valuenow` to the current value and updates `aria-valuetext` to `"{value}, {label}"` (e.g., "7, Hard").
+- The `.active-session__effort-value` span shows "Not rated" when untouched and updates to the numeric value on interaction.
 - The weight field `aria-label` is updated to include "in KG" for clarity.
 - All interactive elements maintain the existing `--min-touch-target` (44px) minimum.
 

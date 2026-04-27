@@ -53,7 +53,7 @@ Content-Type: application/json
 | `loggedExercises[].effort`    | integer  | No       | 1–10 inclusive, or null/omitted               |
 | `loggedExercises[].notes`     | string   | No       | Free text                                     |
 
-> **Note**: `loggedReps` is no longer sent by the frontend. The field remains in the C# DTO and DB schema for backward compatibility but is treated as null if absent.
+> **Note**: `loggedReps` is not part of the current request contract or `SessionLoggedExerciseItem` DTO shape. Consumers and tests should omit this field.
 
 ### Validation
 
@@ -152,8 +152,6 @@ The `loggedExercises` items in the response now include `effort`.
 internal sealed class SessionLoggedExerciseItem
 {
     public Guid ExerciseId { get; set; }
-    // LoggedReps removed from frontend; kept in model for compat but not required
-    public int? LoggedReps { get; set; }
     public string? LoggedWeight { get; set; }
     public int? Effort { get; set; }   // NEW
     public string? Notes { get; set; }

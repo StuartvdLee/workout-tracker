@@ -131,9 +131,9 @@ function renderSession(session: WorkoutSession): string {
           .map((ex) => {
             const parts: string[] = [];
             if (ex.loggedWeight !== null) parts.push(`${escapeHtml(ex.loggedWeight)} KG`);
-            if (ex.effort !== null) parts.push(getEffortLabel(ex.effort));
+            if (ex.effort !== null) parts.push(`${ex.effort} — ${getEffortLabel(ex.effort)}`);
             if (ex.notes !== null) parts.push(`— ${escapeHtml(ex.notes)}`);
-            const dataStr = parts.join(" ");
+            const dataStr = parts.join(" · ");
 
             return `
             <div class="history-session__exercise">

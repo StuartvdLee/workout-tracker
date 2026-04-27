@@ -32,7 +32,6 @@ For each exercise you'll see:
 | **Weight (KG)** | Enter the weight you lifted (e.g., `80`). Leave blank for bodyweight. |
 | **Effort**      | Drag the slider to rate how hard the set felt:                    |
 |                 | 1–3 = Easy · 4–6 = Moderate · 7–8 = Hard · 9–10 = All Out        |
-| **Notes**       | Optional free-text notes.                                         |
 
 The effort label updates live as you move the slider. If you don't touch the slider, no effort value is recorded for that exercise — that's fine.
 
@@ -42,7 +41,7 @@ Click **Save Workout**. The session is saved and you're taken to the History pag
 
 ### Step 5 — Cancel
 
-Click **Cancel** or **← Back to Workouts**. If you've entered any data you'll be asked to confirm before discarding.
+Click **Cancel**. If you've entered any data you'll be asked to confirm before discarding.
 
 ---
 

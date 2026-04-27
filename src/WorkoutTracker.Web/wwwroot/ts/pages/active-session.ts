@@ -223,6 +223,7 @@ function renderExerciseInputs(): void {
     weightInput.id = `weight-${exercise.exerciseId}`;
     weightInput.placeholder = "KG";
     weightInput.min = "0";
+    weightInput.step = "0.5";
     weightInput.setAttribute("aria-label", `Weight in KG for ${exercise.name}`);
     weightInput.addEventListener("input", () => {
       hasChanges = true;
@@ -247,7 +248,7 @@ function renderExerciseInputs(): void {
     const effortValueEl = document.createElement("span");
     effortValueEl.className = "active-session__effort-value";
     effortValueEl.id = `effort-value-${exercise.exerciseId}`;
-    effortValueEl.textContent = "—";
+    effortValueEl.textContent = "Not rated";
 
     const effortSlider = document.createElement("input");
     effortSlider.className = "active-session__effort-slider";
@@ -260,6 +261,7 @@ function renderExerciseInputs(): void {
     effortSlider.setAttribute("aria-label", `Effort for ${exercise.name}`);
     effortSlider.setAttribute("aria-valuemin", "1");
     effortSlider.setAttribute("aria-valuemax", "10");
+    effortSlider.setAttribute("aria-valuetext", "Not rated");
     // Set value=1 so slider renders at the left; aria-valuenow stays absent until touched
     effortSlider.value = "1";
     effortSlider.removeAttribute("aria-valuenow");
@@ -278,9 +280,11 @@ function renderExerciseInputs(): void {
         effortSlider.setAttribute("data-touched", "true");
       }
       effortSlider.setAttribute("aria-valuenow", String(value));
+      const label = getEffortLabel(value);
+      effortSlider.setAttribute("aria-valuetext", `${value}, ${label}`);
 
       effortValueEl.textContent = String(value);
-      effortBandEl.textContent = getEffortLabel(value);
+      effortBandEl.textContent = label;
     });
 
     effortGroup.appendChild(effortLabel);
@@ -303,6 +307,19 @@ async function handleSave(): Promise<void> {
   if (!saveBtn) return;
 
   if (apiErrorEl) apiErrorEl.textContent = "";
+
+  // Client-side weight validation
+  const exercisesEl = document.getElementById("session-exercises");
+  if (exercisesEl && workout) {
+    for (const exercise of workout.exercises) {
+      const weightInput = document.getElementById(`weight-${exercise.exerciseId}`) as HTMLInputElement | null;
+      if (weightInput && weightInput.value !== "" && weightInput.validity.badInput) {
+        const errorEl = document.getElementById("session-error");
+        if (errorEl) errorEl.textContent = `Weight for ${exercise.name} must be a valid number.`;
+        return;
+      }
+    }
+  }
 
   isSaving = true;
   saveBtn.setAttribute("aria-disabled", "true");

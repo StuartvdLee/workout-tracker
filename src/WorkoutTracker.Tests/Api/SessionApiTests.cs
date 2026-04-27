@@ -94,7 +94,7 @@ public class SessionApiTests : IAsyncLifetime
     {
         var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Effort Day", "Bench Press");
 
-        await _client.PostAsJsonAsync(
+        var postResponse = await _client.PostAsJsonAsync(
             $"/api/workouts/{workoutId}/sessions",
             new
             {
@@ -104,10 +104,13 @@ public class SessionApiTests : IAsyncLifetime
                 }
             });
 
+        Assert.Equal(HttpStatusCode.Created, postResponse.StatusCode);
+
         var response = await _client.GetAsync("/api/sessions");
-        var sessions = await response.Content.ReadFromJsonAsync<List<SessionDto>>();
+        var sessions = await response.Content.ReadFromJsonAsync<List<SessionWithDetailDto>>();
         Assert.NotNull(sessions);
         Assert.Single(sessions);
+        Assert.Equal(8, sessions[0].LoggedExercises[0].Effort);
     }
 
     [Fact]
@@ -133,11 +136,33 @@ public class SessionApiTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task CreateSession_StoresNullEffort_WhenEffortOmittedFromPayload()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Light Day Omit", "Plank");
+
+        var postResponse = await _client.PostAsJsonAsync(
+            $"/api/workouts/{workoutId}/sessions",
+            new
+            {
+                LoggedExercises = new[]
+                {
+                    new { ExerciseId = exerciseId, LoggedWeight = (string?)null }
+                }
+            });
+
+        Assert.Equal(HttpStatusCode.Created, postResponse.StatusCode);
+        var session = await postResponse.Content.ReadFromJsonAsync<SessionDetailDto>();
+        Assert.NotNull(session);
+        Assert.Single(session.LoggedExercises);
+        Assert.Null(session.LoggedExercises[0].Effort);
+    }
+
+    [Fact]
     public async Task CreateSession_Returns400_WhenEffortOutOfRange()
     {
         var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Bad Effort", "Row");
 
-        var response = await _client.PostAsJsonAsync(
+        var responseTooHigh = await _client.PostAsJsonAsync(
             $"/api/workouts/{workoutId}/sessions",
             new
             {
@@ -147,9 +172,23 @@ public class SessionApiTests : IAsyncLifetime
                 }
             });
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        var error = await response.Content.ReadFromJsonAsync<ErrorDto>();
-        Assert.Equal("Effort must be between 1 and 10.", error?.Error);
+        Assert.Equal(HttpStatusCode.BadRequest, responseTooHigh.StatusCode);
+        var errorHigh = await responseTooHigh.Content.ReadFromJsonAsync<ErrorDto>();
+        Assert.Equal("Effort must be between 1 and 10.", errorHigh?.Error);
+
+        var responseTooLow = await _client.PostAsJsonAsync(
+            $"/api/workouts/{workoutId}/sessions",
+            new
+            {
+                LoggedExercises = new[]
+                {
+                    new { ExerciseId = exerciseId, LoggedWeight = (string?)null, Notes = (string?)null, Effort = 0 }
+                }
+            });
+
+        Assert.Equal(HttpStatusCode.BadRequest, responseTooLow.StatusCode);
+        var errorLow = await responseTooLow.Content.ReadFromJsonAsync<ErrorDto>();
+        Assert.Equal("Effort must be between 1 and 10.", errorLow?.Error);
     }
 
     [Fact]
