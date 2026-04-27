@@ -119,6 +119,20 @@ function initForm() {
             renderExerciseDropdown();
         }
     });
+
+    // Attach a single global keydown handler to support keyboard activation
+    if (!document.body.dataset["exerciseKeydownAttached"]) {
+        document.addEventListener("keydown", (e) => {
+            if (e.key === " " || e.key === "Spacebar" || e.key === "Enter") {
+                const active = document.activeElement;
+                if (active && active.matches && active.matches("#workout-form .workout-form__exercises button[role='checkbox']")) {
+                    e.preventDefault();
+                    active.click();
+                }
+            }
+        });
+        document.body.dataset["exerciseKeydownAttached"] = "1";
+    }
 }
 function initEditModal() {
     const form = document.getElementById("workout-edit-form");
