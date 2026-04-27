@@ -155,6 +155,10 @@ public class WorkoutTrackerDbContext(DbContextOptions<WorkoutTrackerDbContext> o
                 .WithMany(ex => ex.LoggedExercises)
                 .HasForeignKey(e => e.ExerciseId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            entity.ToTable(t => t.HasCheckConstraint(
+                "ck_logged_exercise_effort_range",
+                "effort IS NULL OR (effort >= 1 AND effort <= 10)"));
         });
     }
 }

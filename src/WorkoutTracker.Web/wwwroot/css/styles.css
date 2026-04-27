@@ -1247,17 +1247,14 @@ body {
 }
 
 .active-session__header {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
   margin-bottom: var(--spacing-lg);
+  text-align: center;
 }
 
 .active-session__title {
   font-size: var(--font-size-xl);
   font-weight: 700;
   color: var(--color-text);
-  flex: 1;
 }
 
 .active-session__back-btn {
@@ -1371,6 +1368,30 @@ body {
   outline: 2px solid var(--color-border-focus);
   outline-offset: 2px;
   border-color: var(--color-border-focus);
+}
+
+.active-session__effort-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.active-session__effort-value {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--color-text);
+  min-width: 2ch;
+}
+
+.active-session__effort-band {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.active-session__effort-slider {
+  width: 100%;
+  min-height: var(--min-touch-target);
+  cursor: pointer;
 }
 
 .active-session__actions {

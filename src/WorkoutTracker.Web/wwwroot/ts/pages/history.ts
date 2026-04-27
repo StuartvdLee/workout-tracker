@@ -1,10 +1,12 @@
+import { getEffortLabel } from "../utils.js";
+
 interface LoggedExercise {
   readonly loggedExerciseId: string;
   readonly exerciseId: string;
   readonly exerciseName: string;
-  readonly loggedReps: number | null;
   readonly loggedWeight: string | null;
   readonly notes: string | null;
+  readonly effort: number | null;
 }
 
 interface WorkoutSession {
@@ -128,10 +130,10 @@ function renderSession(session: WorkoutSession): string {
       : session.loggedExercises
           .map((ex) => {
             const parts: string[] = [];
-            if (ex.loggedReps !== null) parts.push(`${ex.loggedReps} reps`);
-            if (ex.loggedWeight !== null) parts.push(`@ ${escapeHtml(ex.loggedWeight)}`);
+            if (ex.loggedWeight !== null) parts.push(`${escapeHtml(ex.loggedWeight)} KG`);
+            if (ex.effort !== null) parts.push(`${ex.effort} — ${getEffortLabel(ex.effort)}`);
             if (ex.notes !== null) parts.push(`— ${escapeHtml(ex.notes)}`);
-            const dataStr = parts.join(" ");
+            const dataStr = parts.join(" · ");
 
             return `
             <div class="history-session__exercise">
