@@ -28,6 +28,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
     /// </summary>
     public static readonly IReadOnlyList<MockMuscle> Muscles =
     [
+        new("a1000000-0000-0000-0000-00000000000c", "Adductors"),
         new("a1000000-0000-0000-0000-000000000001", "Back"),
         new("a1000000-0000-0000-0000-000000000002", "Biceps"),
         new("a1000000-0000-0000-0000-000000000003", "Calves"),
