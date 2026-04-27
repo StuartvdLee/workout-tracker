@@ -457,6 +457,15 @@ app.MapPost("/api/workouts/{workoutId:guid}/sessions", async (Guid workoutId, Ht
     var body = await context.Request.ReadFromJsonAsync<SessionCreateRequest>();
     var loggedExercises = body?.LoggedExercises ?? [];
 
+    foreach (var item in loggedExercises)
+    {
+        if (item.LoggedWeight is { Length: > 100 })
+            return Results.Json(new { error = "Logged weight must not exceed 100 characters." }, statusCode: 400);
+
+        if (item.Effort is not null && (item.Effort < 1 || item.Effort > 10))
+            return Results.Json(new { error = "Effort must be between 1 and 10." }, statusCode: 400);
+    }
+
     if (loggedExercises.Length > 0)
     {
         var loggedExerciseIds = loggedExercises.Select(le => le.ExerciseId).Distinct().ToArray();
@@ -486,9 +495,9 @@ app.MapPost("/api/workouts/{workoutId:guid}/sessions", async (Guid workoutId, Ht
             LoggedExerciseId = Guid.NewGuid(),
             WorkoutSessionId = session.WorkoutSessionId,
             ExerciseId = item.ExerciseId,
-            LoggedReps = item.LoggedReps,
             LoggedWeight = item.LoggedWeight,
             Notes = item.Notes,
+            Effort = item.Effort,
         });
     }
 
@@ -504,9 +513,9 @@ app.MapPost("/api/workouts/{workoutId:guid}/sessions", async (Guid workoutId, Ht
         {
             le.LoggedExerciseId,
             le.ExerciseId,
-            le.LoggedReps,
             le.LoggedWeight,
             le.Notes,
+            le.Effort,
         }).ToList(),
     }, statusCode: 201);
 });
@@ -529,9 +538,9 @@ app.MapGet("/api/sessions", async (WorkoutTrackerDbContext db) =>
                 le.LoggedExerciseId,
                 le.ExerciseId,
                 ExerciseName = le.Exercise.Name,
-                le.LoggedReps,
                 le.LoggedWeight,
                 le.Notes,
+                le.Effort,
             }).ToList(),
         })
         .ToListAsync();
@@ -565,9 +574,9 @@ internal sealed class SessionCreateRequest
 internal sealed class SessionLoggedExerciseItem
 {
     public Guid ExerciseId { get; set; }
-    public int? LoggedReps { get; set; }
     public string? LoggedWeight { get; set; }
     public string? Notes { get; set; }
+    public int? Effort { get; set; }
 }
 
 internal sealed class ExerciseCreateRequest

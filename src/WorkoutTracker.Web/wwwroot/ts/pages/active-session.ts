@@ -1,4 +1,5 @@
 import { navigate } from "../router.js";
+import { getEffortLabel } from "../utils.js";
 
 interface WorkoutExercise {
   readonly exerciseId: string;
@@ -14,8 +15,8 @@ interface WorkoutDetail {
 }
 
 interface LogEntry {
-  loggedReps: string;
   loggedWeight: string;
+  loggedEffort: number | null;
   notes: string;
 }
 
@@ -192,7 +193,7 @@ function renderExerciseInputs(): void {
   logEntries = new Map();
 
   for (const exercise of workout.exercises) {
-    logEntries.set(exercise.exerciseId, { loggedReps: "", loggedWeight: "", notes: "" });
+    logEntries.set(exercise.exerciseId, { loggedWeight: "", loggedEffort: null, notes: "" });
 
     const item = document.createElement("div");
     item.className = "active-session__exercise-item";
@@ -204,8 +205,7 @@ function renderExerciseInputs(): void {
     item.appendChild(nameDiv);
 
     const targets: string[] = [];
-    if (exercise.targetReps) targets.push(`Target: ${exercise.targetReps} reps`);
-    if (exercise.targetWeight) targets.push(`@ ${exercise.targetWeight}`);
+    if (exercise.targetWeight) targets.push(`@ ${exercise.targetWeight} KG`);
 
     if (targets.length > 0) {
       const targetsDiv = document.createElement("div");
@@ -217,42 +217,20 @@ function renderExerciseInputs(): void {
     const inputsDiv = document.createElement("div");
     inputsDiv.className = "active-session__exercise-inputs";
 
-    // Reps input
-    const repsGroup = document.createElement("div");
-    repsGroup.className = "active-session__input-group";
-    const repsLabel = document.createElement("label");
-    repsLabel.className = "active-session__input-label";
-    repsLabel.setAttribute("for", `reps-${exercise.exerciseId}`);
-    repsLabel.textContent = "Reps";
-    const repsInput = document.createElement("input");
-    repsInput.className = "active-session__input";
-    repsInput.type = "number";
-    repsInput.id = `reps-${exercise.exerciseId}`;
-    repsInput.placeholder = "Reps";
-    repsInput.min = "0";
-    repsInput.setAttribute("aria-label", `Reps for ${exercise.name}`);
-    repsInput.addEventListener("input", () => {
-      hasChanges = true;
-      const entry = logEntries.get(exercise.exerciseId);
-      if (entry) entry.loggedReps = repsInput.value;
-    });
-    repsGroup.appendChild(repsLabel);
-    repsGroup.appendChild(repsInput);
-    inputsDiv.appendChild(repsGroup);
-
-    // Weight input
+    // Weight input (KG)
     const weightGroup = document.createElement("div");
     weightGroup.className = "active-session__input-group";
     const weightLabel = document.createElement("label");
     weightLabel.className = "active-session__input-label";
     weightLabel.setAttribute("for", `weight-${exercise.exerciseId}`);
-    weightLabel.textContent = "Weight";
+    weightLabel.textContent = "Weight (KG)";
     const weightInput = document.createElement("input");
     weightInput.className = "active-session__input";
-    weightInput.type = "text";
+    weightInput.type = "number";
     weightInput.id = `weight-${exercise.exerciseId}`;
-    weightInput.placeholder = "Weight";
-    weightInput.setAttribute("aria-label", `Weight for ${exercise.name}`);
+    weightInput.placeholder = "KG";
+    weightInput.min = "0";
+    weightInput.setAttribute("aria-label", `Weight in KG for ${exercise.name}`);
     weightInput.addEventListener("input", () => {
       hasChanges = true;
       const entry = logEntries.get(exercise.exerciseId);
@@ -284,6 +262,59 @@ function renderExerciseInputs(): void {
     notesGroup.appendChild(notesInput);
     inputsDiv.appendChild(notesGroup);
 
+    // Effort slider
+    const effortGroup = document.createElement("div");
+    effortGroup.className = "active-session__input-group active-session__effort-group";
+
+    const effortLabel = document.createElement("label");
+    effortLabel.className = "active-session__input-label";
+    effortLabel.setAttribute("for", `effort-${exercise.exerciseId}`);
+    effortLabel.textContent = "Effort";
+
+    const effortValueEl = document.createElement("span");
+    effortValueEl.className = "active-session__effort-value";
+    effortValueEl.id = `effort-value-${exercise.exerciseId}`;
+    effortValueEl.textContent = "—";
+
+    const effortSlider = document.createElement("input");
+    effortSlider.className = "active-session__effort-slider";
+    effortSlider.type = "range";
+    effortSlider.id = `effort-${exercise.exerciseId}`;
+    effortSlider.min = "1";
+    effortSlider.max = "10";
+    effortSlider.step = "1";
+    effortSlider.setAttribute("data-touched", "false");
+    effortSlider.setAttribute("aria-label", `Effort for ${exercise.name}`);
+    effortSlider.setAttribute("aria-valuemin", "1");
+    effortSlider.setAttribute("aria-valuemax", "10");
+    // aria-valuenow intentionally absent until first touch
+    effortSlider.removeAttribute("aria-valuenow");
+
+    const effortBandEl = document.createElement("span");
+    effortBandEl.className = "active-session__effort-band";
+    effortBandEl.id = `effort-band-${exercise.exerciseId}`;
+
+    effortSlider.addEventListener("input", () => {
+      hasChanges = true;
+      const value = parseInt(effortSlider.value, 10);
+      const entry = logEntries.get(exercise.exerciseId);
+      if (entry) entry.loggedEffort = value;
+
+      if (effortSlider.getAttribute("data-touched") === "false") {
+        effortSlider.setAttribute("data-touched", "true");
+      }
+      effortSlider.setAttribute("aria-valuenow", String(value));
+
+      effortValueEl.textContent = String(value);
+      effortBandEl.textContent = getEffortLabel(value);
+    });
+
+    effortGroup.appendChild(effortLabel);
+    effortGroup.appendChild(effortValueEl);
+    effortGroup.appendChild(effortSlider);
+    effortGroup.appendChild(effortBandEl);
+    inputsDiv.appendChild(effortGroup);
+
     item.appendChild(inputsDiv);
     exercisesEl.appendChild(item);
   }
@@ -307,14 +338,13 @@ async function handleSave(): Promise<void> {
   try {
     const loggedExercises = workout.exercises.map((exercise) => {
       const entry = logEntries.get(exercise.exerciseId);
-      const repsStr = entry?.loggedReps ?? "";
       const weightStr = entry?.loggedWeight ?? "";
       const notesStr = entry?.notes ?? "";
       return {
         exerciseId: exercise.exerciseId,
-        loggedReps: repsStr !== "" ? parseInt(repsStr, 10) : null,
         loggedWeight: weightStr !== "" ? weightStr : null,
         notes: notesStr !== "" ? notesStr : null,
+        effort: entry?.loggedEffort ?? null,
       };
     });
 
