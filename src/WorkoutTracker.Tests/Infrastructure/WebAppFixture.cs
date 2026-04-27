@@ -3,6 +3,9 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Hosting;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using WorkoutTracker.Infrastructure.Data;
 
 namespace WorkoutTracker.Tests.Infrastructure;
 
@@ -62,6 +65,46 @@ public class WebAppFixture : WebApplicationFactory<Program>
     {
         lock (_workoutsLock) { _workouts.Clear(); }
         lock (_sessionsLock) { _sessions.Clear(); }
+    }
+
+    /// <summary>
+    /// Seeds a planned workout with a stub exercise so the home page dropdown is populated.
+    /// </summary>
+    public static void SeedWorkout(string name)
+    {
+        lock (_workoutsLock)
+        {
+            var stubExercise = new MockPlannedWorkoutExercise(Guid.NewGuid().ToString(), null, null);
+            _workouts.Add(new MockPlannedWorkout(Guid.NewGuid().ToString(), name, [stubExercise]));
+        }
+    }
+
+    /// <summary>
+    /// Provides a stub DB configuration so the test host starts without requiring a real PostgreSQL
+    /// instance. The E2E tests use the separate mock Kestrel server (see CreateHost), not this host.
+    /// </summary>
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        builder.UseEnvironment("Test");
+        builder.UseSetting("ConnectionStrings:workout-tracker-db", "Host=localhost;Database=unused;Username=unused;Password=unused");
+        builder.UseSetting("OTEL_SDK_DISABLED", "true");
+
+        builder.ConfigureServices(services =>
+        {
+            var descriptors = services
+                .Where(d =>
+                    d.ServiceType == typeof(WorkoutTrackerDbContext) ||
+                    d.ServiceType == typeof(DbContextOptions<WorkoutTrackerDbContext>) ||
+                    d.ServiceType == typeof(DbContextOptions))
+                .ToList();
+            foreach (var d in descriptors)
+                services.Remove(d);
+
+            services.AddDbContext<WorkoutTrackerDbContext>(options =>
+                options
+                    .UseNpgsql("Host=localhost;Database=unused;Username=unused;Password=unused")
+                    .UseSnakeCaseNamingConvention());
+        });
     }
 
     public WebAppFixture()
@@ -491,7 +534,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
 
             var body = await request.ReadFromJsonAsync<SessionRequest>();
             var loggedExercises = (body?.LoggedExercises ?? [])
-                .Select(e => new MockLoggedExercise(e.ExerciseId, e.LoggedReps, e.LoggedWeight, e.Notes))
+                .Select(e => new MockLoggedExercise(Guid.NewGuid().ToString(), e.ExerciseId, e.LoggedReps, e.LoggedWeight, e.Notes, e.Effort))
                 .ToList();
 
             string workoutName;
@@ -546,7 +589,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
                 }
 
                 session.LoggedExercises = (body?.LoggedExercises ?? [])
-                    .Select(e => new MockLoggedExercise(e.ExerciseId, e.LoggedReps, e.LoggedWeight, e.Notes))
+                    .Select(e => new MockLoggedExercise(Guid.NewGuid().ToString(), e.ExerciseId, e.LoggedReps, e.LoggedWeight, e.Notes, e.Effort))
                     .ToList();
 
                 return Results.Ok(new { session.SessionId, session.PlannedWorkoutId, session.WorkoutName, session.CompletedAt });
@@ -572,22 +615,23 @@ public class WebAppFixture : WebApplicationFactory<Program>
                 .OrderByDescending(s => s.CompletedAt)
                 .Select(s => new
                 {
-                    s.SessionId,
-                    WorkoutId = s.PlannedWorkoutId,
+                    WorkoutSessionId = s.SessionId,
+                    s.PlannedWorkoutId,
                     s.WorkoutName,
                     s.CompletedAt,
-                    Exercises = s.LoggedExercises
+                    LoggedExercises = s.LoggedExercises
                         .Select(le =>
                         {
                             var ex = exerciseSnapshot.FirstOrDefault(e =>
                                 string.Equals(e.ExerciseId, le.ExerciseId, StringComparison.OrdinalIgnoreCase));
                             return new
                             {
+                                le.LoggedExerciseId,
                                 le.ExerciseId,
                                 ExerciseName = ex?.Name ?? "",
-                                le.LoggedReps,
                                 le.LoggedWeight,
                                 le.Notes,
+                                le.Effort,
                             };
                         })
                         .ToList(),
@@ -667,6 +711,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
         public int? LoggedReps { get; set; }
         public string? LoggedWeight { get; set; }
         public string? Notes { get; set; }
+        public int? Effort { get; set; }
     }
 }
 
@@ -690,7 +735,7 @@ public record MockPlannedWorkout(string PlannedWorkoutId, string Name, List<Mock
     public List<MockPlannedWorkoutExercise> Exercises { get; set; } = Exercises;
 }
 
-public record MockLoggedExercise(string ExerciseId, int? LoggedReps, string? LoggedWeight, string? Notes);
+public record MockLoggedExercise(string LoggedExerciseId, string ExerciseId, int? LoggedReps, string? LoggedWeight, string? Notes, int? Effort);
 
 public record MockWorkoutSession(string SessionId, string PlannedWorkoutId, string WorkoutName, DateTime CompletedAt, List<MockLoggedExercise> LoggedExercises)
 {

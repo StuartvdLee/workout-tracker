@@ -27,7 +27,7 @@ public class SidebarMobileTests
         return page;
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Mobile_SidebarIsHiddenByDefault()
     {
         var page = await CreateMobilePageAsync();
@@ -38,7 +38,7 @@ public class SidebarMobileTests
         await page.CloseAsync();
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Mobile_ToggleButtonIsVisible()
     {
         var page = await CreateMobilePageAsync();
@@ -49,7 +49,7 @@ public class SidebarMobileTests
         await page.CloseAsync();
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Mobile_ClickingToggle_OpensSidebar()
     {
         var page = await CreateMobilePageAsync();
@@ -62,7 +62,7 @@ public class SidebarMobileTests
         await page.CloseAsync();
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Mobile_AriaExpanded_TogglesCorrectly()
     {
         var page = await CreateMobilePageAsync();
@@ -80,7 +80,7 @@ public class SidebarMobileTests
         await page.CloseAsync();
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Mobile_SelectingMenuItem_ClosesSidebarAndNavigates()
     {
         var page = await CreateMobilePageAsync();
@@ -96,7 +96,7 @@ public class SidebarMobileTests
         await page.CloseAsync();
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Mobile_ClickingBackdrop_ClosesSidebar()
     {
         var page = await CreateMobilePageAsync();
@@ -111,7 +111,7 @@ public class SidebarMobileTests
         await page.CloseAsync();
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Mobile_ResizingToDesktop_ShowsSidebarAndHidesTopbar()
     {
         var page = await CreateMobilePageAsync();

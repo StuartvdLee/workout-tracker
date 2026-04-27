@@ -18,7 +18,10 @@ public class HomeLandingPageAccessibilityTests
 
     private async Task<IPage> CreatePageAsync(int width = 375, int height = 667)
     {
-
+        WebAppFixture.ResetWorkouts();
+        WebAppFixture.SeedWorkout("Legs");
+        WebAppFixture.SeedWorkout("Pull");
+        WebAppFixture.SeedWorkout("Push");
         var page = await _playwright.Browser.NewPageAsync(new BrowserNewPageOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
@@ -28,7 +31,7 @@ public class HomeLandingPageAccessibilityTests
         return page;
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task TouchTargets_MeetMinimumSize_44x44()
     {
         var page = await CreatePageAsync();
@@ -47,7 +50,7 @@ public class HomeLandingPageAccessibilityTests
         await page.CloseAsync();
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Select_HasAssociatedLabel()
     {
         var page = await CreatePageAsync();
@@ -58,7 +61,7 @@ public class HomeLandingPageAccessibilityTests
         await page.CloseAsync();
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task ErrorRegion_HasAriaLiveAttribute()
     {
         var page = await CreatePageAsync();
@@ -73,7 +76,7 @@ public class HomeLandingPageAccessibilityTests
         await page.CloseAsync();
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Select_HasAriaDescribedBy_ErrorElement()
     {
         var page = await CreatePageAsync();

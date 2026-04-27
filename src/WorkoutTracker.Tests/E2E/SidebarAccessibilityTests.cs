@@ -27,7 +27,7 @@ public class SidebarAccessibilityTests
         return page;
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task SidebarLinks_AreReachableViaTab()
     {
         var page = await CreatePageAsync();
@@ -47,7 +47,7 @@ public class SidebarAccessibilityTests
         await page.CloseAsync();
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task SidebarLinks_ActivatableViaEnter()
     {
         var page = await CreatePageAsync();
@@ -61,7 +61,7 @@ public class SidebarAccessibilityTests
         await page.CloseAsync();
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Nav_HasAriaLabel()
     {
         var page = await CreatePageAsync();
@@ -73,7 +73,7 @@ public class SidebarAccessibilityTests
         await page.CloseAsync();
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task ActiveLink_HasAriaCurrent_InactiveLinksDoNot()
     {
         var page = await CreatePageAsync();
@@ -91,7 +91,7 @@ public class SidebarAccessibilityTests
         await page.CloseAsync();
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task ToggleButton_HasCorrectAriaAttributes()
     {
         var page = await _playwright.Browser.NewPageAsync(new BrowserNewPageOptions
