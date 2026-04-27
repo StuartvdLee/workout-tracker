@@ -64,6 +64,20 @@ public class WebAppFixture : WebApplicationFactory<Program>
         lock (_sessionsLock) { _sessions.Clear(); }
     }
 
+    /// <summary>
+    /// Seeds Push, Pull, and Legs planned workouts for home page tests.
+    /// Call after ResetWorkouts() to ensure a predictable dropdown state.
+    /// </summary>
+    public static void SeedDefaultWorkouts()
+    {
+        lock (_workoutsLock)
+        {
+            _workouts.Add(new MockPlannedWorkout("workout-legs-id", "Legs", []));
+            _workouts.Add(new MockPlannedWorkout("workout-pull-id", "Pull", []));
+            _workouts.Add(new MockPlannedWorkout("workout-push-id", "Push", []));
+        }
+    }
+
     public WebAppFixture()
     {
         var port = Random.Shared.Next(5100, 5999);

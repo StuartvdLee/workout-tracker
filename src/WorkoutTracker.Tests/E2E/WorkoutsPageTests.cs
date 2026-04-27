@@ -65,7 +65,7 @@ public class WorkoutsPageTests
     // Navigation & Page Loading
     // ──────────────────────────────────────────
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task NavigateViaSidebar_ShowsWorkoutsPage()
     {
         var page = await CreatePageAsync();
@@ -81,7 +81,7 @@ public class WorkoutsPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task DeepLink_ShowsWorkoutsPage()
     {
         WebAppFixture.ResetExercises();
@@ -104,7 +104,7 @@ public class WorkoutsPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task WorkoutsLink_HasActiveState()
     {
         var page = await CreatePageAsync();
@@ -125,7 +125,7 @@ public class WorkoutsPageTests
     // Empty State
     // ──────────────────────────────────────────
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task EmptyState_ShownWhenNoWorkouts()
     {
         var page = await CreatePageAsync();
@@ -143,7 +143,7 @@ public class WorkoutsPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task EmptyState_HiddenAfterCreatingWorkout()
     {
         var page = await CreatePageAsync();
@@ -165,7 +165,7 @@ public class WorkoutsPageTests
     // Create Workout
     // ──────────────────────────────────────────
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task CreateWorkout_SuccessfullyCreatesAndAppearsInList()
     {
         var page = await CreatePageAsync();
@@ -191,7 +191,7 @@ public class WorkoutsPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task CreateWorkout_EmptyName_ShowsRequiredError()
     {
         var page = await CreatePageAsync();
@@ -214,7 +214,7 @@ public class WorkoutsPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task CreateWorkout_WhitespaceOnlyName_ShowsRequiredError()
     {
         var page = await CreatePageAsync();
@@ -237,7 +237,7 @@ public class WorkoutsPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task CreateWorkout_NameTooLong_ShowsLengthError()
     {
         var page = await CreatePageAsync();
@@ -263,7 +263,7 @@ public class WorkoutsPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task CreateWorkout_DuplicateName_ShowsApiError()
     {
         var page = await CreatePageAsync();
@@ -288,7 +288,7 @@ public class WorkoutsPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task CreateWorkout_NoExercisesSelected_ShowsError()
     {
         var page = await CreatePageAsync();
@@ -309,7 +309,7 @@ public class WorkoutsPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task CreateWorkout_FormClearsAfterSuccess()
     {
         var page = await CreatePageAsync();
@@ -332,7 +332,7 @@ public class WorkoutsPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task CreateWorkout_SubmitButtonDisabledDuringSubmission()
     {
         var page = await CreatePageAsync();
@@ -371,7 +371,7 @@ public class WorkoutsPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task CreateWorkout_ServerError_ShowsApiError()
     {
         var page = await CreatePageAsync();
@@ -400,7 +400,7 @@ public class WorkoutsPageTests
     // Workout List
     // ──────────────────────────────────────────
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task WorkoutList_ShowsAllWorkoutsInAlphabeticalOrder()
     {
         var page = await CreatePageAsync();
@@ -425,7 +425,7 @@ public class WorkoutsPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task WorkoutList_ShowsCorrectExerciseCount()
     {
         var page = await CreatePageAsync();
@@ -453,7 +453,7 @@ public class WorkoutsPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task WorkoutList_ShowsSingularExercise()
     {
         var page = await CreatePageAsync();
@@ -474,7 +474,7 @@ public class WorkoutsPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task WorkoutList_EachItemHasEditDeleteStartButtons()
     {
         var page = await CreatePageAsync();
@@ -503,7 +503,7 @@ public class WorkoutsPageTests
     // Edit Workout
     // ──────────────────────────────────────────
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task EditWorkout_OpensModalWithCurrentData()
     {
         var page = await CreatePageAsync();
@@ -526,7 +526,7 @@ public class WorkoutsPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task EditWorkout_CanUpdateName()
     {
         var page = await CreatePageAsync();
@@ -552,7 +552,7 @@ public class WorkoutsPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task EditWorkout_CancelClosesModal()
     {
         var page = await CreatePageAsync();
@@ -577,7 +577,7 @@ public class WorkoutsPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task EditWorkout_EscapeClosesModal()
     {
         var page = await CreatePageAsync();
@@ -599,7 +599,7 @@ public class WorkoutsPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task EditWorkout_BackdropClickClosesModal()
     {
         var page = await CreatePageAsync();
@@ -623,7 +623,7 @@ public class WorkoutsPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task EditWorkout_EmptyNameShowsError()
     {
         var page = await CreatePageAsync();
@@ -647,7 +647,7 @@ public class WorkoutsPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task EditWorkout_DuplicateNameShowsError()
     {
         var page = await CreatePageAsync();
@@ -676,7 +676,7 @@ public class WorkoutsPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task EditWorkout_SameNameAllowed()
     {
         var page = await CreatePageAsync();
@@ -706,7 +706,7 @@ public class WorkoutsPageTests
     // Delete Workout
     // ──────────────────────────────────────────
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task DeleteWorkout_OpensConfirmationDialog()
     {
         var page = await CreatePageAsync();
@@ -733,7 +733,7 @@ public class WorkoutsPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task DeleteWorkout_ConfirmDeleteRemovesFromList()
     {
         var page = await CreatePageAsync();
@@ -758,7 +758,7 @@ public class WorkoutsPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task DeleteWorkout_CancelDoesNotDelete()
     {
         var page = await CreatePageAsync();
@@ -782,7 +782,7 @@ public class WorkoutsPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task DeleteWorkout_EscapeDoesNotDelete()
     {
         var page = await CreatePageAsync();
@@ -806,7 +806,7 @@ public class WorkoutsPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task DeleteWorkout_LastWorkoutShowsEmptyState()
     {
         var page = await CreatePageAsync();
@@ -834,7 +834,7 @@ public class WorkoutsPageTests
     // Start Workout
     // ──────────────────────────────────────────
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task StartWorkout_NavigatesToActiveSession()
     {
         var page = await CreatePageAsync();

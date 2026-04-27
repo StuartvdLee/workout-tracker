@@ -71,7 +71,7 @@ public class WorkoutAccessibilityTests
     // T050: ARIA & Keyboard Accessibility
     // ──────────────────────────────────────────
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Aria_ExerciseTogglesHaveCheckboxRole()
     {
         var page = await CreatePageAsync();
@@ -99,7 +99,7 @@ public class WorkoutAccessibilityTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Aria_ExerciseToggle_SpaceActivatesCheckbox()
     {
         var page = await CreatePageAsync();
@@ -125,7 +125,7 @@ public class WorkoutAccessibilityTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Aria_ErrorMessagesHaveAlertRole()
     {
         var page = await CreatePageAsync();
@@ -149,7 +149,7 @@ public class WorkoutAccessibilityTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Aria_EditModalHasDialogRole()
     {
         var page = await CreatePageAsync();
@@ -172,7 +172,7 @@ public class WorkoutAccessibilityTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Aria_DeleteModalHasAlertdialogRole()
     {
         var page = await CreatePageAsync();
@@ -195,7 +195,7 @@ public class WorkoutAccessibilityTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Aria_InputShowsInvalidState()
     {
         var page = await CreatePageAsync();
@@ -216,7 +216,7 @@ public class WorkoutAccessibilityTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Aria_PageHasH1Heading()
     {
         var page = await CreatePageAsync();
@@ -235,7 +235,7 @@ public class WorkoutAccessibilityTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Keyboard_TabNavigatesFormFields()
     {
         var page = await CreatePageAsync();
@@ -260,7 +260,7 @@ public class WorkoutAccessibilityTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Keyboard_EnterSubmitsForm()
     {
         var page = await CreatePageAsync();
@@ -287,7 +287,7 @@ public class WorkoutAccessibilityTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Keyboard_EscapeClosesEditModal()
     {
         var page = await CreatePageAsync();
@@ -309,7 +309,7 @@ public class WorkoutAccessibilityTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Keyboard_EscapeClosesDeleteModal()
     {
         var page = await CreatePageAsync();
@@ -335,7 +335,7 @@ public class WorkoutAccessibilityTests
     // T051: Mobile Responsive
     // ──────────────────────────────────────────
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Mobile_WorkoutsPageRendersAt375px()
     {
         var page = await CreatePageAsync(375, 667);
@@ -353,7 +353,7 @@ public class WorkoutAccessibilityTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Mobile_FormInputsAreFullWidth()
     {
         var page = await CreatePageAsync(375, 667);
@@ -374,7 +374,7 @@ public class WorkoutAccessibilityTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Mobile_WorkoutListItemsReadable()
     {
         var page = await CreatePageAsync(375, 667);
@@ -397,7 +397,7 @@ public class WorkoutAccessibilityTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Mobile_ActionButtonsAreUsable()
     {
         var page = await CreatePageAsync(375, 667);
@@ -427,7 +427,7 @@ public class WorkoutAccessibilityTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Mobile_EditModalFitsViewport()
     {
         var page = await CreatePageAsync(375, 667);

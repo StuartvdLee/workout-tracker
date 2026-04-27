@@ -18,7 +18,8 @@ public class HomeLandingPageResponsiveTests
 
     private async Task<IPage> CreatePageWithViewportAsync(int width, int height)
     {
-
+        WebAppFixture.ResetWorkouts();
+        WebAppFixture.SeedDefaultWorkouts();
         var page = await _playwright.Browser.NewPageAsync(new BrowserNewPageOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
@@ -28,7 +29,7 @@ public class HomeLandingPageResponsiveTests
         return page;
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task MobileViewport_AllElementsVisible_NoHorizontalOverflow()
     {
         var page = await CreatePageWithViewportAsync(375, 667);
@@ -44,7 +45,7 @@ public class HomeLandingPageResponsiveTests
         await page.CloseAsync();
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task DesktopViewport_AllElementsVisible_LayoutAdapts()
     {
         var page = await CreatePageWithViewportAsync(1024, 768);
@@ -60,7 +61,7 @@ public class HomeLandingPageResponsiveTests
         await page.CloseAsync();
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task NarrowViewport_320px_NoOverflow()
     {
         var page = await CreatePageWithViewportAsync(320, 568);
@@ -74,7 +75,7 @@ public class HomeLandingPageResponsiveTests
         await page.CloseAsync();
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task WideViewport_1920px_ContentCentered()
     {
         var page = await CreatePageWithViewportAsync(1920, 1080);

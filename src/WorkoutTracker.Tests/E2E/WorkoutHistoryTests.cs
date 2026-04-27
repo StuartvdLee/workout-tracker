@@ -115,7 +115,7 @@ public class WorkoutHistoryTests
     // History Page
     // ──────────────────────────────────────────
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task HistoryPage_EmptyState_ShowsMessage()
     {
         var page = await CreatePageAsync();
@@ -133,7 +133,7 @@ public class WorkoutHistoryTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task HistoryPage_LoadingState_ShownInitially()
     {
         var page = await CreatePageAsync();
@@ -161,7 +161,7 @@ public class WorkoutHistoryTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task HistoryPage_WithSessions_ShowsSessions()
     {
         var page = await CreatePageAsync();
@@ -181,7 +181,7 @@ public class WorkoutHistoryTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task HistoryPage_SessionExpandCollapse()
     {
         var page = await CreatePageAsync();
@@ -211,7 +211,7 @@ public class WorkoutHistoryTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task HistoryPage_SessionDetails_ShowsExerciseData()
     {
         var page = await CreatePageAsync();
@@ -244,7 +244,7 @@ public class WorkoutHistoryTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task HistoryPage_DateGrouping_ShowsToday()
     {
         var page = await CreatePageAsync();
@@ -263,7 +263,7 @@ public class WorkoutHistoryTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task HistoryPage_HasH1Heading()
     {
         var page = await CreatePageAsync();
@@ -283,7 +283,7 @@ public class WorkoutHistoryTests
     // Active Session Page
     // ──────────────────────────────────────────
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task ActiveSession_StartWorkout_NavigatesToSession()
     {
         var page = await CreatePageAsync();
@@ -303,7 +303,7 @@ public class WorkoutHistoryTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task ActiveSession_ShowsWorkoutExercises()
     {
         var page = await CreatePageAsync();
@@ -326,7 +326,7 @@ public class WorkoutHistoryTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task ActiveSession_BackButton_NavigatesToWorkouts()
     {
         var page = await CreatePageAsync();
@@ -350,7 +350,7 @@ public class WorkoutHistoryTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task ActiveSession_SaveButton_SavesAndNavigates()
     {
         var page = await CreatePageAsync();
@@ -382,7 +382,7 @@ public class WorkoutHistoryTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task ActiveSession_CancelWithoutChanges_GoesBack()
     {
         var page = await CreatePageAsync();
@@ -408,7 +408,7 @@ public class WorkoutHistoryTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task ActiveSession_CancelWithChanges_ShowsDiscardModal()
     {
         var page = await CreatePageAsync();
@@ -438,7 +438,7 @@ public class WorkoutHistoryTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task ActiveSession_DiscardModal_DiscardNavigatesAway()
     {
         var page = await CreatePageAsync();
@@ -471,7 +471,7 @@ public class WorkoutHistoryTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task ActiveSession_DiscardModal_ContinueStaysOnPage()
     {
         var page = await CreatePageAsync();

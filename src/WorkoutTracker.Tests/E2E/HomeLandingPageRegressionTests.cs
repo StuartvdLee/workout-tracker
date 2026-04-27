@@ -18,13 +18,15 @@ public class HomeLandingPageRegressionTests
 
     private async Task<IPage> CreatePageAsync()
     {
+        WebAppFixture.ResetWorkouts();
+        WebAppFixture.SeedDefaultWorkouts();
         var page = await _playwright.Browser.NewPageAsync();
         await page.GotoAsync(_webApp.BaseUrl);
         await page.Locator("#workout-select option:not([disabled])").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
         return page;
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task RapidClicks_WithoutSelection_ErrorDisplayedOnce()
     {
         var page = await CreatePageAsync();
@@ -42,20 +44,20 @@ public class HomeLandingPageRegressionTests
         await page.CloseAsync();
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task AllWorkoutTypes_CanBeSelectedAndSubmitted()
     {
         var page = await CreatePageAsync();
-        var select = page.Locator("#workout-select");
-        var button = page.Locator("button[type='submit']");
-        var error = page.Locator("#workout-error");
         string[] workoutLabels = ["Push", "Pull", "Legs"];
 
         foreach (var label in workoutLabels)
         {
-            await select.SelectOptionAsync(new SelectOptionValue { Label = label });
-            await button.ClickAsync();
-            await Assertions.Expect(error).ToBeHiddenAsync();
+            // Navigate fresh each iteration because clicking Start navigates to /active-session
+            await page.GotoAsync(_webApp.BaseUrl);
+            await page.Locator("#workout-select option:not([disabled])").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
+            await page.Locator("#workout-select").SelectOptionAsync(new SelectOptionValue { Label = label });
+            await page.Locator("button[type='submit']").ClickAsync();
+            await Assertions.Expect(page.Locator("#workout-error")).ToBeHiddenAsync();
         }
 
         await page.CloseAsync();
