@@ -328,7 +328,17 @@ function renderExerciseToggles(): void {
     btn.setAttribute("role", "checkbox");
     btn.setAttribute("data-exercise-id", exercise.exerciseId);
     btn.setAttribute("aria-checked", "false");
+    // Ensure the button is keyboard-focusable
+    btn.setAttribute("tabindex", "0");
     btn.textContent = exercise.name;
+
+    // Support keyboard activation (Space / Enter) for ARIA checkbox role
+    btn.addEventListener("keydown", (e: KeyboardEvent) => {
+      if (e.key === " " || e.key === "Spacebar" || e.key === "Enter") {
+        e.preventDefault();
+        btn.click();
+      }
+    });
 
     btn.addEventListener("click", () => {
       if (selectedExercises.has(exercise.exerciseId)) {
@@ -342,6 +352,9 @@ function renderExerciseToggles(): void {
       // Keep other UI in sync
       renderExerciseDropdown();
       renderSelectedExercisesList();
+
+      // Keep focus on the button after activation so keyboard tests work reliably
+      btn.focus();
     });
 
     container.appendChild(btn);
@@ -361,7 +374,17 @@ function renderEditExerciseToggles(): void {
     btn.setAttribute("role", "checkbox");
     btn.setAttribute("data-exercise-id", exercise.exerciseId);
     btn.setAttribute("aria-checked", editSelectedExercises.has(exercise.exerciseId) ? "true" : "false");
+    // Ensure the button is keyboard-focusable
+    btn.setAttribute("tabindex", "0");
     btn.textContent = exercise.name;
+
+    // Support keyboard activation (Space / Enter) for ARIA checkbox role
+    btn.addEventListener("keydown", (e: KeyboardEvent) => {
+      if (e.key === " " || e.key === "Spacebar" || e.key === "Enter") {
+        e.preventDefault();
+        btn.click();
+      }
+    });
 
     btn.addEventListener("click", () => {
       if (editSelectedExercises.has(exercise.exerciseId)) {
@@ -374,6 +397,9 @@ function renderEditExerciseToggles(): void {
 
       renderEditExerciseDropdown();
       renderEditSelectedExercisesList();
+
+      // Keep focus on the button after activation so keyboard tests work reliably
+      btn.focus();
     });
 
     container.appendChild(btn);
