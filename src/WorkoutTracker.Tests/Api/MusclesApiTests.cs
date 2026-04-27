@@ -44,7 +44,7 @@ public class MusclesApiTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetMuscles_FirstMuscleIsBack()
+    public async Task GetMuscles_FirstMuscleIsAdductors()
     {
         var response = await _client.GetAsync("/api/muscles");
         var muscles = await response.Content.ReadFromJsonAsync<List<MuscleDto>>();
