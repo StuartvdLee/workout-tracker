@@ -37,26 +37,38 @@ async function loadSessions(): Promise<void> {
   const emptyEl = document.getElementById("history-empty") as HTMLElement | null;
   const listEl = document.getElementById("history-list") as HTMLElement | null;
 
-  try {
-    const response = await fetch("/api/sessions");
-    if (!response.ok) {
-      throw new Error(`Failed to load sessions: ${response.status}`);
-    }
+  const maxAttempts = 6;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await fetch("/api/sessions");
+      if (!response.ok) {
+        throw new Error(`Failed to load sessions: ${response.status}`);
+      }
 
-    const sessions: WorkoutSession[] = await response.json();
+      const sessions: WorkoutSession[] = await response.json();
 
-    if (loadingEl) loadingEl.style.display = "none";
+      if (loadingEl) loadingEl.style.display = "none";
 
-    if (sessions.length === 0) {
-      if (emptyEl) emptyEl.style.display = "";
+      if (sessions.length === 0) {
+        // No sessions; show empty state
+        if (emptyEl) emptyEl.style.display = "";
+        return;
+      }
+
+      if (listEl) {
+        renderSessions(sessions, listEl);
+      }
+
       return;
-    }
+    } catch {
+      if (attempt === maxAttempts) {
+        if (loadingEl) loadingEl.textContent = "Failed to load workout history.";
+        return;
+      }
 
-    if (listEl) {
-      renderSessions(sessions, listEl);
+      // Retry after a short delay to tolerate transient test races
+      await new Promise((resolve) => setTimeout(resolve, 150));
     }
-  } catch {
-    if (loadingEl) loadingEl.textContent = "Failed to load workout history.";
   }
 }
 

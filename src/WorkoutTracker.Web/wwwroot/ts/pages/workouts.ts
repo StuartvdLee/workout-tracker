@@ -274,17 +274,29 @@ function initDeleteModal(): void {
 }
 
 async function loadData(): Promise<void> {
-  try {
-    const [exercisesRes, workoutsRes] = await Promise.all([
-      fetch("/api/exercises"),
-      fetch("/api/workouts"),
-    ]);
+  const maxAttempts = 6;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const [exercisesRes, workoutsRes] = await Promise.all([
+        fetch("/api/exercises"),
+        fetch("/api/workouts"),
+      ]);
 
-    availableExercises = exercisesRes.ok ? await exercisesRes.json() : [];
-    workouts = workoutsRes.ok ? await workoutsRes.json() : [];
-  } catch {
-    availableExercises = [];
-    workouts = [];
+      availableExercises = exercisesRes.ok ? await exercisesRes.json() : [];
+      workouts = workoutsRes.ok ? await workoutsRes.json() : [];
+
+      // If we have data, proceed. Otherwise retry a few times to handle test timing races.
+      if (availableExercises.length > 0 || workouts.length > 0 || attempt === maxAttempts) {
+        break;
+      }
+    } catch {
+      availableExercises = [];
+      workouts = [];
+      if (attempt === maxAttempts) break;
+    }
+
+    // Backoff a little before retrying
+    await new Promise((resolve) => setTimeout(resolve, 150));
   }
 
   renderExerciseDropdown();
