@@ -327,7 +327,7 @@ function renderExerciseToggles(): void {
     btn.className = "workout-form__exercise-item";
     btn.setAttribute("role", "checkbox");
     btn.setAttribute("data-exercise-id", exercise.exerciseId);
-    btn.setAttribute("aria-checked", selectedExercises.has(exercise.exerciseId) ? "true" : "false");
+    btn.setAttribute("aria-checked", "false");
     btn.textContent = exercise.name;
 
     btn.addEventListener("click", () => {
