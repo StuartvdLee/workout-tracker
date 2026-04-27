@@ -62,6 +62,15 @@ jobs:
       - name: Build
         run: dotnet build src/WorkoutTracker.Tests/WorkoutTracker.Tests.csproj --no-restore --configuration Release
 
+      # Install dotnet-ef and apply EF migrations to the test database
+      - name: Apply EF migrations
+        env:
+          ConnectionStrings__workout-tracker-db: "Host=localhost;Port=5432;Database=workout_tracker_test;Username=postgres;Password=postgres"
+        run: |
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          dotnet tool install --global dotnet-ef || true
+          dotnet ef database update --project src/WorkoutTracker.Infrastructure --startup-project src/WorkoutTracker.Api --configuration Release --no-build
+
       # Install Playwright browsers required for E2E tests
       - name: Install Playwright browsers
         run: pwsh src/WorkoutTracker.Tests/bin/Release/net10.0/playwright.ps1 install chromium --with-deps
