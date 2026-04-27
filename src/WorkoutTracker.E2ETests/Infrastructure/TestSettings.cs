@@ -1,4 +1,4 @@
-namespace WorkoutTracker.Tests.Infrastructure;
+namespace WorkoutTracker.E2ETests.Infrastructure;
 
 public class TestSettings
 {

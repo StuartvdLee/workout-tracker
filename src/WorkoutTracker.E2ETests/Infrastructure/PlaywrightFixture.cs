@@ -1,7 +1,7 @@
 using Microsoft.Playwright;
 using Xunit;
 
-namespace WorkoutTracker.Tests.Infrastructure;
+namespace WorkoutTracker.E2ETests.Infrastructure;
 
 public class PlaywrightFixture : IAsyncLifetime
 {

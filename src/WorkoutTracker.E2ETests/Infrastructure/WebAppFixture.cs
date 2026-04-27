@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using WorkoutTracker.Infrastructure.Data;
 
-namespace WorkoutTracker.Tests.Infrastructure;
+namespace WorkoutTracker.E2ETests.Infrastructure;
 
 public class WebAppFixture : WebApplicationFactory<Program>
 {

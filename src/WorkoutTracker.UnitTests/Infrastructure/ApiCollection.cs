@@ -1,6 +1,6 @@
 using Xunit;
 
-namespace WorkoutTracker.Tests.Infrastructure;
+namespace WorkoutTracker.UnitTests.Infrastructure;
 
 [CollectionDefinition("Api")]
 public class ApiCollection : ICollectionFixture<ApiFixture>

@@ -1,8 +1,8 @@
 using Microsoft.Playwright;
-using WorkoutTracker.Tests.Infrastructure;
+using WorkoutTracker.E2ETests.Infrastructure;
 using Xunit;
 
-namespace WorkoutTracker.Tests.E2E;
+namespace WorkoutTracker.E2ETests.E2E;
 
 [Collection("E2E")]
 public class SidebarAccessibilityTests

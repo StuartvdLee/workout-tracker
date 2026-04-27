@@ -1,9 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using Xunit;
-using WorkoutTracker.Tests.Infrastructure;
+using WorkoutTracker.UnitTests.Infrastructure;
 
-namespace WorkoutTracker.Tests.Api;
+namespace WorkoutTracker.UnitTests.Api;
 
 [Collection("Api")]
 public class WorkoutApiTests : IAsyncLifetime
