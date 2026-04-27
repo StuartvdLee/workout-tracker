@@ -13,7 +13,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 
 WORKDIR /src
 
-# Pre-install npm packages so the MSBuild npm install step hits the cache
+# Pre-install npm packages to warm the Docker layer cache.
+# The MSBuild BuildTypeScript target skips npm ci when node_modules already exists,
+# so this layer is effectively reused on rebuilds without package changes.
 COPY src/WorkoutTracker.Web/package.json src/WorkoutTracker.Web/package-lock.json WorkoutTracker.Web/
 RUN cd WorkoutTracker.Web && npm ci
 

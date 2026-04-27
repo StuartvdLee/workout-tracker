@@ -10,7 +10,7 @@
   
   <!-- Compile TypeScript before build -->
   <Target Name="BuildTypeScript" BeforeTargets="Build">
-    <Exec Command="npm install" WorkingDirectory="$(ProjectDir)" />
+    <Exec Command="npm ci" WorkingDirectory="$(ProjectDir)" Condition="!Exists('$(ProjectDir)node_modules')" />
     <Exec Command="npm run build" WorkingDirectory="$(ProjectDir)" />
   </Target>
 </Project>
