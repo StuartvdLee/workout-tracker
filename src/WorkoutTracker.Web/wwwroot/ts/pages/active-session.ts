@@ -7,6 +7,12 @@ function effortColor(value: number): string {
   return `hsl(${hue}, 70%, 40%)`;
 }
 
+function updateSliderStyle(slider: HTMLInputElement, value: number): void {
+  const pct = ((value - 1) / 9) * 100;
+  slider.style.setProperty("--effort-color", effortColor(value));
+  slider.style.setProperty("--value-pct", `${pct.toFixed(1)}%`);
+}
+
 interface WorkoutExercise {
   readonly exerciseId: string;
   readonly name: string;
@@ -268,7 +274,7 @@ function renderExerciseInputs(): void {
     effortSlider.setAttribute("aria-valuemax", "10");
     // Set value=1 so slider renders at the left; aria-valuenow stays absent until touched
     effortSlider.value = "1";
-    effortSlider.style.accentColor = effortColor(1);
+    updateSliderStyle(effortSlider, 1);
     effortSlider.removeAttribute("aria-valuenow");
 
     const effortBandEl = document.createElement("span");
@@ -285,7 +291,7 @@ function renderExerciseInputs(): void {
         effortSlider.setAttribute("data-touched", "true");
       }
       effortSlider.setAttribute("aria-valuenow", String(value));
-      effortSlider.style.accentColor = effortColor(value);
+      updateSliderStyle(effortSlider, value);
 
       effortValueEl.textContent = String(value);
       effortBandEl.textContent = getEffortLabel(value);
