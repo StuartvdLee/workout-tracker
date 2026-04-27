@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using WorkoutTracker.Infrastructure.Data;
 using Xunit;
 
-namespace WorkoutTracker.Tests.Infrastructure;
+namespace WorkoutTracker.UnitTests.Infrastructure;
 
 /// <summary>
 /// Shared WebApplicationFactory for the API project. Creates one server per test collection run
