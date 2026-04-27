@@ -3,15 +3,10 @@ targetScope = 'resourceGroup'
 @description('Azure region for all resources. Defaults to the resource group location.')
 param location string = resourceGroup().location
 
-@description('Short environment name appended to resource names (e.g. prod, staging).')
-@minLength(1)
-@maxLength(10)
-param environmentName string = 'prod'
-
-@description('Globally unique name for the Azure Container Registry (alphanumeric, 5–50 chars).')
+@description('Azure Container Registry name (globally unique, alphanumeric only, no hyphens — e.g. crworkouttracker).')
 @minLength(5)
 @maxLength(50)
-param containerRegistryName string
+param containerRegistryName string = 'crworkouttracker'
 
 @description('PostgreSQL administrator login name.')
 param postgresAdminLogin string = 'wtadmin'
@@ -36,8 +31,6 @@ param aadClientSecret string
 @description('Entra ID tenant ID. Restricts login to users in this tenant.')
 param aadTenantId string
 
-var prefix = 'wt-${environmentName}'
-
 module registry 'modules/registry.bicep' = {
   name: 'registry'
   params: {
@@ -50,7 +43,6 @@ module containerAppsEnv 'modules/containerAppsEnv.bicep' = {
   name: 'containerAppsEnv'
   params: {
     location: location
-    prefix: prefix
   }
 }
 
@@ -58,7 +50,6 @@ module database 'modules/postgres.bicep' = {
   name: 'database'
   params: {
     location: location
-    prefix: prefix
     adminLogin: postgresAdminLogin
     adminPassword: postgresAdminPassword
   }

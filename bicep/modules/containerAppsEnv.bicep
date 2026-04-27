@@ -1,11 +1,8 @@
 @description('Azure region for the resources.')
 param location string
 
-@description('Prefix used for resource names.')
-param prefix string
-
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
-  name: '${prefix}-logs'
+  name: 'log-workouttracker'
   location: location
   properties: {
     sku: {
@@ -16,7 +13,7 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
 }
 
 resource containerAppsEnv 'Microsoft.App/managedEnvironments@2024-03-01' = {
-  name: '${prefix}-env'
+  name: 'cae-workouttracker'
   location: location
   properties: {
     appLogsConfiguration: {

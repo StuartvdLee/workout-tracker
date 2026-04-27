@@ -1,9 +1,6 @@
 @description('Azure region for the resources.')
 param location string
 
-@description('Prefix used for resource names.')
-param prefix string
-
 @description('PostgreSQL administrator login name.')
 param adminLogin string
 
@@ -11,7 +8,7 @@ param adminLogin string
 @secure()
 param adminPassword string
 
-var serverName = '${prefix}-postgres'
+var serverName = 'psql-workouttracker'
 var databaseName = 'workout_tracker'
 
 resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {

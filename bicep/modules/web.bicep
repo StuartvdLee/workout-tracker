@@ -31,7 +31,7 @@ param aadClientSecret string
 param aadTenantId string
 
 resource webApp 'Microsoft.App/containerApps@2024-03-01' = {
-  name: 'web'
+  name: 'ca-workouttracker-web'
   location: location
   properties: {
     environmentId: containerAppsEnvironmentId

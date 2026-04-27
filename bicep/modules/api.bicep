@@ -34,7 +34,7 @@ param postgresPassword string
 var connectionString = 'Host=${postgresHost};Port=5432;Database=${postgresDatabaseName};Username=${postgresUsername};Password=${postgresPassword};SSL Mode=Require;Trust Server Certificate=true'
 
 resource apiApp 'Microsoft.App/containerApps@2024-03-01' = {
-  name: 'api'
+  name: 'ca-workouttracker-api'
   location: location
   properties: {
     environmentId: containerAppsEnvironmentId

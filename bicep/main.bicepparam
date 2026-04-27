@@ -4,14 +4,13 @@ using './main.bicep'
 // Secrets (postgresAdminPassword, aadClientSecret) are passed via
 // --parameters in the GitHub Actions workflow so they never appear in source.
 
-param environmentName = 'prod'
-
 // Set this to the Azure region closest to your users, e.g. 'westeurope', 'eastus'
 param location = 'westeurope'
 
-// Globally unique ACR name – alphanumeric only, 5–50 characters.
+// ACR names are globally unique and alphanumeric only (no hyphens).
+// Convention: cr + appname → crworkouttracker. Append digits if the name is taken.
 // Override via the AZURE_CONTAINER_REGISTRY GitHub Secret / --parameters in CI.
-param containerRegistryName = 'REPLACE_WITH_ACR_NAME'
+param containerRegistryName = 'crworkouttracker'
 
 param postgresAdminLogin = 'wtadmin'
 
