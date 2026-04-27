@@ -58,10 +58,9 @@ public class WorkoutHistoryTests
 
     private static async Task CreateWorkoutViaUIAsync(IPage page, string name, string exerciseName)
     {
-        await page.WaitForSelectorAsync("#workout-form .workout-form__exercises button[role='checkbox']");
+        await page.Locator("#workout-exercise-select option:not([disabled]):not([value=''])").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
         await page.FillAsync("#workout-name", name);
-        await page.Locator("#workout-form .workout-form__exercises button[role='checkbox']")
-            .Filter(new() { HasText = exerciseName }).ClickAsync();
+        await page.Locator("#workout-exercise-select").SelectOptionAsync(new SelectOptionValue { Label = exerciseName });
         await page.Locator("#workout-form .workout-form__submit").ClickAsync();
         await page.Locator(".workout-list__name").Filter(new() { HasText = name }).WaitForAsync();
     }
@@ -115,7 +114,7 @@ public class WorkoutHistoryTests
     // History Page
     // ──────────────────────────────────────────
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task HistoryPage_EmptyState_ShowsMessage()
     {
         var page = await CreatePageAsync();
@@ -133,7 +132,7 @@ public class WorkoutHistoryTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task HistoryPage_LoadingState_ShownInitially()
     {
         var page = await CreatePageAsync();
@@ -161,7 +160,7 @@ public class WorkoutHistoryTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task HistoryPage_WithSessions_ShowsSessions()
     {
         var page = await CreatePageAsync();
@@ -181,7 +180,7 @@ public class WorkoutHistoryTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task HistoryPage_SessionExpandCollapse()
     {
         var page = await CreatePageAsync();
@@ -211,7 +210,7 @@ public class WorkoutHistoryTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task HistoryPage_SessionDetails_ShowsExerciseData()
     {
         var page = await CreatePageAsync();
@@ -244,7 +243,7 @@ public class WorkoutHistoryTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task HistoryPage_DateGrouping_ShowsToday()
     {
         var page = await CreatePageAsync();
@@ -263,7 +262,7 @@ public class WorkoutHistoryTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task HistoryPage_HasH1Heading()
     {
         var page = await CreatePageAsync();
@@ -283,7 +282,7 @@ public class WorkoutHistoryTests
     // Active Session Page
     // ──────────────────────────────────────────
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task ActiveSession_StartWorkout_NavigatesToSession()
     {
         var page = await CreatePageAsync();
@@ -303,7 +302,7 @@ public class WorkoutHistoryTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task ActiveSession_ShowsWorkoutExercises()
     {
         var page = await CreatePageAsync();
@@ -326,7 +325,7 @@ public class WorkoutHistoryTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task ActiveSession_BackButton_NavigatesToWorkouts()
     {
         var page = await CreatePageAsync();
@@ -339,7 +338,7 @@ public class WorkoutHistoryTests
             await page.Locator(".workout-list__start-btn").First.ClickAsync();
             await Expect(page).ToHaveURLAsync(new Regex(@"/active-session\?id="));
 
-            await page.Locator("#session-back").ClickAsync();
+            await page.Locator("#session-cancel").ClickAsync();
 
             await page.WaitForSelectorAsync(".workouts-page");
             await Expect(page.Locator(".workouts-page")).ToBeVisibleAsync();
@@ -350,7 +349,7 @@ public class WorkoutHistoryTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task ActiveSession_SaveButton_SavesAndNavigates()
     {
         var page = await CreatePageAsync();
@@ -367,8 +366,7 @@ public class WorkoutHistoryTests
             var exerciseItem = page.Locator(".active-session__exercise-item").First;
             var exerciseId = await exerciseItem.GetAttributeAsync("data-exercise-id");
 
-            // Fill in reps and weight inputs
-            await page.Locator($"#reps-{exerciseId}").FillAsync("10");
+            // Fill in weight input
             await page.Locator($"#weight-{exerciseId}").FillAsync("135");
 
             await page.Locator("#session-save").ClickAsync();
@@ -382,7 +380,7 @@ public class WorkoutHistoryTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task ActiveSession_CancelWithoutChanges_GoesBack()
     {
         var page = await CreatePageAsync();
@@ -408,7 +406,7 @@ public class WorkoutHistoryTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task ActiveSession_CancelWithChanges_ShowsDiscardModal()
     {
         var page = await CreatePageAsync();
@@ -424,7 +422,7 @@ public class WorkoutHistoryTests
             // Make a change by filling in a reps input
             var exerciseItem = page.Locator(".active-session__exercise-item").First;
             var exerciseId = await exerciseItem.GetAttributeAsync("data-exercise-id");
-            await page.Locator($"#reps-{exerciseId}").FillAsync("10");
+            await page.Locator($"#weight-{exerciseId}").FillAsync("60");
 
             // Click cancel
             await page.Locator("#session-cancel").ClickAsync();
@@ -438,7 +436,7 @@ public class WorkoutHistoryTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task ActiveSession_DiscardModal_DiscardNavigatesAway()
     {
         var page = await CreatePageAsync();
@@ -454,7 +452,7 @@ public class WorkoutHistoryTests
             // Make a change and cancel to trigger discard modal
             var exerciseItem = page.Locator(".active-session__exercise-item").First;
             var exerciseId = await exerciseItem.GetAttributeAsync("data-exercise-id");
-            await page.Locator($"#reps-{exerciseId}").FillAsync("10");
+            await page.Locator($"#weight-{exerciseId}").FillAsync("60");
 
             await page.Locator("#session-cancel").ClickAsync();
             await Expect(page.Locator("#discard-backdrop")).ToBeVisibleAsync();
@@ -471,7 +469,7 @@ public class WorkoutHistoryTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task ActiveSession_DiscardModal_ContinueStaysOnPage()
     {
         var page = await CreatePageAsync();
@@ -487,7 +485,7 @@ public class WorkoutHistoryTests
             // Make a change and cancel to trigger discard modal
             var exerciseItem = page.Locator(".active-session__exercise-item").First;
             var exerciseId = await exerciseItem.GetAttributeAsync("data-exercise-id");
-            await page.Locator($"#reps-{exerciseId}").FillAsync("10");
+            await page.Locator($"#weight-{exerciseId}").FillAsync("60");
 
             await page.Locator("#session-cancel").ClickAsync();
             await Expect(page.Locator("#discard-backdrop")).ToBeVisibleAsync();

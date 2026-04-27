@@ -27,7 +27,7 @@ public class SidebarNavigationTests
         return page;
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Sidebar_IsVisible_WithFourMenuItems()
     {
         var page = await CreatePageAsync();
@@ -41,7 +41,7 @@ public class SidebarNavigationTests
         await page.CloseAsync();
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Sidebar_MenuItems_HaveIconsAndLabels()
     {
         var page = await CreatePageAsync();
@@ -56,7 +56,7 @@ public class SidebarNavigationTests
         await page.CloseAsync();
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task ClickingMenuItem_UpdatesContentAndUrl()
     {
         var page = await CreatePageAsync();
@@ -75,7 +75,7 @@ public class SidebarNavigationTests
         await page.CloseAsync();
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task ActiveLink_GetsActiveClass_AndAriaCurrent()
     {
         var page = await CreatePageAsync();
@@ -98,7 +98,7 @@ public class SidebarNavigationTests
         await page.CloseAsync();
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task DeepLink_Workouts_ShowsCorrectContent()
     {
         var page = await _playwright.Browser.NewPageAsync(new BrowserNewPageOptions
@@ -116,7 +116,7 @@ public class SidebarNavigationTests
         await page.CloseAsync();
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task DeepLink_Exercises_ShowsCorrectContent()
     {
         var page = await _playwright.Browser.NewPageAsync(new BrowserNewPageOptions
@@ -134,7 +134,7 @@ public class SidebarNavigationTests
         await page.CloseAsync();
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task UnknownRoute_RedirectsToHome()
     {
         var page = await _playwright.Browser.NewPageAsync(new BrowserNewPageOptions
@@ -152,7 +152,7 @@ public class SidebarNavigationTests
         await page.CloseAsync();
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task BrowserBackForward_UpdatesActiveState()
     {
         var page = await CreatePageAsync();

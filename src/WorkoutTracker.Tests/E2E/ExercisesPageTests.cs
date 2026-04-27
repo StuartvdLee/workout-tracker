@@ -29,7 +29,7 @@ public class ExercisesPageTests
         return page;
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task CreateExercise_AppearsInList()
     {
         var page = await CreatePageAsync();
@@ -48,7 +48,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task SubmitEmptyName_ShowsRequiredError()
     {
         var page = await CreatePageAsync();
@@ -66,7 +66,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task SubmitWhitespaceOnlyName_ShowsRequiredError()
     {
         var page = await CreatePageAsync();
@@ -83,7 +83,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task SubmitNameExceedingMaxLength_ShowsMaxLengthError()
     {
         var page = await CreatePageAsync();
@@ -105,7 +105,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task CreateDuplicateName_ShowsDuplicateError()
     {
         var page = await CreatePageAsync();
@@ -126,7 +126,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task AfterSuccessfulSave_FormClears()
     {
         var page = await CreatePageAsync();
@@ -145,7 +145,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task EmptyState_ShownWhenNoExercises()
     {
         var page = await CreatePageAsync();
@@ -159,7 +159,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task DeepLink_LoadsExercisesPage()
     {
         var page = await CreatePageAsync();
@@ -173,7 +173,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task DoubleSubmissionPrevention_DisabledDuringSubmit()
     {
         var page = await CreatePageAsync();
@@ -204,7 +204,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task ServerError_ShowsErrorAndPreservesInput()
     {
         var page = await CreatePageAsync();
@@ -226,13 +226,13 @@ public class ExercisesPageTests
 
     // === User Story 2: Assign Targeted Muscles ===
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task MuscleToggles_AllElevenDisplayed()
     {
         var page = await CreatePageAsync();
         try
         {
-            await Expect(page.Locator("#exercise-muscles .muscle-toggle")).ToHaveCountAsync(11);
+            await Expect(page.Locator("#exercise-muscles .muscle-toggle")).ToHaveCountAsync(12);
         }
         finally
         {
@@ -240,7 +240,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task MuscleToggle_ClickTogglesActiveState()
     {
         var page = await CreatePageAsync();
@@ -263,7 +263,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task CreateExerciseWithMuscles_ShowsMuscleChipsInList()
     {
         var page = await CreatePageAsync();
@@ -287,7 +287,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task CreateExerciseWithoutMuscles_Succeeds()
     {
         var page = await CreatePageAsync();
@@ -307,7 +307,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task CreateExerciseWithMultipleMuscles_DisplaysAllChips()
     {
         var page = await CreatePageAsync();
@@ -333,7 +333,7 @@ public class ExercisesPageTests
 
     // === User Story 3: View Exercise List ===
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task ExerciseList_MultipleExercisesAllAppear()
     {
         var page = await CreatePageAsync();
@@ -361,7 +361,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task ExerciseList_ExerciseWithMusclesShowsChips()
     {
         var page = await CreatePageAsync();
@@ -382,7 +382,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task ExerciseList_ExerciseWithoutMusclesShowsNameOnly()
     {
         var page = await CreatePageAsync();
@@ -402,7 +402,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task ExerciseList_EmptyStateMessage()
     {
         var page = await CreatePageAsync();
@@ -417,7 +417,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task ExerciseList_HeadingVisible()
     {
         var page = await CreatePageAsync();
@@ -437,7 +437,7 @@ public class ExercisesPageTests
 
     // === User Story 4: Edit an Existing Exercise ===
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task EditExercise_FormPopulatesWithExistingData()
     {
         var page = await CreatePageAsync();
@@ -464,7 +464,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task EditMode_ShowsUpdateButtonAndCancelButton()
     {
         var page = await CreatePageAsync();
@@ -486,7 +486,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task EditExercise_UpdateNameAppearsInList()
     {
         var page = await CreatePageAsync();
@@ -512,7 +512,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task EditExercise_UpdateMusclesAppearsInList()
     {
         var page = await CreatePageAsync();
@@ -540,7 +540,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task EditMode_CancelReturnToCreateMode()
     {
         var page = await CreatePageAsync();
@@ -565,7 +565,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task EditMode_ClearNameShowsRequiredError()
     {
         var page = await CreatePageAsync();
@@ -588,7 +588,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task EditMode_DuplicateNameShowsError()
     {
         var page = await CreatePageAsync();
@@ -617,7 +617,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task EditMode_OwnNameAllowed()
     {
         var page = await CreatePageAsync();
@@ -642,7 +642,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task EditMode_SwitchToAnotherExercise()
     {
         var page = await CreatePageAsync();
@@ -680,7 +680,7 @@ public class ExercisesPageTests
     // Phase 7 — T025: ARIA & Keyboard Navigation
     // ──────────────────────────────────────────
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Keyboard_TabThroughFormFields()
     {
         var page = await CreatePageAsync();
@@ -701,7 +701,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Keyboard_SpaceActivatesMuscleToggle()
     {
         var page = await CreatePageAsync();
@@ -723,7 +723,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Keyboard_EnterSubmitsForm()
     {
         var page = await CreatePageAsync();
@@ -741,7 +741,7 @@ public class ExercisesPageTests
 
     // === Delete Exercise Tests ===
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Delete_ButtonIsVisibleForEachExercise()
     {
         var page = await CreatePageAsync();
@@ -762,7 +762,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Delete_ConfirmationModalOpensOnClick()
     {
         var page = await CreatePageAsync();
@@ -789,7 +789,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Delete_CancelClosesModalWithoutDeleting()
     {
         var page = await CreatePageAsync();
@@ -813,7 +813,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Delete_ConfirmDeletesExerciseAndClosesModal()
     {
         var page = await CreatePageAsync();
@@ -840,7 +840,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Delete_OnlyDeletesTargetedExercise()
     {
         var page = await CreatePageAsync();
@@ -869,7 +869,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Delete_EscapeClosesModal()
     {
         var page = await CreatePageAsync();
@@ -893,7 +893,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Delete_BackdropClickClosesModal()
     {
         var page = await CreatePageAsync();
@@ -919,7 +919,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Delete_ModalHasCorrectAriaAttributes()
     {
         var page = await CreatePageAsync();
@@ -942,7 +942,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Aria_ErrorMessagesHaveAlertRole()
     {
         var page = await CreatePageAsync();
@@ -962,7 +962,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Aria_MuscleTogglesHaveCheckboxRole()
     {
         var page = await CreatePageAsync();
@@ -970,7 +970,7 @@ public class ExercisesPageTests
         {
             var toggles = page.Locator("#exercise-muscles .muscle-toggle");
             var count = await toggles.CountAsync();
-            Assert.Equal(11, count);
+            Assert.Equal(12, count);
 
             for (var i = 0; i < count; i++)
             {
@@ -985,7 +985,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Aria_EditButtonsHaveDescriptiveLabels()
     {
         var page = await CreatePageAsync();
@@ -1004,7 +1004,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Aria_SubmitDisabledDuringSave()
     {
         var page = await CreatePageAsync();
@@ -1040,7 +1040,7 @@ public class ExercisesPageTests
         return page;
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Mobile_PageRendersAt375pxViewport()
     {
         var page = await CreateMobilePageAsync();
@@ -1056,7 +1056,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Mobile_FormInputsAreUsable()
     {
         var page = await CreateMobilePageAsync();
@@ -1072,7 +1072,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Mobile_MuscleTogglesWrap()
     {
         var page = await CreateMobilePageAsync();
@@ -1081,10 +1081,10 @@ public class ExercisesPageTests
             var muscleGroup = page.Locator("#exercise-muscles");
             await Expect(muscleGroup).ToBeVisibleAsync();
 
-            // All 11 toggles should be visible even on narrow viewport
+            // All 12 toggles should be visible even on narrow viewport
             var toggles = page.Locator("#exercise-muscles .muscle-toggle");
             var count = await toggles.CountAsync();
-            Assert.Equal(11, count);
+            Assert.Equal(12, count);
 
             for (var i = 0; i < count; i++)
             {
@@ -1097,7 +1097,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Mobile_TouchTargetsMinimum44px()
     {
         var page = await CreateMobilePageAsync();
@@ -1123,7 +1123,7 @@ public class ExercisesPageTests
     // Phase 7 — T028: Performance Budgets
     // ──────────────────────────────────────────
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Performance_PageLoadUnder3sOnSlowNetwork()
     {
         WebAppFixture.ResetExercises();
@@ -1162,7 +1162,7 @@ public class ExercisesPageTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Performance_SubmitFeedbackUnder200ms()
     {
         var page = await CreatePageAsync();

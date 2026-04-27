@@ -53,10 +53,9 @@ public class WorkoutAccessibilityTests
 
     private static async Task CreateWorkoutViaUIAsync(IPage page, string name, string exerciseName)
     {
-        await page.WaitForSelectorAsync("#workout-form .workout-form__exercises button[role='checkbox']");
+        await page.Locator("#workout-exercise-select option:not([disabled]):not([value=''])").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
         await page.FillAsync("#workout-name", name);
-        await page.Locator("#workout-form .workout-form__exercises button[role='checkbox']")
-            .Filter(new() { HasText = exerciseName }).ClickAsync();
+        await page.Locator("#workout-exercise-select").SelectOptionAsync(new SelectOptionValue { Label = exerciseName });
         await page.Locator("#workout-form .workout-form__submit").ClickAsync();
         await page.Locator(".workout-list__name").Filter(new() { HasText = name }).WaitForAsync();
     }
@@ -71,7 +70,7 @@ public class WorkoutAccessibilityTests
     // T050: ARIA & Keyboard Accessibility
     // ──────────────────────────────────────────
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Aria_ExerciseTogglesHaveCheckboxRole()
     {
         var page = await CreatePageAsync();
@@ -79,19 +78,14 @@ public class WorkoutAccessibilityTests
         {
             await SeedExerciseAsync(page, "Bench Press");
             await NavigateToWorkoutsAsync(page);
-            await page.WaitForSelectorAsync("#workout-form .workout-form__exercises button[role='checkbox']");
+            await page.Locator("#workout-exercise-select option:not([disabled]):not([value=''])").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
 
-            var toggles = page.Locator("#workout-form .workout-form__exercises button[role='checkbox']");
-            var count = await toggles.CountAsync();
-            Assert.True(count > 0, "Expected at least one exercise toggle");
+            var options = page.Locator("#workout-exercise-select option:not([disabled]):not([value=''])");
+            var count = await options.CountAsync();
+            Assert.True(count > 0, "Expected at least one exercise option in the select");
 
-            for (var i = 0; i < count; i++)
-            {
-                var toggle = toggles.Nth(i);
-                await Expect(toggle).ToHaveAttributeAsync("role", "checkbox");
-                var ariaChecked = await toggle.GetAttributeAsync("aria-checked");
-                Assert.NotNull(ariaChecked);
-            }
+            await Expect(page.Locator("#workout-exercise-select")).ToBeVisibleAsync();
+            await Expect(page.Locator("label[for='workout-exercise-select']")).ToBeVisibleAsync();
         }
         finally
         {
@@ -99,7 +93,7 @@ public class WorkoutAccessibilityTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Aria_ExerciseToggle_SpaceActivatesCheckbox()
     {
         var page = await CreatePageAsync();
@@ -107,17 +101,18 @@ public class WorkoutAccessibilityTests
         {
             await SeedExerciseAsync(page, "Bench Press");
             await NavigateToWorkoutsAsync(page);
-            await page.WaitForSelectorAsync("#workout-form .workout-form__exercises button[role='checkbox']");
+            await page.Locator("#workout-exercise-select option:not([disabled]):not([value=''])").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
 
-            var toggle = page.Locator("#workout-form .workout-form__exercises button[role='checkbox']").First;
-            await toggle.FocusAsync();
-            await Expect(toggle).ToHaveAttributeAsync("aria-checked", "false");
+            // Select exercise via dropdown - adds to selected list
+            await page.Locator("#workout-exercise-select").SelectOptionAsync(new SelectOptionValue { Label = "Bench Press" });
 
-            await page.Keyboard.PressAsync("Space");
-            await Expect(toggle).ToHaveAttributeAsync("aria-checked", "true");
+            // Verify the exercise appears in the selected list
+            await Expect(page.Locator("#workout-selected-section")).ToBeVisibleAsync();
+            await Expect(page.Locator("#workout-selected-list .workout-selected__name")).ToContainTextAsync("Bench Press");
 
-            await page.Keyboard.PressAsync("Space");
-            await Expect(toggle).ToHaveAttributeAsync("aria-checked", "false");
+            // Remove exercise via the remove button - should hide the selected section
+            await page.Locator(".workout-form__remove-btn[aria-label='Remove Bench Press']").ClickAsync();
+            await Expect(page.Locator("#workout-selected-section")).ToBeHiddenAsync();
         }
         finally
         {
@@ -125,7 +120,7 @@ public class WorkoutAccessibilityTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Aria_ErrorMessagesHaveAlertRole()
     {
         var page = await CreatePageAsync();
@@ -133,7 +128,7 @@ public class WorkoutAccessibilityTests
         {
             await SeedExerciseAsync(page, "Bench Press");
             await NavigateToWorkoutsAsync(page);
-            await page.WaitForSelectorAsync("#workout-form .workout-form__exercises button[role='checkbox']");
+            await Expect(page.Locator("#workout-exercise-select")).ToBeVisibleAsync();
 
             // Submit empty form to trigger validation error
             await page.Locator("#workout-form .workout-form__submit").ClickAsync();
@@ -149,7 +144,7 @@ public class WorkoutAccessibilityTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Aria_EditModalHasDialogRole()
     {
         var page = await CreatePageAsync();
@@ -172,7 +167,7 @@ public class WorkoutAccessibilityTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Aria_DeleteModalHasAlertdialogRole()
     {
         var page = await CreatePageAsync();
@@ -195,7 +190,7 @@ public class WorkoutAccessibilityTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Aria_InputShowsInvalidState()
     {
         var page = await CreatePageAsync();
@@ -203,7 +198,7 @@ public class WorkoutAccessibilityTests
         {
             await SeedExerciseAsync(page, "Bench Press");
             await NavigateToWorkoutsAsync(page);
-            await page.WaitForSelectorAsync("#workout-form .workout-form__exercises button[role='checkbox']");
+            await Expect(page.Locator("#workout-exercise-select")).ToBeVisibleAsync();
 
             // Submit empty form
             await page.Locator("#workout-form .workout-form__submit").ClickAsync();
@@ -216,7 +211,7 @@ public class WorkoutAccessibilityTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Aria_PageHasH1Heading()
     {
         var page = await CreatePageAsync();
@@ -235,7 +230,7 @@ public class WorkoutAccessibilityTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Keyboard_TabNavigatesFormFields()
     {
         var page = await CreatePageAsync();
@@ -243,16 +238,15 @@ public class WorkoutAccessibilityTests
         {
             await SeedExerciseAsync(page, "Bench Press");
             await NavigateToWorkoutsAsync(page);
-            await page.WaitForSelectorAsync("#workout-form .workout-form__exercises button[role='checkbox']");
+            await page.Locator("#workout-exercise-select option:not([disabled]):not([value=''])").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
 
             // Focus the workout name input
             await page.Locator("#workout-name").FocusAsync();
             await Expect(page.Locator("#workout-name")).ToBeFocusedAsync();
 
-            // Tab to exercise toggle
+            // Tab to exercise select dropdown
             await page.Keyboard.PressAsync("Tab");
-            var toggle = page.Locator("#workout-form .workout-form__exercises button[role='checkbox']").First;
-            await Expect(toggle).ToBeFocusedAsync();
+            await Expect(page.Locator("#workout-exercise-select")).ToBeFocusedAsync();
         }
         finally
         {
@@ -260,7 +254,7 @@ public class WorkoutAccessibilityTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Keyboard_EnterSubmitsForm()
     {
         var page = await CreatePageAsync();
@@ -268,11 +262,10 @@ public class WorkoutAccessibilityTests
         {
             await SeedExerciseAsync(page, "Bench Press");
             await NavigateToWorkoutsAsync(page);
-            await page.WaitForSelectorAsync("#workout-form .workout-form__exercises button[role='checkbox']");
+            await page.Locator("#workout-exercise-select option:not([disabled]):not([value=''])").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
 
             await page.FillAsync("#workout-name", "Keyboard Workout");
-            await page.Locator("#workout-form .workout-form__exercises button[role='checkbox']")
-                .Filter(new() { HasText = "Bench Press" }).ClickAsync();
+            await page.Locator("#workout-exercise-select").SelectOptionAsync(new SelectOptionValue { Label = "Bench Press" });
 
             // Press Enter on the submit button
             await page.Locator("#workout-form .workout-form__submit").FocusAsync();
@@ -287,7 +280,7 @@ public class WorkoutAccessibilityTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Keyboard_EscapeClosesEditModal()
     {
         var page = await CreatePageAsync();
@@ -309,7 +302,7 @@ public class WorkoutAccessibilityTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Keyboard_EscapeClosesDeleteModal()
     {
         var page = await CreatePageAsync();
@@ -335,7 +328,7 @@ public class WorkoutAccessibilityTests
     // T051: Mobile Responsive
     // ──────────────────────────────────────────
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Mobile_WorkoutsPageRendersAt375px()
     {
         var page = await CreatePageAsync(375, 667);
@@ -353,7 +346,7 @@ public class WorkoutAccessibilityTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Mobile_FormInputsAreFullWidth()
     {
         var page = await CreatePageAsync(375, 667);
@@ -361,7 +354,7 @@ public class WorkoutAccessibilityTests
         {
             await SeedExerciseAsync(page, "Bench Press");
             await NavigateToWorkoutsAsync(page);
-            await page.WaitForSelectorAsync("#workout-form .workout-form__exercises button[role='checkbox']");
+            await Expect(page.Locator("#workout-exercise-select")).ToBeVisibleAsync();
 
             var inputBox = await page.Locator("#workout-name").BoundingBoxAsync();
             Assert.NotNull(inputBox);
@@ -374,7 +367,7 @@ public class WorkoutAccessibilityTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Mobile_WorkoutListItemsReadable()
     {
         var page = await CreatePageAsync(375, 667);
@@ -397,7 +390,7 @@ public class WorkoutAccessibilityTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Mobile_ActionButtonsAreUsable()
     {
         var page = await CreatePageAsync(375, 667);
@@ -427,7 +420,7 @@ public class WorkoutAccessibilityTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task Mobile_EditModalFitsViewport()
     {
         var page = await CreatePageAsync(375, 667);

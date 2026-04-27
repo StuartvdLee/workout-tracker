@@ -615,11 +615,11 @@ public class WebAppFixture : WebApplicationFactory<Program>
                 .OrderByDescending(s => s.CompletedAt)
                 .Select(s => new
                 {
-                    s.SessionId,
-                    WorkoutId = s.PlannedWorkoutId,
+                    WorkoutSessionId = s.SessionId,
+                    s.PlannedWorkoutId,
                     s.WorkoutName,
                     s.CompletedAt,
-                    Exercises = s.LoggedExercises
+                    LoggedExercises = s.LoggedExercises
                         .Select(le =>
                         {
                             var ex = exerciseSnapshot.FirstOrDefault(e =>
@@ -628,9 +628,9 @@ public class WebAppFixture : WebApplicationFactory<Program>
                             {
                                 le.ExerciseId,
                                 ExerciseName = ex?.Name ?? "",
-                                le.LoggedReps,
                                 le.LoggedWeight,
                                 le.Notes,
+                                Effort = (int?)null,
                             };
                         })
                         .ToList(),

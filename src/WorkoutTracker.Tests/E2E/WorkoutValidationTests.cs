@@ -46,10 +46,9 @@ public class WorkoutValidationTests
 
     private static async Task CreateWorkoutViaUIAsync(IPage page, string name, string exerciseName)
     {
-        await page.WaitForSelectorAsync("#workout-form .workout-form__exercises button[role='checkbox']");
+        await page.Locator("#workout-exercise-select option:not([disabled]):not([value=''])").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
         await page.FillAsync("#workout-name", name);
-        await page.Locator("#workout-form .workout-form__exercises button[role='checkbox']")
-            .Filter(new() { HasText = exerciseName }).ClickAsync();
+        await page.Locator("#workout-exercise-select").SelectOptionAsync(new SelectOptionValue { Label = exerciseName });
         await page.Locator("#workout-form .workout-form__submit").ClickAsync();
         await page.Locator(".workout-list__item").Filter(new() { HasText = name }).WaitForAsync();
     }
@@ -61,7 +60,7 @@ public class WorkoutValidationTests
     // Name Validation
     // ──────────────────────────────────────────
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task CreateWorkout_EmptyName_ShowsRequiredError()
     {
         var page = await CreatePageAsync();
@@ -70,9 +69,8 @@ public class WorkoutValidationTests
             await SeedExerciseAsync(page, "Squat");
             await NavigateToWorkoutsAsync(page);
 
-            await page.WaitForSelectorAsync("#workout-form .workout-form__exercises button[role='checkbox']");
-            await page.Locator("#workout-form .workout-form__exercises button[role='checkbox']")
-                .Filter(new() { HasText = "Squat" }).ClickAsync();
+            await page.Locator("#workout-exercise-select option:not([disabled]):not([value=''])").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
+            await page.Locator("#workout-exercise-select").SelectOptionAsync(new SelectOptionValue { Label = "Squat" });
             await page.Locator("#workout-form .workout-form__submit").ClickAsync();
 
             await Expect(page.Locator("#workout-error")).ToHaveTextAsync("Workout name is required.");
@@ -85,7 +83,7 @@ public class WorkoutValidationTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task CreateWorkout_WhitespaceOnlyName_ShowsRequiredError()
     {
         var page = await CreatePageAsync();
@@ -94,10 +92,9 @@ public class WorkoutValidationTests
             await SeedExerciseAsync(page, "Squat");
             await NavigateToWorkoutsAsync(page);
 
-            await page.WaitForSelectorAsync("#workout-form .workout-form__exercises button[role='checkbox']");
+            await page.Locator("#workout-exercise-select option:not([disabled]):not([value=''])").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
             await page.FillAsync("#workout-name", "   ");
-            await page.Locator("#workout-form .workout-form__exercises button[role='checkbox']")
-                .Filter(new() { HasText = "Squat" }).ClickAsync();
+            await page.Locator("#workout-exercise-select").SelectOptionAsync(new SelectOptionValue { Label = "Squat" });
             await page.Locator("#workout-form .workout-form__submit").ClickAsync();
 
             await Expect(page.Locator("#workout-error")).ToHaveTextAsync("Workout name is required.");
@@ -110,7 +107,7 @@ public class WorkoutValidationTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task CreateWorkout_MaxLengthName_Succeeds()
     {
         var page = await CreatePageAsync();
@@ -130,7 +127,7 @@ public class WorkoutValidationTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task CreateWorkout_ExceedsMaxLength_ShowsError()
     {
         var page = await CreatePageAsync();
@@ -139,13 +136,12 @@ public class WorkoutValidationTests
             await SeedExerciseAsync(page, "Squat");
             await NavigateToWorkoutsAsync(page);
 
-            await page.WaitForSelectorAsync("#workout-form .workout-form__exercises button[role='checkbox']");
+            await page.Locator("#workout-exercise-select option:not([disabled]):not([value=''])").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
             var longName = new string('A', 151);
             await page.Locator("#workout-name").EvaluateAsync(
                 "(el, name) => { el.removeAttribute('maxlength'); el.value = name; }",
                 longName);
-            await page.Locator("#workout-form .workout-form__exercises button[role='checkbox']")
-                .Filter(new() { HasText = "Squat" }).ClickAsync();
+            await page.Locator("#workout-exercise-select").SelectOptionAsync(new SelectOptionValue { Label = "Squat" });
             await page.Locator("#workout-form .workout-form__submit").ClickAsync();
 
             await Expect(page.Locator("#workout-error")).ToHaveTextAsync("Workout name must be 150 characters or fewer.");
@@ -156,7 +152,7 @@ public class WorkoutValidationTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task CreateWorkout_SpecialCharactersInName_Succeeds()
     {
         var page = await CreatePageAsync();
@@ -176,7 +172,7 @@ public class WorkoutValidationTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task CreateWorkout_UnicodeCharactersInName_Succeeds()
     {
         var page = await CreatePageAsync();
@@ -200,7 +196,7 @@ public class WorkoutValidationTests
     // Exercise Selection Validation
     // ──────────────────────────────────────────
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task CreateWorkout_NoExercisesSelected_ShowsError()
     {
         var page = await CreatePageAsync();
@@ -209,7 +205,7 @@ public class WorkoutValidationTests
             await SeedExerciseAsync(page, "Squat");
             await NavigateToWorkoutsAsync(page);
 
-            await page.WaitForSelectorAsync("#workout-form .workout-form__exercises button[role='checkbox']");
+            await page.Locator("#workout-exercise-select option:not([disabled]):not([value=''])").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
             await page.FillAsync("#workout-name", "Leg Day");
             await page.Locator("#workout-form .workout-form__submit").ClickAsync();
 
@@ -221,7 +217,7 @@ public class WorkoutValidationTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task CreateWorkout_ToggleExerciseTwice_DeselectsIt()
     {
         var page = await CreatePageAsync();
@@ -230,14 +226,15 @@ public class WorkoutValidationTests
             await SeedExerciseAsync(page, "Squat");
             await NavigateToWorkoutsAsync(page);
 
-            await page.WaitForSelectorAsync("#workout-form .workout-form__exercises button[role='checkbox']");
-            var toggle = page.Locator("#workout-form .workout-form__exercises button[role='checkbox']")
-                .Filter(new() { HasText = "Squat" });
+            await page.Locator("#workout-exercise-select option:not([disabled]):not([value=''])").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
 
-            await toggle.ClickAsync();
-            await Expect(toggle).ToHaveAttributeAsync("aria-checked", "true");
-            await toggle.ClickAsync();
-            await Expect(toggle).ToHaveAttributeAsync("aria-checked", "false");
+            // Select exercise - it should appear in selected list
+            await page.Locator("#workout-exercise-select").SelectOptionAsync(new SelectOptionValue { Label = "Squat" });
+            await Expect(page.Locator("#workout-selected-section")).ToBeVisibleAsync();
+
+            // Remove it - selected section should hide
+            await page.Locator(".workout-form__remove-btn[aria-label='Remove Squat']").ClickAsync();
+            await Expect(page.Locator("#workout-selected-section")).ToBeHiddenAsync();
 
             await page.FillAsync("#workout-name", "Leg Day");
             await page.Locator("#workout-form .workout-form__submit").ClickAsync();
@@ -250,7 +247,7 @@ public class WorkoutValidationTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task EditWorkout_RemoveAllExercises_ShowsError()
     {
         var page = await CreatePageAsync();
@@ -263,10 +260,9 @@ public class WorkoutValidationTests
             await page.Locator(".workout-list__edit-btn").First.ClickAsync();
             await page.WaitForSelectorAsync("#workout-edit-backdrop");
 
-            var editToggle = page.Locator("#workout-edit-form .workout-form__exercises button[role='checkbox']")
-                .Filter(new() { HasText = "Squat" });
-            await editToggle.ClickAsync();
-            await Expect(editToggle).ToHaveAttributeAsync("aria-checked", "false");
+            // Remove the exercise from the edit modal selected list
+            await page.Locator(".workout-form__remove-btn[aria-label='Remove Squat']").ClickAsync();
+            await Expect(page.Locator("#edit-selected-section")).ToBeHiddenAsync();
 
             await page.Locator("#workout-edit-form .workout-form__submit").ClickAsync();
 
@@ -282,7 +278,7 @@ public class WorkoutValidationTests
     // Duplicate Name
     // ──────────────────────────────────────────
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task CreateWorkout_DuplicateName_ShowsError()
     {
         var page = await CreatePageAsync();
@@ -293,8 +289,7 @@ public class WorkoutValidationTests
             await CreateWorkoutViaUIAsync(page, "Morning Routine", "Bench Press");
 
             await page.FillAsync("#workout-name", "Morning Routine");
-            await page.Locator("#workout-form .workout-form__exercises button[role='checkbox']")
-                .Filter(new() { HasText = "Bench Press" }).ClickAsync();
+            await page.Locator("#workout-exercise-select").SelectOptionAsync(new SelectOptionValue { Label = "Bench Press" });
             await page.Locator("#workout-form .workout-form__submit").ClickAsync();
 
             await Expect(page.Locator("#workout-api-error")).ToHaveTextAsync("A workout with this name already exists.");
@@ -305,7 +300,7 @@ public class WorkoutValidationTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task EditWorkout_SameNameAllowed()
     {
         var page = await CreatePageAsync();
@@ -328,7 +323,7 @@ public class WorkoutValidationTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task EditWorkout_DuplicateNameOfOther_ShowsError()
     {
         var page = await CreatePageAsync();
@@ -358,7 +353,7 @@ public class WorkoutValidationTests
     // Server Error
     // ──────────────────────────────────────────
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task CreateWorkout_ServerError_ShowsApiError()
     {
         var page = await CreatePageAsync();
@@ -367,10 +362,9 @@ public class WorkoutValidationTests
             await SeedExerciseAsync(page, "Squat");
             await NavigateToWorkoutsAsync(page);
 
-            await page.WaitForSelectorAsync("#workout-form .workout-form__exercises button[role='checkbox']");
+            await page.Locator("#workout-exercise-select option:not([disabled]):not([value=''])").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
             await page.FillAsync("#workout-name", "Test Workout");
-            await page.Locator("#workout-form .workout-form__exercises button[role='checkbox']")
-                .Filter(new() { HasText = "Squat" }).ClickAsync();
+            await page.Locator("#workout-exercise-select").SelectOptionAsync(new SelectOptionValue { Label = "Squat" });
 
             await page.RouteAsync("**/api/workouts", route => route.FulfillAsync(new()
             {
@@ -391,7 +385,7 @@ public class WorkoutValidationTests
         }
     }
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task CreateWorkout_ServerError_RetainsFormData()
     {
         var page = await CreatePageAsync();
@@ -400,11 +394,9 @@ public class WorkoutValidationTests
             await SeedExerciseAsync(page, "Squat");
             await NavigateToWorkoutsAsync(page);
 
-            await page.WaitForSelectorAsync("#workout-form .workout-form__exercises button[role='checkbox']");
+            await page.Locator("#workout-exercise-select option:not([disabled]):not([value=''])").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
             await page.FillAsync("#workout-name", "My Workout");
-            var toggle = page.Locator("#workout-form .workout-form__exercises button[role='checkbox']")
-                .Filter(new() { HasText = "Squat" });
-            await toggle.ClickAsync();
+            await page.Locator("#workout-exercise-select").SelectOptionAsync(new SelectOptionValue { Label = "Squat" });
 
             await page.RouteAsync("**/api/workouts", route => route.FulfillAsync(new()
             {
@@ -417,7 +409,8 @@ public class WorkoutValidationTests
             await Expect(page.Locator("#workout-api-error")).ToBeVisibleAsync();
 
             await Expect(page.Locator("#workout-name")).ToHaveValueAsync("My Workout");
-            await Expect(toggle).ToHaveAttributeAsync("aria-checked", "true");
+            // Selected exercise should still appear in selected section after server error
+            await Expect(page.Locator("#workout-selected-section")).ToBeVisibleAsync();
         }
         finally
         {
@@ -430,7 +423,7 @@ public class WorkoutValidationTests
     // Whitespace Trimming
     // ──────────────────────────────────────────
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task CreateWorkout_LeadingTrailingSpaces_TrimmedOnSave()
     {
         var page = await CreatePageAsync();
@@ -439,10 +432,9 @@ public class WorkoutValidationTests
             await SeedExerciseAsync(page, "Squat");
             await NavigateToWorkoutsAsync(page);
 
-            await page.WaitForSelectorAsync("#workout-form .workout-form__exercises button[role='checkbox']");
+            await page.Locator("#workout-exercise-select option:not([disabled]):not([value=''])").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
             await page.FillAsync("#workout-name", "  Morning Routine  ");
-            await page.Locator("#workout-form .workout-form__exercises button[role='checkbox']")
-                .Filter(new() { HasText = "Squat" }).ClickAsync();
+            await page.Locator("#workout-exercise-select").SelectOptionAsync(new SelectOptionValue { Label = "Squat" });
             await page.Locator("#workout-form .workout-form__submit").ClickAsync();
 
             await page.Locator(".workout-list__item").WaitForAsync();
@@ -458,7 +450,7 @@ public class WorkoutValidationTests
     // Delete
     // ──────────────────────────────────────────
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task DeleteWorkout_WorkoutRemovedFromList()
     {
         var page = await CreatePageAsync();
@@ -486,7 +478,7 @@ public class WorkoutValidationTests
     // Form Reset
     // ──────────────────────────────────────────
 
-    [Fact(Skip = "Playwright E2E - disabled")]
+    [Fact]
     public async Task CreateWorkout_SuccessResetsForm()
     {
         var page = await CreatePageAsync();
@@ -497,9 +489,8 @@ public class WorkoutValidationTests
             await CreateWorkoutViaUIAsync(page, "Push Day", "Bench Press");
 
             await Expect(page.Locator("#workout-name")).ToHaveValueAsync("");
-            var toggle = page.Locator("#workout-form .workout-form__exercises button[role='checkbox']")
-                .Filter(new() { HasText = "Bench Press" });
-            await Expect(toggle).ToHaveAttributeAsync("aria-checked", "false");
+            // Selected section should be hidden after successful form reset
+            await Expect(page.Locator("#workout-selected-section")).ToBeHiddenAsync();
         }
         finally
         {

@@ -67,7 +67,7 @@ public class HomeLandingPageSelectionTests
         await page.CloseAsync();
     }
 
-    [Theory(Skip = "Playwright E2E - disabled")]
+    [Theory]
     [InlineData("Push")]
     [InlineData("Pull")]
     [InlineData("Legs")]
