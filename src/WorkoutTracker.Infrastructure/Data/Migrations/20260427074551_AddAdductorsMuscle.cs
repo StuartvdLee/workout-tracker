@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
+#pragma warning disable CA1861 // Prefer 'static readonly' fields over constant array arguments
+
 namespace WorkoutTracker.Infrastructure.Data.Migrations
 {
     /// <inheritdoc />
