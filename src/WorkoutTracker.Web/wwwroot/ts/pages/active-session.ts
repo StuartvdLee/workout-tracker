@@ -268,7 +268,7 @@ function renderExerciseInputs(): void {
     effortSlider.setAttribute("aria-valuemax", "10");
     // Set value=1 so slider renders at the left; aria-valuenow stays absent until touched
     effortSlider.value = "1";
-    effortSlider.style.setProperty("--effort-color", effortColor(1));
+    effortSlider.style.accentColor = effortColor(1);
     effortSlider.removeAttribute("aria-valuenow");
 
     const effortBandEl = document.createElement("span");
@@ -285,7 +285,7 @@ function renderExerciseInputs(): void {
         effortSlider.setAttribute("data-touched", "true");
       }
       effortSlider.setAttribute("aria-valuenow", String(value));
-      effortSlider.style.setProperty("--effort-color", effortColor(value));
+      effortSlider.style.accentColor = effortColor(value);
 
       effortValueEl.textContent = String(value);
       effortBandEl.textContent = getEffortLabel(value);

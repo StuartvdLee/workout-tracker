@@ -1392,7 +1392,6 @@ body {
   width: 100%;
   min-height: var(--min-touch-target);
   cursor: pointer;
-  accent-color: var(--effort-color, hsl(120, 70%, 40%));
 }
 
 .active-session__actions {
