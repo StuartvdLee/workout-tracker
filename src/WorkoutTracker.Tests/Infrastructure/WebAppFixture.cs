@@ -65,16 +65,26 @@ public class WebAppFixture : WebApplicationFactory<Program>
     }
 
     /// <summary>
-    /// Seeds Push, Pull, and Legs planned workouts for home page tests.
-    /// Call after ResetWorkouts() to ensure a predictable dropdown state.
+    /// Seeds Legs, Pull, and Push planned workouts for home page tests.
+    /// Idempotent: existing entries with the same IDs are skipped, so the
+    /// method is safe to call multiple times without a preceding ResetWorkouts().
     /// </summary>
     public static void SeedDefaultWorkouts()
     {
+        var defaults = new[]
+        {
+            new MockPlannedWorkout("workout-legs-id", "Legs", []),
+            new MockPlannedWorkout("workout-pull-id", "Pull", []),
+            new MockPlannedWorkout("workout-push-id", "Push", []),
+        };
+
         lock (_workoutsLock)
         {
-            _workouts.Add(new MockPlannedWorkout("workout-legs-id", "Legs", []));
-            _workouts.Add(new MockPlannedWorkout("workout-pull-id", "Pull", []));
-            _workouts.Add(new MockPlannedWorkout("workout-push-id", "Push", []));
+            foreach (var workout in defaults)
+            {
+                if (!_workouts.Any(w => w.PlannedWorkoutId == workout.PlannedWorkoutId))
+                    _workouts.Add(workout);
+            }
         }
     }
 
