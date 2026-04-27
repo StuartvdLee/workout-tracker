@@ -53,6 +53,7 @@ public class WorkoutTrackerDbContext(DbContextOptions<WorkoutTrackerDbContext> o
             entity.Property(e => e.Name).IsRequired();
 
             entity.HasData(
+                new Muscle { MuscleId = Guid.Parse("a1000000-0000-0000-0000-00000000000c"), Name = "Adductors" },
                 new Muscle { MuscleId = Guid.Parse("a1000000-0000-0000-0000-000000000001"), Name = "Back" },
                 new Muscle { MuscleId = Guid.Parse("a1000000-0000-0000-0000-000000000002"), Name = "Biceps" },
                 new Muscle { MuscleId = Guid.Parse("a1000000-0000-0000-0000-000000000003"), Name = "Calves" },
