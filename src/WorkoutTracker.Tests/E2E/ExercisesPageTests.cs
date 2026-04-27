@@ -232,7 +232,7 @@ public class ExercisesPageTests
         var page = await CreatePageAsync();
         try
         {
-            await Expect(page.Locator("#exercise-muscles .muscle-toggle")).ToHaveCountAsync(11);
+            await Expect(page.Locator("#exercise-muscles .muscle-toggle")).ToHaveCountAsync(12);
         }
         finally
         {
