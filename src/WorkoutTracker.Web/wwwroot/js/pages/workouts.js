@@ -289,7 +289,8 @@ function renderExerciseToggles() {
         btn.className = "workout-form__exercise-item";
         btn.setAttribute("role", "checkbox");
         btn.setAttribute("data-exercise-id", exercise.exerciseId);
-        btn.setAttribute("aria-checked", "false");
+        // Reflect current selection state so ARIA checks pass after toggling
+        btn.setAttribute("aria-checked", selectedExercises.has(exercise.exerciseId) ? "true" : "false");
         // Ensure the button is keyboard-focusable
         btn.setAttribute("tabindex", "0");
         btn.textContent = exercise.name;
