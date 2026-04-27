@@ -1,6 +1,6 @@
 # Implementation Plan: Active Workout UI — Effort Tracking
 
-**Branch**: `005-active-workout-effort` | **Date**: 2026-04-27 | **Spec**: [spec.md](./spec.md)
+**Branch**: `005-active-workout-effort` | **Date**: 2026-04-27 | **Spec**: [spec.md](./spec.md) | **Status**: Implemented — PR #51
 **Input**: Feature specification from `/specs/005-active-workout-effort/spec.md`
 
 ## Summary

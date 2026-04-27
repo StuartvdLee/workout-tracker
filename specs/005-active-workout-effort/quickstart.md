@@ -52,7 +52,7 @@ Go to `/history`. Each completed session expands to show its exercises.
 For each exercise you'll see (only values that were recorded):
 
 ```
-Bench Press   80 KG · 7 — Hard · Great set
+Bench Press   80 KG · 7 — Hard
 Overhead Press   — (no data logged)
 ```
 

@@ -2,7 +2,7 @@
 
 **Feature Branch**: `005-active-workout-effort`  
 **Created**: 2026-04-27  
-**Status**: Draft  
+**Status**: Implemented  
 **Input**: User description: "Change the way that an active workout looks. Remove reps altogether since the user always does the same number of reps. Weight should be specified in the UI as KG. Add an Effort slider to each exercise in a workout with range 1-10: Easy (1-3), Moderate (4-6), Hard (7-8), All Out (9-10)."
 
 ## Context
