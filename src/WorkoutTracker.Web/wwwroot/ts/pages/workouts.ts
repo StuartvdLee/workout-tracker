@@ -351,6 +351,7 @@ function renderExerciseToggles(): void {
     btn.addEventListener("keydown", (e: KeyboardEvent) => {
       if (e.key === " " || e.key === "Space" || e.key === "Spacebar" || e.key === "Enter") {
         e.preventDefault();
+        e.stopPropagation();
         btn.click();
       }
     });
@@ -397,6 +398,7 @@ function renderEditExerciseToggles(): void {
     btn.addEventListener("keydown", (e: KeyboardEvent) => {
       if (e.key === " " || e.key === "Space" || e.key === "Spacebar" || e.key === "Enter") {
         e.preventDefault();
+        e.stopPropagation();
         btn.click();
       }
     });
