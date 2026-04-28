@@ -2,6 +2,9 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
+# Copy shared build configuration so restore/publish matches CI/local builds
+COPY src/Directory.Build.props .
+
 # Copy project files first to leverage Docker layer caching for NuGet restore
 COPY src/WorkoutTracker.ServiceDefaults/WorkoutTracker.ServiceDefaults.csproj WorkoutTracker.ServiceDefaults/
 COPY src/WorkoutTracker.Infrastructure/WorkoutTracker.Infrastructure.csproj WorkoutTracker.Infrastructure/

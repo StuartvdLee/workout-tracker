@@ -20,6 +20,7 @@ COPY src/WorkoutTracker.Web/package.json src/WorkoutTracker.Web/package-lock.jso
 RUN cd WorkoutTracker.Web && npm ci
 
 # Copy project files and restore NuGet packages
+COPY src/Directory.Build.props .
 COPY src/WorkoutTracker.ServiceDefaults/WorkoutTracker.ServiceDefaults.csproj WorkoutTracker.ServiceDefaults/
 COPY src/WorkoutTracker.Web/WorkoutTracker.Web.csproj WorkoutTracker.Web/
 RUN dotnet restore WorkoutTracker.Web/WorkoutTracker.Web.csproj
