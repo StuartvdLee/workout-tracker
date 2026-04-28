@@ -1,0 +1,160 @@
+name: Deploy to Azure
+
+# Runs automatically on every push to main.
+# Can also be triggered manually from any branch via the GitHub Actions UI.
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  id-token: write   # Required for OIDC login to Azure
+  contents: read
+
+jobs:
+  # ── Job 1: Build Docker images and push to Azure Container Registry ──────────
+  build-and-push:
+    name: Build & Push Images
+    runs-on: ubuntu-latest
+
+    outputs:
+      image-tag: ${{ steps.image-tag.outputs.tag }}
+      registry: ${{ steps.acr-login.outputs.login_server }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Federated OIDC login – no long-lived secrets required.
+      # Set up a federated identity credential in Entra ID for:
+      #   repo: <your-org>/<your-repo>   subject: repo:<org>/<repo>:ref:refs/heads/main
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get ACR login server
+        id: acr-login
+        run: |
+          LOGIN_SERVER=$(az acr show \
+            --name "${{ secrets.AZURE_CONTAINER_REGISTRY }}" \
+            --query loginServer \
+            --output tsv)
+          echo "login_server=$LOGIN_SERVER" >> "$GITHUB_OUTPUT"
+          az acr login --name "${{ secrets.AZURE_CONTAINER_REGISTRY }}"
+
+      - name: Compute image tag from Git SHA
+        id: image-tag
+        run: echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+          cache-dependency-path: src/WorkoutTracker.Web/package-lock.json
+
+      - name: Build and push API image
+        run: |
+          TAG="${{ steps.acr-login.outputs.login_server }}/api:${{ steps.image-tag.outputs.tag }}"
+          docker build \
+            --file src/WorkoutTracker.Api/Dockerfile \
+            --tag "$TAG" \
+            .
+          docker push "$TAG"
+
+      - name: Build and push Web image
+        run: |
+          TAG="${{ steps.acr-login.outputs.login_server }}/web:${{ steps.image-tag.outputs.tag }}"
+          docker build \
+            --file src/WorkoutTracker.Web/Dockerfile \
+            --tag "$TAG" \
+            .
+          docker push "$TAG"
+
+  # ── Job 2: Deploy Bicep infrastructure ──────────────────────────────────────
+  deploy-infra:
+    name: Deploy Infrastructure (Bicep)
+    runs-on: ubuntu-latest
+    needs: build-and-push
+
+    outputs:
+      postgres-host: ${{ steps.bicep.outputs.postgresHost }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy Bicep template
+        id: bicep
+        run: |
+          RESULT=$(az deployment group create \
+            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            --template-file bicep/main.bicep \
+            --parameters bicep/main.bicepparam \
+            --parameters containerRegistryName="${{ secrets.AZURE_CONTAINER_REGISTRY }}" \
+            --parameters postgresAdminPassword="${{ secrets.POSTGRES_ADMIN_PASSWORD }}" \
+            --parameters apiImageTag="${{ needs.build-and-push.outputs.image-tag }}" \
+            --parameters webImageTag="${{ needs.build-and-push.outputs.image-tag }}" \
+            --parameters aadClientId="${{ secrets.AZURE_AD_CLIENT_ID }}" \
+            --parameters aadClientSecret="${{ secrets.AZURE_AD_CLIENT_SECRET }}" \
+            --parameters aadTenantId="${{ secrets.AZURE_TENANT_ID }}" \
+            --output json)
+
+          WEB_URL=$(echo "$RESULT"  | jq -r '.properties.outputs.webAppUrl.value')
+          REDIRECT=$(echo "$RESULT" | jq -r '.properties.outputs.aadRedirectUri.value')
+          PG_HOST=$(echo  "$RESULT" | jq -r '.properties.outputs.postgresServerFqdn.value')
+
+          echo "Web app URL: $WEB_URL"
+          echo "⚠️  Add this redirect URI to your Entra ID App Registration: $REDIRECT"
+          echo "postgres-host=$PG_HOST" >> "$GITHUB_OUTPUT"
+
+  # ── Job 3: Run EF Core database migrations ───────────────────────────────────
+  migrate:
+    name: Run Database Migrations
+    runs-on: ubuntu-latest
+    needs: deploy-infra
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Install EF Core tools
+        run: dotnet tool install --global dotnet-ef
+
+      - name: Restore dependencies
+        run: dotnet restore src/WorkoutTracker.Api/WorkoutTracker.Api.csproj
+
+      - name: Build API project
+        run: dotnet build src/WorkoutTracker.Api/WorkoutTracker.Api.csproj --no-restore -c Release
+
+      - name: Run migrations
+        run: |
+          CONNECTION="Host=${{ needs.deploy-infra.outputs.postgres-host }};Port=5432;Database=workout_tracker;Username=wtadmin;Password=${{ secrets.POSTGRES_ADMIN_PASSWORD }};SSL Mode=Require;Trust Server Certificate=true"
+          dotnet ef database update \
+            --project src/WorkoutTracker.Infrastructure \
+            --startup-project src/WorkoutTracker.Api \
+            --no-build \
+            --connection "$CONNECTION"
