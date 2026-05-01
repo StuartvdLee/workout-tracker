@@ -31,17 +31,17 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2025-11-01' =
   sku: {
     name: 'Basic'
   }
-  properties: {
-    adminUserEnabled: false
+  identity: {
+    type: 'SystemAssigned'
   }
 }
 
-// Shared managed identity used by Container Apps to pull images from ACR.
-// Avoids the need for ACR admin credentials entirely.
-resource containerAppsIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: 'workouttracker-id'
-  location: location
-}
+// // Shared managed identity used by Container Apps to pull images from ACR.
+// // Avoids the need for ACR admin credentials entirely.
+// resource containerAppsIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+//   name: 'workouttracker-id'
+//   location: location
+// }
 
 // // Grant AcrPull on the registry to the managed identity.
 // var acrPullRoleDefinitionId = '7f951dda-4ed3-4680-a7ca-43fe172d538d'
