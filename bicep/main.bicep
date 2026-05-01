@@ -31,9 +31,6 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2025-11-01' =
   sku: {
     name: 'Basic'
   }
-  identity: {
-    type: 'SystemAssigned'
-  }
 }
 
 // // Shared managed identity used by Container Apps to pull images from ACR.
