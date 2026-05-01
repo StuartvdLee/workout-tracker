@@ -1,10 +1,10 @@
 targetScope = 'resourceGroup'
 
 @description('Azure region for all resources. Defaults to the resource group location.')
-param location string = resourceGroup().location
+var location string = resourceGroup().location
 
 @description('Name of the application')
-param appName string = 'workouttracker'
+var appName string = 'workouttracker'
 
 @description('administratorLogin for PostgreSQL server')
 @secure()
@@ -13,16 +13,6 @@ param postgresqlAdministratorLogin string
 @description('administratorLoginPassword for PostgreSQL server')
 @secure()
 param postgresqlAdministratorLoginPassword string
-
-// @description('Entra ID application (client) ID for Easy Auth on the Web app.')
-// param aadClientId string
-
-// @description('Entra ID application client secret for Easy Auth.')
-// @secure()
-// param aadClientSecret string
-
-// @description('Entra ID tenant ID. Restricts login to users in this tenant.')
-// param aadTenantId string
 
 resource containerAppsEnv 'Microsoft.App/managedEnvironments@2026-01-01' = {
   name: '${appName}-cae'
