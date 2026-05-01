@@ -15,7 +15,7 @@ resource containerAppsEnv 'Microsoft.App/managedEnvironments@2026-01-01' = {
   name: '${appName}-cae'
   location: location
   properties: {
-    publicNetworkAccess: 'Disabled'
+    publicNetworkAccess: 'Enabled'
   }
 }
 
