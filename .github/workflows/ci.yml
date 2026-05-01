@@ -157,6 +157,9 @@ jobs:
       #       --name $POSTGRES_SERVER \
       #       --public-access "$RUNNER_IP"
 
+      - name: Restore .NET dependencies
+        run: dotnet restore src/WorkoutTracker.slnx
+
       - name: Install EF Core tools
         run: dotnet tool install --global dotnet-ef --version '10.0.*'
 
