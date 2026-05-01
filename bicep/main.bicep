@@ -25,13 +25,13 @@ param location string = resourceGroup().location
 // @description('Entra ID tenant ID. Restricts login to users in this tenant.')
 // param aadTenantId string
 
-resource containerRegistry 'Microsoft.ContainerRegistry/registries@2025-11-01' = {
-  name: 'workouttrackercr'
-  location: location
-  sku: {
-    name: 'Basic'
-  }
-}
+// resource containerRegistry 'Microsoft.ContainerRegistry/registries@2025-11-01' = {
+//   name: 'workouttrackercr'
+//   location: location
+//   sku: {
+//     name: 'Basic'
+//   }
+// }
 
 // // Shared managed identity used by Container Apps to pull images from ACR.
 // // Avoids the need for ACR admin credentials entirely.
@@ -63,6 +63,12 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2025-11-01' =
 //     location: location
 //   }
 // }
+
+resource containerAppsEnv 'Microsoft.App/managedEnvironments@2026-01-01' = {
+  name: 'workouttracker-cae'
+  location: location
+  properties: { publicNetworkAccess: 'Disabled' }
+}
 
 // module database 'modules/postgres.bicep' = {
 //   name: 'database'
