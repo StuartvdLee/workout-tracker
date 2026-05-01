@@ -111,6 +111,7 @@ resource authConfig 'Microsoft.App/containerApps/authConfigs@2024-03-01' = {
         }
         validation: {
           allowedAudiences: [
+            aadClientId
             'api://${aadClientId}'
           ]
           defaultAuthorizationPolicy: {
