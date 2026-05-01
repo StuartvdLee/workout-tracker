@@ -25,6 +25,33 @@ param location string = resourceGroup().location
 // @description('Entra ID tenant ID. Restricts login to users in this tenant.')
 // param aadTenantId string
 
+resource containerAppsEnv 'Microsoft.App/managedEnvironments@2026-01-01' = {
+  name: 'workouttracker-cae'
+  location: location
+  properties: {
+    publicNetworkAccess: 'Disabled'
+  }
+}
+
+resource apiContainerApp 'Microsoft.App/containerApps@2026-01-01' = {
+  name: 'workouttracker-api-ca'
+  location: location
+  properties: {
+    environmentId: containerAppsEnv.id
+    configuration: {
+      activeRevisionsMode: 'Single'
+      ingress: {
+        external: false
+        transport: 'auto'
+        allowInsecure: false
+        stickySessions: {
+          affinity: 'none'
+        }
+      }
+    }
+  }
+}
+
 // resource containerRegistry 'Microsoft.ContainerRegistry/registries@2025-11-01' = {
 //   name: 'workouttrackercr'
 //   location: location
@@ -56,19 +83,6 @@ param location string = resourceGroup().location
 //     principalType: 'ServicePrincipal'
 //   }
 // }
-
-// module containerAppsEnv 'modules/containerAppsEnv.bicep' = {
-//   name: 'containerAppsEnv'
-//   params: {
-//     location: location
-//   }
-// }
-
-resource containerAppsEnv 'Microsoft.App/managedEnvironments@2026-01-01' = {
-  name: 'workouttracker-cae'
-  location: location
-  properties: { publicNetworkAccess: 'Disabled' }
-}
 
 // module database 'modules/postgres.bicep' = {
 //   name: 'database'
