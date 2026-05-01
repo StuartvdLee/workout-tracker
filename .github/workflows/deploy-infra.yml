@@ -45,8 +45,7 @@ jobs:
           --template-file bicep/main.bicep \
           --parameters \
             postgresqlAdministratorLogin='${{ secrets.POSTGRES_ADMIN_USER }}' \
-            postgresqlAdministratorLoginPassword='${{ secrets.POSTGRES_ADMIN_PASSWORD }}' \
-        
+            postgresqlAdministratorLoginPassword='${{ secrets.POSTGRES_ADMIN_PASSWORD }}'
       # RESULT=$(az deployment group create \
       #   --resource-group "$resourceGroupName" \
       #   --template-file bicep/main.bicep \

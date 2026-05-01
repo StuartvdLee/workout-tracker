@@ -1,13 +1,12 @@
 targetScope = 'resourceGroup'
 
 @description('Azure region for all resources. Defaults to the resource group location.')
-var location string = resourceGroup().location
+param location string = resourceGroup().location
 
 @description('Name of the application')
-var appName string = 'workouttracker'
+param appName string = 'workouttracker'
 
 @description('administratorLogin for PostgreSQL server')
-@secure()
 param postgresqlAdministratorLogin string
 
 @description('administratorLoginPassword for PostgreSQL server')
@@ -23,6 +22,7 @@ resource containerAppsEnv 'Microsoft.App/managedEnvironments@2026-01-01' = {
 }
 
 module apiContainerApp 'modules/containerApp.bicep' = {
+  name: '${appName}-api-ca-module'
   params: {
     location: location
     containerAppsEnvironmentId: containerAppsEnv.id
@@ -32,6 +32,7 @@ module apiContainerApp 'modules/containerApp.bicep' = {
 }
 
 module webContainerApp 'modules/containerApp.bicep' = {
+  name: '${appName}-web-ca-module'
   params: {
     location: location
     containerAppsEnvironmentId: containerAppsEnv.id
@@ -42,7 +43,7 @@ module webContainerApp 'modules/containerApp.bicep' = {
 
 resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2025-08-01' = {
   name: '${appName}-psql'
-  location: 'northeurope'
+  location: location
   sku: {
     name: 'Standard_B1ms'
     tier: 'Burstable'
@@ -62,6 +63,9 @@ resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2025-08-01' =
     }
     highAvailability: {
       mode: 'Disabled'
+    }
+    network: {
+      publicNetworkAccess: 'Disabled'
     }
   }
 }
