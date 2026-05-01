@@ -14,10 +14,6 @@ param containerRegistryName = 'crworkouttracker'
 
 param postgresAdminLogin = 'wtadmin'
 
-// Image tags are overridden by CI with the short Git SHA.
-param apiImageTag = 'latest'
-param webImageTag = 'latest'
-
 // Set these to the values from your Entra ID App Registration.
 // Client ID is not secret; override via AZURE_AD_CLIENT_ID GitHub Secret in CI.
 param aadClientId = 'REPLACE_WITH_AAD_CLIENT_ID'

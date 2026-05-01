@@ -4,19 +4,6 @@ param location string
 @description('Resource ID of the Container Apps Environment.')
 param containerAppsEnvironmentId string
 
-@description('Container Registry login server (e.g. myregistry.azurecr.io).')
-param registryServer string
-
-@description('Container Registry admin username.')
-param registryUsername string
-
-@description('Container Registry admin password.')
-@secure()
-param registryPassword string
-
-@description('Docker image tag to deploy.')
-param imageTag string
-
 @description('Internal HTTPS URL for the API Container App (Aspire service discovery).')
 param apiInternalUrl string
 
@@ -30,6 +17,9 @@ param aadClientSecret string
 @description('Entra ID tenant ID to restrict access to.')
 param aadTenantId string
 
+// Placeholder image used until Docker images are built and pushed to ACR.
+var placeholderImage = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
+
 resource webApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: 'ca-workouttracker-web'
   location: location
@@ -41,18 +31,7 @@ resource webApp 'Microsoft.App/containerApps@2024-03-01' = {
         targetPort: 8080
         transport: 'http'
       }
-      registries: [
-        {
-          server: registryServer
-          username: registryUsername
-          passwordSecretRef: 'acr-password'
-        }
-      ]
       secrets: [
-        {
-          name: 'acr-password'
-          value: registryPassword
-        }
         {
           name: 'aad-client-secret'
           value: aadClientSecret
@@ -63,7 +42,7 @@ resource webApp 'Microsoft.App/containerApps@2024-03-01' = {
       containers: [
         {
           name: 'web'
-          image: '${registryServer}/web:${imageTag}'
+          image: placeholderImage
           resources: {
             cpu: json('0.5')
             memory: '1Gi'

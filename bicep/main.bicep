@@ -15,12 +15,6 @@ param postgresAdminLogin string = 'wtadmin'
 @secure()
 param postgresAdminPassword string
 
-@description('Docker image tag for the API service.')
-param apiImageTag string = 'latest'
-
-@description('Docker image tag for the Web service.')
-param webImageTag string = 'latest'
-
 @description('Entra ID application (client) ID for Easy Auth on the Web app.')
 param aadClientId string
 
@@ -60,10 +54,6 @@ module apiApp 'modules/api.bicep' = {
   params: {
     location: location
     containerAppsEnvironmentId: containerAppsEnv.outputs.environmentId
-    registryServer: registry.outputs.loginServer
-    registryUsername: registry.outputs.adminUsername
-    registryPassword: registry.outputs.adminPassword
-    imageTag: apiImageTag
     postgresHost: database.outputs.serverFqdn
     postgresDatabaseName: database.outputs.databaseName
     postgresUsername: database.outputs.adminLogin
@@ -76,10 +66,6 @@ module webApp 'modules/web.bicep' = {
   params: {
     location: location
     containerAppsEnvironmentId: containerAppsEnv.outputs.environmentId
-    registryServer: registry.outputs.loginServer
-    registryUsername: registry.outputs.adminUsername
-    registryPassword: registry.outputs.adminPassword
-    imageTag: webImageTag
     apiInternalUrl: 'https://${apiApp.outputs.internalFqdn}'
     aadClientId: aadClientId
     aadClientSecret: aadClientSecret
