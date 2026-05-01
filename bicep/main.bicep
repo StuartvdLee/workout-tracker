@@ -31,22 +31,17 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2025-11-01' =
   sku: {
     name: 'Basic'
   }
+  properties: {
+    adminUserEnabled: false
+  }
 }
 
-// module registry 'modules/registry.bicep' = {
-//   name: 'registry'
-//   params: {
-//     location: location
-//     registryName: containerRegistryName
-//   }
-// }
-
-// // Shared managed identity used by both Container Apps to pull images from ACR.
-// // Avoids the need for ACR admin credentials entirely.
-// resource containerAppsIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-//   name: 'id-workouttracker'
-//   location: location
-// }
+// Shared managed identity used by Container Apps to pull images from ACR.
+// Avoids the need for ACR admin credentials entirely.
+resource containerAppsIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: 'workouttracker-id'
+  location: location
+}
 
 // // Grant AcrPull on the registry to the managed identity.
 // var acrPullRoleDefinitionId = '7f951dda-4ed3-4680-a7ca-43fe172d538d'
