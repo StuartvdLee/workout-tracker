@@ -3,17 +3,16 @@ targetScope = 'resourceGroup'
 @description('Azure region for all resources. Defaults to the resource group location.')
 param location string = resourceGroup().location
 
-// @description('Azure Container Registry name (globally unique, alphanumeric only, no hyphens — e.g. crworkouttracker).')
-// @minLength(5)
-// @maxLength(50)
-// param containerRegistryName string = 'workouttracker-cr'
+@description('Name of the application')
+param appName string = 'workouttracker'
 
-// @description('PostgreSQL administrator login name.')
-// param postgresAdminLogin string = 'wtadmin'
+@description('administratorLogin for PostgreSQL server')
+@secure()
+param postgresqlAdministratorLogin string
 
-// @description('PostgreSQL administrator password.')
-// @secure()
-// param postgresAdminPassword string
+@description('administratorLoginPassword for PostgreSQL server')
+@secure()
+param postgresqlAdministratorLoginPassword string
 
 // @description('Entra ID application (client) ID for Easy Auth on the Web app.')
 // param aadClientId string
@@ -26,7 +25,7 @@ param location string = resourceGroup().location
 // param aadTenantId string
 
 resource containerAppsEnv 'Microsoft.App/managedEnvironments@2026-01-01' = {
-  name: 'workouttracker-cae'
+  name: '${appName}-cae'
   location: location
   properties: {
     publicNetworkAccess: 'Disabled'
@@ -37,7 +36,7 @@ module apiContainerApp 'modules/containerApp.bicep' = {
   params: {
     location: location
     containerAppsEnvironmentId: containerAppsEnv.id
-    containerAppName: 'workouttracker-api-ca'
+    containerAppName: '${appName}-api-ca'
     ingressTrafficAllow: false
   }
 }
@@ -46,16 +45,42 @@ module webContainerApp 'modules/containerApp.bicep' = {
   params: {
     location: location
     containerAppsEnvironmentId: containerAppsEnv.id
-    containerAppName: 'workouttracker-web-ca'
+    containerAppName: '${appName}-web-ca'
     ingressTrafficAllow: true
   }
 }
 
-// module database 'modules/postgres.bicep' = {
-//   name: 'database'
-//   params: {
-//     location: location
-//     adminLogin: postgresAdminLogin
-//     adminPassword: postgresAdminPassword
-//   }
-// }
+resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2025-08-01' = {
+  name: '${appName}-psql'
+  location: location
+  sku: {
+    name: 'Standard_B1ms'
+    tier: 'Burstable'
+  }
+  properties: {
+    administratorLogin: postgresqlAdministratorLogin
+    administratorLoginPassword: postgresqlAdministratorLoginPassword
+    version: '17'
+    storage: {
+      storageSizeGB: 32
+      autoGrow: 'Enabled'
+      tier: 'P4'
+    }
+    backup: {
+      backupRetentionDays: 7
+      geoRedundantBackup: 'Disabled'
+    }
+    highAvailability: {
+      mode: 'Disabled'
+    }
+  }
+}
+
+resource postgresDatabase 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2025-08-01' = {
+  parent: postgresServer
+  name: '${appName}_db'
+  properties: {
+    charset: 'UTF8'
+    collation: 'en_US.UTF8'
+  }
+}
