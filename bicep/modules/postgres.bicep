@@ -30,7 +30,7 @@ resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' =
       geoRedundantBackup: 'Disabled'
     }
     network: {
-      publicNetworkAccess: 'Enabled'
+      publicNetworkAccess: 'Disabled'
     }
     highAvailability: {
       mode: 'Disabled'
@@ -44,16 +44,6 @@ resource database 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2024-08-0
   properties: {
     charset: 'UTF8'
     collation: 'en_US.utf8'
-  }
-}
-
-// Allow all Azure-hosted IPs (0.0.0.0 → 0.0.0.0 enables "Allow Azure services" flag)
-resource firewallAllowAzure 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2024-08-01' = {
-  parent: postgresServer
-  name: 'AllowAzureServices'
-  properties: {
-    startIpAddress: '0.0.0.0'
-    endIpAddress: '0.0.0.0'
   }
 }
 
