@@ -1,17 +1,15 @@
 targetScope = 'resourceGroup'
 
-@description('Azure region for all resources. Defaults to the resource group location.')
-param location string = resourceGroup().location
-
-@description('Name of the application')
-param appName string = 'workouttracker'
-
 @description('administratorLogin for PostgreSQL server')
+@secure()
 param postgresqlAdministratorLogin string
 
 @description('administratorLoginPassword for PostgreSQL server')
 @secure()
 param postgresqlAdministratorLoginPassword string
+
+var location = resourceGroup().location
+var appName = 'workouttracker'
 
 resource containerAppsEnv 'Microsoft.App/managedEnvironments@2026-01-01' = {
   name: '${appName}-cae'
@@ -27,7 +25,6 @@ module apiContainerApp 'modules/containerApp.bicep' = {
     location: location
     containerAppsEnvironmentId: containerAppsEnv.id
     containerAppName: '${appName}-api-ca'
-    ingressTrafficAllow: false
   }
 }
 
