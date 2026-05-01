@@ -8,22 +8,22 @@ param location string = resourceGroup().location
 // @maxLength(50)
 // param containerRegistryName string = 'workouttracker-cr'
 
-@description('PostgreSQL administrator login name.')
-param postgresAdminLogin string = 'wtadmin'
+// @description('PostgreSQL administrator login name.')
+// param postgresAdminLogin string = 'wtadmin'
 
-@description('PostgreSQL administrator password.')
-@secure()
-param postgresAdminPassword string
+// @description('PostgreSQL administrator password.')
+// @secure()
+// param postgresAdminPassword string
 
-@description('Entra ID application (client) ID for Easy Auth on the Web app.')
-param aadClientId string
+// @description('Entra ID application (client) ID for Easy Auth on the Web app.')
+// param aadClientId string
 
-@description('Entra ID application client secret for Easy Auth.')
-@secure()
-param aadClientSecret string
+// @description('Entra ID application client secret for Easy Auth.')
+// @secure()
+// param aadClientSecret string
 
-@description('Entra ID tenant ID. Restricts login to users in this tenant.')
-param aadTenantId string
+// @description('Entra ID tenant ID. Restricts login to users in this tenant.')
+// param aadTenantId string
 
 resource containerRegistry 'Microsoft.ContainerRegistry/registries@2025-11-01' = {
   name: 'workouttrackercr'
