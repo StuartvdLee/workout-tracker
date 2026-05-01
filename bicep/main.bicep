@@ -40,7 +40,7 @@ module webContainerApp 'modules/containerApp.bicep' = {
 
 resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2025-08-01' = {
   name: '${appName}-psql'
-  location: location
+  location: 'northeurope'
   sku: {
     name: 'Standard_B1ms'
     tier: 'Burstable'
