@@ -1,0 +1,52 @@
+name: Deploy to Azure
+
+# Runs automatically on every push to main.
+# Can also be triggered manually from any branch via the GitHub Actions UI.
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  id-token: write   # Required for OIDC login to Azure
+  contents: read
+
+jobs:
+  # ── Deploy Bicep infrastructure ──────────────────────────────────────────────
+  deploy-infra:
+    name: Deploy Infrastructure (Bicep)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Federated OIDC login – no long-lived secrets required.
+      # Set up a federated identity credential in Entra ID for:
+      #   repo: <your-org>/<your-repo>   subject: repo:<org>/<repo>:ref:refs/heads/main
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy Bicep template
+        run: |
+          RESULT=$(az deployment group create \
+            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            --template-file bicep/main.bicep \
+            --parameters bicep/main.bicepparam \
+            --parameters containerRegistryName="${{ secrets.AZURE_CONTAINER_REGISTRY }}" \
+            --parameters postgresAdminPassword="${{ secrets.POSTGRES_ADMIN_PASSWORD }}" \
+            --parameters aadClientId="${{ secrets.AZURE_AD_CLIENT_ID }}" \
+            --parameters aadClientSecret="${{ secrets.AZURE_AD_CLIENT_SECRET }}" \
+            --parameters aadTenantId="${{ secrets.AZURE_TENANT_ID }}" \
+            --output json)
+
+          WEB_URL=$(echo "$RESULT"  | jq -r '.properties.outputs.webAppUrl.value')
+          REDIRECT=$(echo "$RESULT" | jq -r '.properties.outputs.aadRedirectUri.value')
+
+          echo "Web app URL: $WEB_URL"
+          echo "⚠️  Add this redirect URI to your Entra ID App Registration: $REDIRECT"
