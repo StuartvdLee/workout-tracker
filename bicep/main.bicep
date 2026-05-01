@@ -33,6 +33,30 @@ module registry 'modules/registry.bicep' = {
   }
 }
 
+// Shared managed identity used by both Container Apps to pull images from ACR.
+// Avoids the need for ACR admin credentials entirely.
+resource containerAppsIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: 'id-workouttracker'
+  location: location
+}
+
+// Grant AcrPull on the registry to the managed identity.
+var acrPullRoleDefinitionId = '7f951dda-4ed3-4680-a7ca-43fe172d538d'
+
+resource registryRef 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
+  name: containerRegistryName
+}
+
+resource acrPullAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: registryRef
+  name: guid(registryRef.id, containerAppsIdentity.id, acrPullRoleDefinitionId)
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', acrPullRoleDefinitionId)
+    principalId: containerAppsIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
 module containerAppsEnv 'modules/containerAppsEnv.bicep' = {
   name: 'containerAppsEnv'
   params: {
@@ -58,6 +82,8 @@ module apiApp 'modules/api.bicep' = {
     postgresDatabaseName: database.outputs.databaseName
     postgresUsername: database.outputs.adminLogin
     postgresPassword: postgresAdminPassword
+    registryLoginServer: registry.outputs.loginServer
+    managedIdentityId: containerAppsIdentity.id
   }
 }
 
@@ -70,6 +96,8 @@ module webApp 'modules/web.bicep' = {
     aadClientId: aadClientId
     aadClientSecret: aadClientSecret
     aadTenantId: aadTenantId
+    registryLoginServer: registry.outputs.loginServer
+    managedIdentityId: containerAppsIdentity.id
   }
 }
 

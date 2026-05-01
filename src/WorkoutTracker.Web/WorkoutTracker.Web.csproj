@@ -8,9 +8,16 @@
     <ProjectReference Include="..\WorkoutTracker.ServiceDefaults\WorkoutTracker.ServiceDefaults.csproj" />
   </ItemGroup>
   
-  <!-- Compile TypeScript before build -->
-  <Target Name="BuildTypeScript" BeforeTargets="Build">
-    <Exec Command="npm ci" WorkingDirectory="$(ProjectDir)" Condition="!Exists('$(ProjectDir)node_modules')" />
+  <!-- npm ci is incremental: runs when package-lock.json is newer than node_modules/.package-lock.json,
+       or when node_modules/.package-lock.json doesn't exist (first build or after a clean). -->
+  <Target Name="NpmInstall" BeforeTargets="Build"
+          Inputs="$(ProjectDir)package-lock.json"
+          Outputs="$(ProjectDir)node_modules/.package-lock.json">
+    <Exec Command="npm ci" WorkingDirectory="$(ProjectDir)" />
+  </Target>
+
+  <!-- Compile TypeScript before build (depends on NpmInstall to ensure packages are ready) -->
+  <Target Name="BuildTypeScript" BeforeTargets="Build" DependsOnTargets="NpmInstall">
     <Exec Command="npm run build" WorkingDirectory="$(ProjectDir)" />
   </Target>
 </Project>

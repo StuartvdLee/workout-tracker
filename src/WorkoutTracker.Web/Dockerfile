@@ -14,8 +14,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 WORKDIR /src
 
 # Pre-install npm packages to warm the Docker layer cache.
-# The MSBuild BuildTypeScript target skips npm ci when node_modules already exists,
-# so this layer is effectively reused on rebuilds without package changes.
+# The NpmInstall MSBuild target is incremental (package-lock.json → node_modules/.package-lock.json),
+# so this layer is reused on rebuilds without package changes.
 COPY src/WorkoutTracker.Web/package.json src/WorkoutTracker.Web/package-lock.json WorkoutTracker.Web/
 RUN cd WorkoutTracker.Web && npm ci
 
@@ -28,6 +28,10 @@ RUN dotnet restore WorkoutTracker.Web/WorkoutTracker.Web.csproj
 # Copy source and publish (MSBuild BuildTypeScript target runs npm run build internally)
 COPY src/WorkoutTracker.ServiceDefaults/ WorkoutTracker.ServiceDefaults/
 COPY src/WorkoutTracker.Web/ WorkoutTracker.Web/
+# The COPY above re-timestamps package-lock.json, which would fool MSBuild's incremental
+# NpmInstall check into re-running npm ci even though packages are already installed.
+# Reset the output file's timestamp so the incremental check sees it as up-to-date.
+RUN touch WorkoutTracker.Web/node_modules/.package-lock.json
 RUN dotnet publish WorkoutTracker.Web/WorkoutTracker.Web.csproj \
       --no-restore \
       -c Release \

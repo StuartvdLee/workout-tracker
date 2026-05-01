@@ -17,6 +17,12 @@ param postgresUsername string
 @secure()
 param postgresPassword string
 
+@description('ACR login server for image pulls (e.g. crworkouttracker.azurecr.io).')
+param registryLoginServer string
+
+@description('Resource ID of the user-assigned managed identity that has AcrPull on the registry.')
+param managedIdentityId string
+
 // Connection string constructed here so it never surfaces as a Bicep output
 var connectionString = 'Host=${postgresHost};Port=5432;Database=${postgresDatabaseName};Username=${postgresUsername};Password=${postgresPassword};SSL Mode=Require;Trust Server Certificate=true'
 
@@ -26,6 +32,12 @@ var placeholderImage = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:lat
 resource apiApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: 'ca-workouttracker-api'
   location: location
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${managedIdentityId}': {}
+    }
+  }
   properties: {
     environmentId: containerAppsEnvironmentId
     configuration: {
@@ -34,6 +46,12 @@ resource apiApp 'Microsoft.App/containerApps@2024-03-01' = {
         targetPort: 8080
         transport: 'http'
       }
+      registries: [
+        {
+          server: registryLoginServer
+          identity: managedIdentityId
+        }
+      ]
       secrets: [
         {
           name: 'postgres-connection-string'

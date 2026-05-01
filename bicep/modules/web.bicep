@@ -17,12 +17,24 @@ param aadClientSecret string
 @description('Entra ID tenant ID to restrict access to.')
 param aadTenantId string
 
+@description('ACR login server for image pulls (e.g. crworkouttracker.azurecr.io).')
+param registryLoginServer string
+
+@description('Resource ID of the user-assigned managed identity that has AcrPull on the registry.')
+param managedIdentityId string
+
 // Placeholder image used until Docker images are built and pushed to ACR.
 var placeholderImage = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 
 resource webApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: 'ca-workouttracker-web'
   location: location
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${managedIdentityId}': {}
+    }
+  }
   properties: {
     environmentId: containerAppsEnvironmentId
     configuration: {
@@ -31,6 +43,12 @@ resource webApp 'Microsoft.App/containerApps@2024-03-01' = {
         targetPort: 8080
         transport: 'http'
       }
+      registries: [
+        {
+          server: registryLoginServer
+          identity: managedIdentityId
+        }
+      ]
       secrets: [
         {
           name: 'aad-client-secret'
