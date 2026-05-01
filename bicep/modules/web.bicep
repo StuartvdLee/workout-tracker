@@ -107,7 +107,7 @@ resource authConfig 'Microsoft.App/containerApps/authConfigs@2024-03-01' = {
         registration: {
           clientId: aadClientId
           clientSecretSettingName: 'aad-client-secret'
-          openIdIssuer: 'https://sts.windows.net/${aadTenantId}/v2.0'
+          openIdIssuer: 'https://login.microsoftonline.com/${aadTenantId}/v2.0'
         }
         validation: {
           allowedAudiences: [
