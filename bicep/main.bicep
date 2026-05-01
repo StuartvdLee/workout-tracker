@@ -29,40 +29,58 @@ resource containerAppsEnv 'Microsoft.App/managedEnvironments@2026-01-01' = {
   name: 'workouttracker-cae'
   location: location
   properties: {
-    publicNetworkAccess: 'Disabled'
+    publicNetworkAccess: 'Enabled'
   }
 }
 
-resource apiContainerApp 'Microsoft.App/containerApps@2026-01-01' = {
-  name: 'workouttracker-api-ca'
-  location: location
-  properties: {
-    environmentId: containerAppsEnv.id
-    configuration: {
-      activeRevisionsMode: 'Single'
-      ingress: {
-        external: false
-        transport: 'auto'
-        allowInsecure: false
-        stickySessions: {
-          affinity: 'none'
-        }
-      }
-    }
-    template: {
-      containers: [
-        {
-          name: 'bootstrap-container-pre-deployment'
-          image: 'mcr.microsoft.com/k8se/quickstart:latest'
-          resources: {
-            cpu: json('0.25')
-            memory: '.5Gi'
-          }
-        }
-      ]
-    }
+module apiContainerApp 'modules/containerApp.bicep' = {
+  params: {
+    location: location
+    containerAppsEnvironmentId: containerAppsEnv.id
+    containerAppName: 'workouttracker-api-ca'
+    ingressTrafficAllow: false
   }
 }
+
+module webContainerApp 'modules/containerApp.bicep' = {
+  params: {
+    location: location
+    containerAppsEnvironmentId: containerAppsEnv.id
+    containerAppName: 'workouttracker-web-ca'
+    ingressTrafficAllow: true
+  }
+}
+
+// resource apiContainerApp 'Microsoft.App/containerApps@2026-01-01' = {
+//   name: 'workouttracker-api-ca'
+//   location: location
+//   properties: {
+//     environmentId: containerAppsEnv.id
+//     configuration: {
+//       activeRevisionsMode: 'Single'
+//       ingress: {
+//         external: false
+//         transport: 'auto'
+//         allowInsecure: false
+//         stickySessions: {
+//           affinity: 'none'
+//         }
+//       }
+//     }
+//     template: {
+//       containers: [
+//         {
+//           name: 'bootstrap-container-pre-deployment'
+//           image: 'mcr.microsoft.com/k8se/quickstart:latest'
+//           resources: {
+//             cpu: json('0.25')
+//             memory: '.5Gi'
+//           }
+//         }
+//       ]
+//     }
+//   }
+// }
 
 // resource containerRegistry 'Microsoft.ContainerRegistry/registries@2025-11-01' = {
 //   name: 'workouttrackercr'
