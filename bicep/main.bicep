@@ -29,7 +29,7 @@ resource containerAppsEnv 'Microsoft.App/managedEnvironments@2026-01-01' = {
   name: 'workouttracker-cae'
   location: location
   properties: {
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: 'Disabled'
   }
 }
 
@@ -51,69 +51,6 @@ module webContainerApp 'modules/containerApp.bicep' = {
   }
 }
 
-// resource apiContainerApp 'Microsoft.App/containerApps@2026-01-01' = {
-//   name: 'workouttracker-api-ca'
-//   location: location
-//   properties: {
-//     environmentId: containerAppsEnv.id
-//     configuration: {
-//       activeRevisionsMode: 'Single'
-//       ingress: {
-//         external: false
-//         transport: 'auto'
-//         allowInsecure: false
-//         stickySessions: {
-//           affinity: 'none'
-//         }
-//       }
-//     }
-//     template: {
-//       containers: [
-//         {
-//           name: 'bootstrap-container-pre-deployment'
-//           image: 'mcr.microsoft.com/k8se/quickstart:latest'
-//           resources: {
-//             cpu: json('0.25')
-//             memory: '.5Gi'
-//           }
-//         }
-//       ]
-//     }
-//   }
-// }
-
-// resource containerRegistry 'Microsoft.ContainerRegistry/registries@2025-11-01' = {
-//   name: 'workouttrackercr'
-//   location: location
-//   sku: {
-//     name: 'Basic'
-//   }
-// }
-
-// // Shared managed identity used by Container Apps to pull images from ACR.
-// // Avoids the need for ACR admin credentials entirely.
-// resource containerAppsIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-//   name: 'workouttracker-id'
-//   location: location
-// }
-
-// // Grant AcrPull on the registry to the managed identity.
-// var acrPullRoleDefinitionId = '7f951dda-4ed3-4680-a7ca-43fe172d538d'
-
-// resource registryRef 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
-//   name: containerRegistryName
-// }
-
-// resource acrPullAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-//   scope: registryRef
-//   name: guid(registryRef.id, containerAppsIdentity.id, acrPullRoleDefinitionId)
-//   properties: {
-//     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', acrPullRoleDefinitionId)
-//     principalId: containerAppsIdentity.properties.principalId
-//     principalType: 'ServicePrincipal'
-//   }
-// }
-
 // module database 'modules/postgres.bicep' = {
 //   name: 'database'
 //   params: {
@@ -122,43 +59,3 @@ module webContainerApp 'modules/containerApp.bicep' = {
 //     adminPassword: postgresAdminPassword
 //   }
 // }
-
-// module apiApp 'modules/api.bicep' = {
-//   name: 'apiApp'
-//   params: {
-//     location: location
-//     containerAppsEnvironmentId: containerAppsEnv.outputs.environmentId
-//     postgresHost: database.outputs.serverFqdn
-//     postgresDatabaseName: database.outputs.databaseName
-//     postgresUsername: database.outputs.adminLogin
-//     postgresPassword: postgresAdminPassword
-//     registryLoginServer: registry.outputs.loginServer
-//     managedIdentityId: containerAppsIdentity.id
-//   }
-// }
-
-// module webApp 'modules/web.bicep' = {
-//   name: 'webApp'
-//   params: {
-//     location: location
-//     containerAppsEnvironmentId: containerAppsEnv.outputs.environmentId
-//     apiInternalUrl: 'https://${apiApp.outputs.internalFqdn}'
-//     aadClientId: aadClientId
-//     aadClientSecret: aadClientSecret
-//     aadTenantId: aadTenantId
-//     registryLoginServer: registry.outputs.loginServer
-//     managedIdentityId: containerAppsIdentity.id
-//   }
-// }
-
-// @description('Public URL of the Web Container App.')
-// output webAppUrl string = webApp.outputs.url
-
-// @description('FQDN to register as the redirect URI in the Entra ID App Registration.')
-// output aadRedirectUri string = 'https://${webApp.outputs.fqdn}/.auth/login/aad/callback'
-
-// @description('PostgreSQL server FQDN, used by the migration CI step.')
-// output postgresServerFqdn string = database.outputs.serverFqdn
-
-// @description('ACR login server for use in CI/CD.')
-// output registryLoginServer string = registry.outputs.loginServer
