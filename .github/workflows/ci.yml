@@ -129,4 +129,4 @@ jobs:
         uses: actions/checkout@v6.0.2
 
       - name: Deploy
-        run: echo "TODO: implement deployment"
+        run: 'echo "TODO: implement deployment"'
