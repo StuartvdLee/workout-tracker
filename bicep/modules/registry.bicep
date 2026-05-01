@@ -11,10 +11,9 @@ resource registry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
     name: 'Basic'
   }
   properties: {
-    adminUserEnabled: true
+    adminUserEnabled: false
   }
 }
 
+output id string = registry.id
 output loginServer string = registry.properties.loginServer
-output adminUsername string = registry.listCredentials().username
-output adminPassword string = registry.listCredentials().passwords[0].value
