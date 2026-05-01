@@ -49,6 +49,18 @@ resource apiContainerApp 'Microsoft.App/containerApps@2026-01-01' = {
         }
       }
     }
+    template: {
+      containers: [
+        {
+          name: 'bootstrap-container-pre-deployment'
+          image: 'mcr.microsoft.com/k8se/quickstart:latest'
+          resources: {
+            cpu: json('0.25')
+            memory: '.5Gi'
+          }
+        }
+      ]
+    }
   }
 }
 
