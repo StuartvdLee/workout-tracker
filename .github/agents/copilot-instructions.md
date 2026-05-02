@@ -26,7 +26,7 @@ C# on .NET 10.0 (backend), TypeScript 5.9.3 (frontend): Follow standard conventi
 
 ## Recent Changes
 - 006-reorder-exercises: Added C# on .NET 10.0 (backend — no changes), TypeScript 5.9.3 (frontend — primary change) + ASP.NET Core minimal API, .NET Aspire 13.1.2, Entity Framework Core with Npgsql, vanilla TypeScript (no JS frameworks or libraries)
-- 006-reorder-exercises: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
+- 006-reorder-exercises: Added PostgreSQL via EF Core — no schema changes; `planned_workout_exercise.sequence` already exists
 - 005-active-workout-effort: Added C# on .NET 10.0 (backend), TypeScript 5.9.3 (frontend) + ASP.NET Core minimal API, .NET Aspire 13.1.2, Entity Framework Core with Npgsql, vanilla TypeScript (no JS frameworks)
 
 
