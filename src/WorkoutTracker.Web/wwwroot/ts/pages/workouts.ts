@@ -627,7 +627,7 @@ function initDragAndDrop(
   let draggingLi: HTMLElement | null = null;
   let dropHandled = false;
   // Keyboard reorder state
-  let pickedUpIndex = -1;
+  let originalPickupIndex = -1;
   let snapshotBeforePickup: string[] = [];
 
   function getAnnounce(): HTMLElement | null {
@@ -820,12 +820,12 @@ function initDragAndDrop(
       ev.preventDefault();
       if (!isPickedUp) {
         snapshotBeforePickup = [...arr];
-        pickedUpIndex = currentIndex;
+        originalPickupIndex = currentIndex;
         handle.setAttribute("aria-pressed", "true");
         announce(`${li.querySelector(".workout-selected__name")?.textContent ?? "Exercise"} picked up. Use arrow keys to move, Space or Enter to drop, Escape to cancel.`);
       } else {
         handle.setAttribute("aria-pressed", "false");
-        pickedUpIndex = -1;
+        originalPickupIndex = -1;
         snapshotBeforePickup = [];
         announce(`Exercise dropped at position ${currentIndex + 1} of ${arr.length}`);
       }
@@ -835,7 +835,6 @@ function initDragAndDrop(
       const newIndex = currentIndex + direction;
       if (newIndex < 0 || newIndex >= arr.length) return;
       reorder(arr, currentIndex, newIndex);
-      pickedUpIndex = newIndex;
       onReorder();
       // Re-focus the handle at the new index after re-render
       requestAnimationFrame(() => {
@@ -849,10 +848,10 @@ function initDragAndDrop(
       });
     } else if (ev.key === "Escape" && isPickedUp) {
       ev.preventDefault();
-      // Restore snapshot
-      const restoredIndex = pickedUpIndex;
+      // Restore snapshot and focus the handle at the original pickup position
+      const restoredIndex = originalPickupIndex;
       arr.splice(0, arr.length, ...snapshotBeforePickup);
-      pickedUpIndex = -1;
+      originalPickupIndex = -1;
       snapshotBeforePickup = [];
       onReorder();
       requestAnimationFrame(() => {
