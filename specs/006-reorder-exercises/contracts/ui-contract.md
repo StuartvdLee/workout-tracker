@@ -55,12 +55,12 @@ The updated structure adds a drag handle button on the left:
       aria-hidden="true"
       focusable="false"
     >
-      <circle cx="5" cy="4" r="1.5"/>
+      <circle cx="5" cy="3" r="1.5"/>
       <circle cx="5" cy="8" r="1.5"/>
-      <circle cx="5" cy="12" r="1.5"/>
-      <circle cx="11" cy="4" r="1.5"/>
+      <circle cx="5" cy="13" r="1.5"/>
+      <circle cx="11" cy="3" r="1.5"/>
       <circle cx="11" cy="8" r="1.5"/>
-      <circle cx="11" cy="12" r="1.5"/>
+      <circle cx="11" cy="13" r="1.5"/>
     </svg>
   </button>
 
@@ -121,9 +121,9 @@ body.is-dragging .workout-selected__drag-handle {
 }
 
 /* Drop target indicator */
-.workout-selected__item--drag-over {
-  border-top: 2px solid var(--color-primary);
-}
+/* Not used — live DOM reordering during dragover replaces the static border.
+   Items shift position in real-time as the user drags, making the drop
+   destination immediately visible without a separate indicator state. */
 ```
 
 ### Updated List Item Layout
@@ -156,7 +156,7 @@ A visually hidden live region is added immediately before the `<ul>` in both the
 
 After each successful reorder, the live region text is set to:
 `"[Exercise Name] moved to position [N] of [total]."`
-and cleared after 3 seconds.
+The text is overwritten on the next move; it is not explicitly cleared.
 
 ### Keyboard Interaction on the Drag Handle Button
 
@@ -191,7 +191,7 @@ Focus remains on the drag handle button throughout keyboard reordering so the us
 | State | Visual |
 |---|---|
 | Item being dragged | `.workout-selected__item--dragging` — `opacity: 0.4` |
-| Drop target (item below cursor) | `.workout-selected__item--drag-over` — top border highlight |
+| All other items | Shift live in the DOM as the user moves the dragged item over them — no separate drop-target indicator |
 | Body while drag active | `body.is-dragging` — `cursor: grabbing` on drag handles |
 
 ### Single-Exercise List (drag disabled)
@@ -214,11 +214,10 @@ If the API call fails after a reorder, the existing error display (`#workout-api
 ## Touch Behaviour
 
 On touch devices:
-- `touchstart` on the drag handle begins a touch drag.
+- `touchstart` on the `<ul>` container begins a touch drag (passive listener — no `preventDefault()` needed at start).
 - A **fixed-position clone** of the `<li>` is created and follows the finger; the original `<li>` is faded (`.workout-selected__item--dragging`).
-- `touchmove` (non-passive) prevents page scroll while dragging; uses `document.elementFromPoint()` to identify the drop target.
-- `touchend` commits the reorder (calls `reorder(fromIndex, toIndex)`) and removes the clone.
-- The clone has `pointer-events: none` so `elementFromPoint` returns the element beneath it.
+- `touchmove` (non-passive): prevents page scroll via `preventDefault()`; repositions the clone; hides clone with `visibility: hidden` then calls `document.elementFromPoint()` to identify the target `<li>` beneath the finger; live-moves the dragged `<li>` in the DOM using the same midpoint logic as `dragover`.
+- `touchend`: reads the final DOM index via `getLiveDomIndex`; calls `reorder(fromIndex, finalIndex)`; removes the clone; removes all visual state.
 
 ---
 
@@ -227,6 +226,6 @@ On touch devices:
 | File | Change |
 |---|---|
 | `src/WorkoutTracker.Web/wwwroot/ts/pages/workouts.ts` | Primary change: `Set→Array`, drag-and-drop logic, keyboard reorder, ARIA live region |
-| `src/WorkoutTracker.Web/wwwroot/css/styles.css` | Add `.workout-selected__drag-handle`, `.workout-selected__item--dragging`, `.workout-selected__item--drag-over`, `body.is-dragging`, `.sr-only` (if not already present) |
+| `src/WorkoutTracker.Web/wwwroot/css/styles.css` | Add `.workout-selected__drag-handle`, `.workout-selected__item--dragging`, `body.is-dragging`, `.sr-only` (if not already present) |
 
 No other files are modified.

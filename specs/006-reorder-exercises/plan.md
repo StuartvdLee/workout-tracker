@@ -47,7 +47,7 @@ Add drag-and-drop exercise reordering to the planned workout create form and edi
 
 - **Performance**:
   - Reorder response < 100 ms: the `reorder()` function is synchronous array mutation + a full `list.innerHTML` re-render. For ≤ 20 items this is < 5 ms including layout; no async work involved. ✅
-  - Touch clone follows the finger in `touchmove` — no layout recalculations on the original list during drag; only the clone is repositioned via `transform: translate`. ✅
+  - Touch clone follows the finger in `touchmove` — no layout recalculations on the original list during drag; the clone is repositioned via absolute `left`/`top`. The dragged `<li>` moves live in the DOM during `touchmove` (same approach as mouse dragover). ✅
   - No new API calls are introduced by the reorder action itself — only the existing create/save API calls remain. ✅
 
 ## Project Structure
@@ -72,13 +72,13 @@ specs/006-reorder-exercises/
 src/WorkoutTracker.Web/
 └── wwwroot/
     ├── css/
-    │   └── styles.css                     # MODIFIED: add drag handle, dragging, drop-over, sr-only styles
+    │   └── styles.css                     # MODIFIED: add drag handle, dragging, sr-only styles
     └── ts/
         ├── utils.ts                       # MODIFIED: add reorder() helper function
         ├── pages/
         │   └── workouts.ts                # MODIFIED: Set→Array, drag-and-drop, keyboard reorder, ARIA
         └── __tests__/
-            └── workouts.test.ts           # NEW: Vitest unit tests for reorder() helper
+            └── utils.test.ts           # NEW: Vitest unit tests for reorder() helper
 
 src/WorkoutTracker.Infrastructure/        # UNCHANGED
 src/WorkoutTracker.Api/                   # UNCHANGED
@@ -124,7 +124,7 @@ src/WorkoutTracker.Tests/                 # UNCHANGED (backend tests)
 1. Add `reorder<T>(arr: T[], fromIndex: number, toIndex: number): void` to `utils.ts`
    - Validates `fromIndex` and `toIndex` are within bounds before mutating
    - Mutates in place: `arr.splice(toIndex, 0, arr.splice(fromIndex, 1)[0])`
-2. Add Vitest unit tests in `__tests__/workouts.test.ts` covering move-first-to-last, move-last-to-first, move-middle-to-first, no-op, single-element
+2. Add Vitest unit tests in `__tests__/utils.test.ts` covering move-first-to-last, move-last-to-first, move-middle-to-first, no-op, single-element
 
 **Workstream B: `workouts.ts` — state model change (`Set→Array`)**
 1. Change declarations: `let selectedExercises: string[] = []` and `let editSelectedExercises: string[] = []`
@@ -142,30 +142,30 @@ src/WorkoutTracker.Tests/                 # UNCHANGED (backend tests)
 
 1. **`buildSelectedExerciseItem`** — add six-dot drag handle `<button>` (left of name), `draggable="true"` on `<li>`, `data-index`, `aria-roledescription="sortable item"` (only when list has ≥ 2 items)
 2. **HTML reorder announce region** — add `<div class="sr-only" aria-live="polite" id="workout-reorder-announce">` to create form and edit modal markup in `render()`
-3. **`initDragAndDrop(listId, getArray, onReorder)`** — shared function that attaches HTML5 DnD + touch listeners to a `<ul>`:
-   - `dragstart`: store `draggingIndex`; `dataTransfer.setData('text/plain', index)` (Firefox compatibility); `effectAllowed = 'move'`; add `body.is-dragging` class
-   - `dragover`/`dragenter` on `<ul>`: `preventDefault()`; add `.workout-selected__item--drag-over` to target `<li>`
-   - `dragleave` on `<ul>`: remove `.workout-selected__item--drag-over`
-   - `drop` on `<ul>`: get target index from `closest('li').dataset.index`; call `reorder(arr, from, to)`; trigger `onReorder()`; announce result
-   - `dragend` on `<ul>`: remove `body.is-dragging`; remove all drag visual classes
-   - `touchstart` on drag handle buttons (non-passive): record start index; clone element; position fixed; set original to `.workout-selected__item--dragging`; `document.body.classList.add('is-dragging')`
-   - `touchmove` (non-passive): reposition clone via `transform: translate`; use `elementFromPoint()` to find target `<li>`; add `.workout-selected__item--drag-over`
-   - `touchend`: commit reorder; remove clone; remove all visual state; call `onReorder()`; announce result
+3. **`initDragAndDrop(listId, announceId, getArray, onReorder)`** — shared function that attaches HTML5 DnD + touch listeners to a `<ul>` via event delegation. A `dndAttached` dataset flag prevents duplicate listener registration on repeated modal opens:
+   - `dragstart`: store `draggingIndex` and `draggingLi`; `dataTransfer.setData('text/plain', index)` (Firefox compatibility); `effectAllowed = 'move'`; add `body.is-dragging` class; defer `.workout-selected__item--dragging` via `setTimeout(0)` so ghost is captured at full opacity
+   - `dragover` on `<ul>`: `preventDefault()`; compute midpoint of target `<li>` using `getBoundingClientRect()`; call `list.insertBefore(draggingLi, ...)` to move the dragged item live in the DOM — items shift in real-time as the user drags, making the drop position immediately visible
+   - `drop` on `<ul>`: read final index via `getLiveDomIndex(draggingLi)` (position among DOM siblings); call `reorder(arr, draggingIndex, finalIndex)`; trigger `onReorder()`; announce result
+   - `dragend` on `<ul>`: remove `body.is-dragging`; remove dragging class; if `drop` did not fire, call `onReorder()` to restore correct array state
+   - `touchstart` on `<ul>` (passive): record start index; clone element; position clone `fixed`; set original to `.workout-selected__item--dragging`; `document.body.classList.add('is-dragging')`
+   - `touchmove` on `<ul>` (non-passive): `preventDefault()`; reposition clone via `left`/`top`; hide clone briefly with `visibility: hidden`, call `elementFromPoint()` to find target `<li>`, restore visibility; live-move dragged `<li>` in the DOM (same midpoint logic as `dragover`)
+   - `touchend` on `<ul>`: read final index via `getLiveDomIndex`; call `reorder(arr, touchDragIndex, finalIndex)`; remove clone; remove all visual state; call `onReorder()`; announce result
 4. **Keyboard reorder** on drag handle `<button>` `keydown`:
    - `Space`: toggle picked-up state; `aria-pressed` toggle
    - `ArrowUp`/`ArrowDown`: if picked up, call `reorder()`; re-render; move focus to the handle at the new index; announce
    - `Enter`: confirm (same as second Space)
    - `Escape`: restore original position; clear picked-up state
-5. Call `initDragAndDrop('workout-selected-list', () => selectedExercises, renderExerciseDropdown)` in `initForm()`
-6. Call `initDragAndDrop('edit-selected-list', () => editSelectedExercises, renderEditExerciseDropdown)` in `renderEditExerciseDropdown()` (after re-render)
+5. Call `initDragAndDrop('workout-selected-list', 'workout-reorder-announce', () => selectedExercises, renderExerciseDropdown)` in `initForm()`
+6. Call `initDragAndDrop('edit-selected-list', 'edit-reorder-announce', () => editSelectedExercises, renderEditExerciseDropdown)` in `fetchAndPopulateEditModal()`, after populating `editSelectedExercises` but before showing the backdrop. A `dndAttached` guard on the `<ul>` element prevents duplicate registration if the modal is reopened.
 
 **Workstream D: `styles.css`**
 1. Add `.workout-selected__drag-handle` styles: flex, 44×44px touch target, `background: none`, `border: none`, `cursor: grab`, muted colour, hover/focus-visible states
 2. Add `body.is-dragging .workout-selected__drag-handle { cursor: grabbing }`
 3. Add `.workout-selected__item--dragging { opacity: 0.4 }`
-4. Add `.workout-selected__item--drag-over { border-top: 2px solid var(--color-primary) }`
-5. Add `.sr-only` visually-hidden utility class (if not already present)
-6. Update `.workout-selected__item` to `display: flex; align-items: center` (drag handle sits left of name)
+4. Add `.sr-only` visually-hidden utility class (if not already present)
+5. Update `.workout-selected__item` to `display: flex; align-items: center` (drag handle sits left of name)
+
+Note: `.workout-selected__item--drag-over` was **not added** — live DOM reordering during `dragover` provides visual feedback without a static drop-target border.
 
 **Dependencies**:
 - Workstream B must complete before C (C depends on `string[]` type)

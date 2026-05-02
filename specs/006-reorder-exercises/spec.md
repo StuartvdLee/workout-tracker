@@ -2,7 +2,7 @@
 
 **Feature Branch**: `006-reorder-exercises`  
 **Created**: 2026-05-02  
-**Status**: Draft  
+**Status**: Delivered  
 **Input**: User description: "I want to be able to change the order of exercises. This could be necessary when creating a new workout and the user is adding exercises but in the wrong order. They should be able to drag exercises in the order they desire before saving the exercise. The other situation is when editing a workout. The user should be able to rearrange the order of exercises here."
 
 ## User Scenarios & Testing *(mandatory)*
@@ -71,7 +71,7 @@ A user opens an existing planned workout to edit it and decides to change the or
 ### User Experience Consistency Requirements
 
 - **UX-001**: The drag handle affordance MUST follow the same visual style used elsewhere in the application (e.g., consistent icon, spacing, colour tokens).
-- **UX-002**: The exercise list MUST provide clear visual feedback during a drag operation (e.g., a placeholder showing where the item will be dropped, the dragged item visually elevated or highlighted).
+- **UX-002**: The exercise list MUST provide clear visual feedback during a drag operation. Delivered via live DOM reordering: as the user drags, list items shift in real time to show exactly where the dragged item will land. The dragged item is rendered at reduced opacity to distinguish it from the rest of the list.
 - **UX-003**: If a save fails after reordering, the error state MUST be communicated with a message consistent with how other save errors are displayed in the workout forms.
 - **UX-004**: The reorder affordance MUST NOT be shown when there is only one exercise in the list, avoiding visual noise for a no-op interaction.
 
