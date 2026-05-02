@@ -12,7 +12,7 @@ var location = resourceGroup().location
 var appName = 'workouttracker'
 
 resource containerRegistry 'Microsoft.ContainerRegistry/registries@2025-11-01' = {
-  name: '${appName}acr'
+  name: '${appName}cr'
   location: location
   sku: {
     name: 'Basic'
