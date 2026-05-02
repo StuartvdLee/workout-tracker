@@ -172,31 +172,31 @@ jobs:
             --project src/WorkoutTracker.Infrastructure \
             --connection "Host=${{ env.POSTGRES_SERVER }}.postgres.database.azure.com;Database=workouttracker_db;Username=${{ secrets.POSTGRES_ADMIN_USER }};Password=${{ secrets.POSTGRES_ADMIN_PASSWORD }};SSL Mode=Require"
 
-      - name: Download API artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: api-publish
-          path: ./api-artifact
+      # - name: Download API artifact
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: api-publish
+      #     path: ./api-artifact
 
       - name: Log in to Azure Container Registry
-        run: az acr login --name ${{ secrets.AZURE_CONTAINER_REGISTRY }}
+        run: az acr login --name workouttrackercr
 
       - name: Build and push Docker image
         run: |
-          IMAGE=${{ secrets.AZURE_CONTAINER_REGISTRY }}.azurecr.io/workouttracker-api:${{ github.sha }}
-          docker build -f src/WorkoutTracker.Api/Dockerfile.ci -t "$IMAGE" ./api-artifact
+          IMAGE=workouttrackercr.azurecr.io/workouttracker-api:${{ github.sha }}
+          docker build -f src/WorkoutTracker.Api/Dockerfile -t "$IMAGE"
           docker push "$IMAGE"
 
-      - name: Deploy to Container App
-        run: |
-          ACR_PASSWORD=$(az acr credential show \
-            --name ${{ secrets.AZURE_CONTAINER_REGISTRY }} \
-            --query "passwords[0].value" -o tsv)
-          az containerapp update \
-            --name workouttracker-api-ca \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --image ${{ secrets.AZURE_CONTAINER_REGISTRY }}.azurecr.io/workouttracker-api:${{ github.sha }} \
-            --target-port 8080 \
-            --registry-server ${{ secrets.AZURE_CONTAINER_REGISTRY }}.azurecr.io \
-            --registry-username ${{ secrets.AZURE_CONTAINER_REGISTRY }} \
-            --registry-password "$ACR_PASSWORD"
+      # - name: Deploy to Container App
+      #   run: |
+      #     ACR_PASSWORD=$(az acr credential show \
+      #       --name workouttrackercr \
+      #       --query "passwords[0].value" -o tsv)
+      #     az containerapp update \
+      #       --name workouttracker-api-ca \
+      #       --resource-group ${{ env.RESOURCE_GROUP }} \
+      #       --image workouttrackercr.azurecr.io/workouttracker-api:${{ github.sha }} \
+      #       --target-port 8080 \
+      #       --registry-server workouttrackercr.azurecr.io \
+      #       --registry-username workouttrackercr \
+      #       --registry-password "$ACR_PASSWORD"
