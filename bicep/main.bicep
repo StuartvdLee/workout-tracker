@@ -62,7 +62,7 @@ resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2025-08-01' =
       mode: 'Disabled'
     }
     network: {
-      publicNetworkAccess: 'Disabled'
+      publicNetworkAccess: 'Enabled'
     }
   }
 }
