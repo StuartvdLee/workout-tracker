@@ -13,7 +13,7 @@ param ingressTrafficAllow bool = false
 @description('Name of the Azure Container Registry to pull images from.')
 param containerRegistryName string = 'workouttrackercr'
 
-resource containerRegistry 'Microsoft.App/managedEnvironments@2026-01-01' existing = {
+resource containerRegistry 'Microsoft.ContainerRegistry/registries@2025-11-01' existing = {
   name: containerRegistryName
 }
 
