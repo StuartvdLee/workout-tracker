@@ -66,17 +66,6 @@ jobs:
           name: unit-test-results
           path: src/WorkoutTracker.UnitTests/TestResults/
 
-      - name: Publish API
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-        run: dotnet publish src/WorkoutTracker.Api/WorkoutTracker.Api.csproj --no-build --configuration Release --output ./publish/api
-
-      - name: Upload API artifact
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-        uses: actions/upload-artifact@v7.0.1
-        with:
-          name: api-publish
-          path: ./publish/api
-
   e2e-tests:
     name: E2E Tests
     needs: build
@@ -171,12 +160,6 @@ jobs:
           dotnet ef database update \
             --project src/WorkoutTracker.Infrastructure \
             --connection "Host=${{ env.POSTGRES_SERVER }}.postgres.database.azure.com;Database=workouttracker_db;Username=${{ secrets.POSTGRES_ADMIN_USER }};Password=${{ secrets.POSTGRES_ADMIN_PASSWORD }};SSL Mode=Require"
-
-      # - name: Download API artifact
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: api-publish
-      #     path: ./api-artifact
 
       - name: Log in to Azure Container Registry
         run: az acr login --name workouttrackercr
