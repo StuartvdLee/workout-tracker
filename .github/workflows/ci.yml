@@ -121,12 +121,58 @@ jobs:
     needs: build
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    environment: Prd
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
     permissions:
       contents: read
+      id-token: write
+
+    env:
+      POSTGRES_SERVER: workouttracker-psql
+      RESOURCE_GROUP: workouttracker-rg
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6.0.2
 
-      - name: Deploy
-        run: 'echo "TODO: implement deployment"'
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5.2.0
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # - name: Enable PostgreSQL access for runner
+      #   run: |
+      #     RUNNER_IP=$(curl -sf https://api.ipify.org)
+      #     az postgres flexible-server update \
+      #       --resource-group $RESOURCE_GROUP \
+      #       --name $POSTGRES_SERVER \
+      #       --public-access "$RUNNER_IP"
+
+      - name: Restore .NET dependencies
+        run: dotnet restore src/WorkoutTracker.slnx
+
+      - name: Install EF Core tools
+        run: dotnet tool install --global dotnet-ef --version '10.0.*'
+
+      - name: Run database migrations
+        run: |
+          dotnet ef database update \
+            --project src/WorkoutTracker.Infrastructure \
+            --connection "Host=${{ env.POSTGRES_SERVER }}.postgres.database.azure.com;Database=workouttracker_db;Username=${{ secrets.POSTGRES_ADMIN_USER }};Password=${{ secrets.POSTGRES_ADMIN_PASSWORD }};SSL Mode=Require"
+
+      # - name: Disable PostgreSQL public network access
+      #   if: always()
+      #   run: |
+      #     az postgres flexible-server update \
+      #       --resource-group $RESOURCE_GROUP \
+      #       --name $POSTGRES_SERVER \
+      #       --public-access Disabled
