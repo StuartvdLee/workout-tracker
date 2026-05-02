@@ -19,7 +19,7 @@ resource containerApp 'Microsoft.App/containerApps@2026-01-01' = {
       activeRevisionsMode: 'Single'
       ingress: {
         external: ingressTrafficAllow
-        targetPort: 80
+        targetPort: 8080
         transport: 'auto'
         allowInsecure: false
         stickySessions: {

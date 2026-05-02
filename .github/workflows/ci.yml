@@ -66,6 +66,17 @@ jobs:
           name: unit-test-results
           path: src/WorkoutTracker.UnitTests/TestResults/
 
+      - name: Publish API
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        run: dotnet publish src/WorkoutTracker.Api/WorkoutTracker.Api.csproj --no-build --configuration Release --output ./publish/api
+
+      - name: Upload API artifact
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: api-publish
+          path: ./publish/api
+
   e2e-tests:
     name: E2E Tests
     needs: build
@@ -149,8 +160,8 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Restore .NET dependencies
-        run: dotnet restore src/WorkoutTracker.slnx
+      - name: Restore Infrastructure dependencies
+        run: dotnet restore src/WorkoutTracker.Infrastructure/WorkoutTracker.Infrastructure.csproj
 
       - name: Install EF Core tools
         run: dotnet tool install --global dotnet-ef --version '10.0.*'
@@ -160,3 +171,32 @@ jobs:
           dotnet ef database update \
             --project src/WorkoutTracker.Infrastructure \
             --connection "Host=${{ env.POSTGRES_SERVER }}.postgres.database.azure.com;Database=workouttracker_db;Username=${{ secrets.POSTGRES_ADMIN_USER }};Password=${{ secrets.POSTGRES_ADMIN_PASSWORD }};SSL Mode=Require"
+
+      - name: Download API artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: api-publish
+          path: ./api-artifact
+
+      - name: Log in to Azure Container Registry
+        run: az acr login --name ${{ secrets.AZURE_CONTAINER_REGISTRY }}
+
+      - name: Build and push Docker image
+        run: |
+          IMAGE=${{ secrets.AZURE_CONTAINER_REGISTRY }}.azurecr.io/workouttracker-api:${{ github.sha }}
+          docker build -f src/WorkoutTracker.Api/Dockerfile.ci -t "$IMAGE" ./api-artifact
+          docker push "$IMAGE"
+
+      - name: Deploy to Container App
+        run: |
+          ACR_PASSWORD=$(az acr credential show \
+            --name ${{ secrets.AZURE_CONTAINER_REGISTRY }} \
+            --query "passwords[0].value" -o tsv)
+          az containerapp update \
+            --name workouttracker-api-ca \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image ${{ secrets.AZURE_CONTAINER_REGISTRY }}.azurecr.io/workouttracker-api:${{ github.sha }} \
+            --target-port 8080 \
+            --registry-server ${{ secrets.AZURE_CONTAINER_REGISTRY }}.azurecr.io \
+            --registry-username ${{ secrets.AZURE_CONTAINER_REGISTRY }} \
+            --registry-password "$ACR_PASSWORD"

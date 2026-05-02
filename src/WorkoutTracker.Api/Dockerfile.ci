@@ -1,0 +1,6 @@
+# Lightweight runtime image built from a pre-published artifact produced by the CI build job.
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
+WORKDIR /app
+EXPOSE 8080
+COPY . .
+ENTRYPOINT ["dotnet", "WorkoutTracker.Api.dll"]
