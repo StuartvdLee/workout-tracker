@@ -174,4 +174,17 @@ jobs:
           az containerapp update \
             --name workouttracker-api-ca \
             --resource-group workouttracker-rg \
-            --image workouttrackercr.azurecr.io/workouttracker-api:${{ github.sha }} \
+            --image workouttrackercr.azurecr.io/workouttracker-api:${{ github.sha }}
+
+      - name: Build and push web Docker image
+        run: |
+          IMAGE=workouttrackercr.azurecr.io/workouttracker-web:${{ github.sha }}
+          docker build -f src/WorkoutTracker.Web/Dockerfile -t "$IMAGE" .
+          docker push "$IMAGE"
+
+      - name: Deploy to Web Container App
+        run: |
+          az containerapp update \
+            --name workouttracker-web-ca \
+            --resource-group workouttracker-rg \
+            --image workouttrackercr.azurecr.io/workouttracker-web:${{ github.sha }}
