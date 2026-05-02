@@ -52,13 +52,13 @@ resource containerApp 'Microsoft.App/containerApps@2026-01-01' = {
   }
 }
 
-resource acrPullRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource containerRegistryPullRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(containerApp.id, containerRegistry.id, 'AcrPull')
   scope: containerRegistry
   properties: {
     roleDefinitionId: subscriptionResourceId(
       'Microsoft.Authorization/roleDefinitions',
-      '7f951dda-4ed3-4680-85e3-815caa345eb2'
+      '7f951dda-4ed3-4680-a7ca-43fe172d538d'
     ) // AcrPull role
     principalId: containerApp.identity.principalId
     principalType: 'ServicePrincipal'
