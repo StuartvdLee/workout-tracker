@@ -10,9 +10,19 @@ param containerAppName string
 @description('Whether to allow ingress traffic to the Container App.')
 param ingressTrafficAllow bool = false
 
+@description('Name of the Azure Container Registry to pull images from.')
+param containerRegistryName string = 'workouttrackercr'
+
+resource containerRegistry 'Microsoft.App/managedEnvironments@2026-01-01' existing = {
+  name: containerRegistryName
+}
+
 resource containerApp 'Microsoft.App/containerApps@2026-01-01' = {
   name: containerAppName
   location: location
+  identity: {
+    type: 'SystemAssigned'
+  }
   properties: {
     environmentId: containerAppsEnvironmentId
     configuration: {
@@ -39,5 +49,18 @@ resource containerApp 'Microsoft.App/containerApps@2026-01-01' = {
         }
       ]
     }
+  }
+}
+
+resource acrPullRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(containerApp.id, containerRegistry.id, 'AcrPull')
+  scope: containerRegistry
+  properties: {
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      '7f951dda-4ed3-4680-85e3-815caa345eb2'
+    ) // AcrPull role
+    principalId: containerApp.identity.principalId
+    principalType: 'ServicePrincipal'
   }
 }
