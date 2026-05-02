@@ -1,4 +1,5 @@
 import { navigate } from "../router.js";
+import { reorder } from "../utils.js";
 
 interface WorkoutExercise {
   readonly exerciseId: string;
@@ -21,12 +22,12 @@ interface Exercise {
 
 let workouts: Workout[] = [];
 let availableExercises: Exercise[] = [];
-let selectedExercises: Set<string> = new Set();
+let selectedExercises: string[] = [];
 let isSubmitting = false;
 
 // Edit modal state
 let editingWorkoutId: string | null = null;
-let editSelectedExercises: Set<string> = new Set();
+let editSelectedExercises: string[] = [];
 let isEditSubmitting = false;
 
 // Delete confirmation state
@@ -57,6 +58,7 @@ export async function render(container: HTMLElement): Promise<void> {
         </div>
         <div id="workout-selected-section" style="display:none;">
           <h3 class="workout-selected__heading">Selected exercises</h3>
+          <div class="sr-only" aria-live="polite" aria-atomic="true" id="workout-reorder-announce"></div>
           <ul class="workout-selected__list" id="workout-selected-list"></ul>
         </div>
         <div class="workout-form__error" id="workout-error" role="alert" aria-live="polite"></div>
@@ -88,6 +90,7 @@ export async function render(container: HTMLElement): Promise<void> {
             </div>
             <div id="edit-selected-section" style="display:none;">
               <h3 class="workout-selected__heading">Selected exercises</h3>
+              <div class="sr-only" aria-live="polite" aria-atomic="true" id="edit-reorder-announce"></div>
               <ul class="workout-selected__list" id="edit-selected-list"></ul>
             </div>
             <div class="workout-form__error" id="edit-workout-error" role="alert" aria-live="polite"></div>
@@ -114,8 +117,8 @@ export async function render(container: HTMLElement): Promise<void> {
   `;
 
   editingWorkoutId = null;
-  selectedExercises = new Set();
-  editSelectedExercises = new Set();
+  selectedExercises = [];
+  editSelectedExercises = [];
   isSubmitting = false;
   isEditSubmitting = false;
   deletingWorkoutId = null;
@@ -139,11 +142,13 @@ function initForm(): void {
 
   exerciseSelect?.addEventListener("change", () => {
     const exerciseId = exerciseSelect.value;
-    if (exerciseId) {
-      selectedExercises.add(exerciseId);
+    if (exerciseId && !selectedExercises.includes(exerciseId)) {
+      selectedExercises.push(exerciseId);
       renderExerciseDropdown();
     }
   });
+
+  initDragAndDrop("workout-selected-list", "workout-reorder-announce", () => selectedExercises, renderExerciseDropdown);
 }
 
 function initEditModal(): void {
@@ -282,7 +287,7 @@ function renderExerciseDropdown(): void {
   while (select.options.length > 1) select.remove(1);
 
   for (const exercise of availableExercises) {
-    if (!selectedExercises.has(exercise.exerciseId)) {
+    if (!selectedExercises.includes(exercise.exerciseId)) {
       const option = document.createElement("option");
       option.value = exercise.exerciseId;
       option.textContent = exercise.name;
@@ -300,13 +305,14 @@ function renderSelectedExercisesList(): void {
   if (!list || !section) return;
 
   list.innerHTML = "";
-  section.style.display = selectedExercises.size > 0 ? "" : "none";
+  section.style.display = selectedExercises.length > 0 ? "" : "none";
 
   for (const exerciseId of selectedExercises) {
     const exercise = availableExercises.find(e => e.exerciseId === exerciseId);
     if (!exercise) continue;
-    list.appendChild(buildSelectedExerciseItem(exercise.name, () => {
-      selectedExercises.delete(exerciseId);
+    const index = selectedExercises.indexOf(exerciseId);
+    list.appendChild(buildSelectedExerciseItem(exercise.name, exerciseId, index, selectedExercises.length, () => {
+      selectedExercises = selectedExercises.filter(id => id !== exerciseId);
       renderExerciseDropdown();
     }));
   }
@@ -412,7 +418,7 @@ async function handleSubmit(): Promise<void> {
     return;
   }
 
-  if (selectedExercises.size === 0) {
+  if (selectedExercises.length === 0) {
     errorEl.textContent = "At least one exercise is required.";
     return;
   }
@@ -425,7 +431,7 @@ async function handleSubmit(): Promise<void> {
   submitBtn.classList.add("workout-form__submit--loading");
 
   try {
-    const exercises = Array.from(selectedExercises).map(exerciseId => ({
+    const exercises = selectedExercises.map(exerciseId => ({
       exerciseId,
       targetReps: null as string | null,
       targetWeight: null as string | null,
@@ -490,11 +496,10 @@ async function fetchAndPopulateEditModal(workoutId: string, nameInput: HTMLInput
 
     nameInput.value = fullWorkout.name;
 
-    // Populate selected exercises from the workout
-    editSelectedExercises = new Set();
-    for (const ex of fullWorkout.exercises) {
-      editSelectedExercises.add(ex.exerciseId);
-    }
+    // Populate selected exercises from the workout in persisted sequence order
+    editSelectedExercises = fullWorkout.exercises.map(ex => ex.exerciseId);
+
+    initDragAndDrop("edit-selected-list", "edit-reorder-announce", () => editSelectedExercises, renderEditExerciseDropdown);
 
     renderEditExerciseDropdown();
 
@@ -509,7 +514,7 @@ function closeEditModal(): void {
   const backdrop = document.getElementById("workout-edit-backdrop") as HTMLElement | null;
   if (backdrop) backdrop.style.display = "none";
   editingWorkoutId = null;
-  editSelectedExercises = new Set();
+  editSelectedExercises = [];
 }
 
 function renderEditExerciseDropdown(): void {
@@ -521,8 +526,8 @@ function renderEditExerciseDropdown(): void {
     select.dataset["listenerAttached"] = "1";
     select.addEventListener("change", () => {
       const exerciseId = select.value;
-      if (exerciseId) {
-        editSelectedExercises.add(exerciseId);
+      if (exerciseId && !editSelectedExercises.includes(exerciseId)) {
+        editSelectedExercises.push(exerciseId);
         renderEditExerciseDropdown();
       }
     });
@@ -531,7 +536,7 @@ function renderEditExerciseDropdown(): void {
   while (select.options.length > 1) select.remove(1);
 
   for (const exercise of availableExercises) {
-    if (!editSelectedExercises.has(exercise.exerciseId)) {
+    if (!editSelectedExercises.includes(exercise.exerciseId)) {
       const option = document.createElement("option");
       option.value = exercise.exerciseId;
       option.textContent = exercise.name;
@@ -549,21 +554,45 @@ function renderEditSelectedExercisesList(): void {
   if (!list || !section) return;
 
   list.innerHTML = "";
-  section.style.display = editSelectedExercises.size > 0 ? "" : "none";
+  section.style.display = editSelectedExercises.length > 0 ? "" : "none";
 
   for (const exerciseId of editSelectedExercises) {
     const exercise = availableExercises.find(e => e.exerciseId === exerciseId);
     if (!exercise) continue;
-    list.appendChild(buildSelectedExerciseItem(exercise.name, () => {
-      editSelectedExercises.delete(exerciseId);
+    const index = editSelectedExercises.indexOf(exerciseId);
+    list.appendChild(buildSelectedExerciseItem(exercise.name, exerciseId, index, editSelectedExercises.length, () => {
+      editSelectedExercises = editSelectedExercises.filter(id => id !== exerciseId);
       renderEditExerciseDropdown();
     }));
   }
 }
 
-function buildSelectedExerciseItem(name: string, onRemove: () => void): HTMLLIElement {
+function buildSelectedExerciseItem(
+  name: string,
+  exerciseId: string,
+  index: number,
+  listLength: number,
+  onRemove: () => void
+): HTMLLIElement {
   const li = document.createElement("li");
   li.className = "workout-selected__item";
+  li.setAttribute("data-exercise-id", exerciseId);
+  li.setAttribute("data-index", String(index));
+
+  const showHandle = listLength >= 2;
+
+  if (showHandle) {
+    li.setAttribute("draggable", "true");
+    li.setAttribute("aria-roledescription", "sortable item");
+
+    const handle = document.createElement("button");
+    handle.type = "button";
+    handle.className = "workout-selected__drag-handle";
+    handle.setAttribute("aria-label", `Drag to reorder ${name}`);
+    handle.setAttribute("aria-pressed", "false");
+    handle.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="5" cy="3" r="1.5"/><circle cx="5" cy="8" r="1.5"/><circle cx="5" cy="13" r="1.5"/><circle cx="11" cy="3" r="1.5"/><circle cx="11" cy="8" r="1.5"/><circle cx="11" cy="13" r="1.5"/></svg>`;
+    li.appendChild(handle);
+  }
 
   const nameSpan = document.createElement("span");
   nameSpan.className = "workout-selected__name";
@@ -579,6 +608,263 @@ function buildSelectedExerciseItem(name: string, onRemove: () => void): HTMLLIEl
   li.appendChild(removeBtn);
 
   return li;
+}
+
+function initDragAndDrop(
+  listId: string,
+  announceId: string,
+  getArray: () => string[],
+  onReorder: () => void
+): void {
+  const list = document.getElementById(listId);
+  if (!list) return;
+
+  // Guard: attach listeners only once per list element lifetime
+  if (list.dataset["dndAttached"]) return;
+  list.dataset["dndAttached"] = "1";
+
+  let draggingIndex = -1;
+  let draggingLi: HTMLElement | null = null;
+  let dropHandled = false;
+  // Keyboard reorder state
+  let originalPickupIndex = -1;
+  let snapshotBeforePickup: string[] = [];
+
+  function getAnnounce(): HTMLElement | null {
+    return document.getElementById(announceId);
+  }
+
+  function announce(msg: string): void {
+    const el = getAnnounce();
+    if (el) el.textContent = msg;
+  }
+
+  function getLiAtIndex(idx: number): HTMLElement | null {
+    return list!.querySelector(`li[data-index="${idx}"]`);
+  }
+
+  /** Returns the current 0-based position of li among its siblings in the list. */
+  function getLiveDomIndex(li: HTMLElement): number {
+    return Array.from(list!.children).indexOf(li);
+  }
+
+  // ── HTML5 DnD ──────────────────────────────────────────────────────────────
+
+  list.addEventListener("dragstart", (e: Event) => {
+    const ev = e as DragEvent;
+    const li = (ev.target as HTMLElement).closest("li[data-index]") as HTMLElement | null;
+    if (!li) return;
+    draggingIndex = parseInt(li.dataset["index"] ?? "-1", 10);
+    draggingLi = li;
+    dropHandled = false;
+    ev.dataTransfer?.setData("text/plain", String(draggingIndex)); // Firefox compat
+    if (ev.dataTransfer) ev.dataTransfer.effectAllowed = "move";
+    // Defer the opacity so the drag ghost is captured at full opacity first
+    setTimeout(() => li.classList.add("workout-selected__item--dragging"), 0);
+    document.body.classList.add("is-dragging");
+  });
+
+  list.addEventListener("dragover", (e: Event) => {
+    const ev = e as DragEvent;
+    ev.preventDefault();
+    if (ev.dataTransfer) ev.dataTransfer.dropEffect = "move";
+    if (!draggingLi) return;
+    const targetLi = (ev.target as HTMLElement).closest("li[data-index]") as HTMLElement | null;
+    if (!targetLi || targetLi === draggingLi) return;
+    // Insert before or after target based on cursor position relative to its midpoint
+    const rect = targetLi.getBoundingClientRect();
+    if (ev.clientY < rect.top + rect.height / 2) {
+      list!.insertBefore(draggingLi, targetLi);
+    } else {
+      list!.insertBefore(draggingLi, targetLi.nextSibling);
+    }
+  });
+
+  list.addEventListener("dragenter", (e: Event) => {
+    (e as DragEvent).preventDefault();
+  });
+
+  list.addEventListener("drop", (e: Event) => {
+    const ev = e as DragEvent;
+    ev.preventDefault();
+    document.body.classList.remove("is-dragging");
+    if (!draggingLi) return;
+    const finalIndex = getLiveDomIndex(draggingLi);
+    draggingLi.classList.remove("workout-selected__item--dragging");
+    dropHandled = true;
+    const arr = getArray();
+    if (finalIndex !== -1 && finalIndex !== draggingIndex) {
+      reorder(arr, draggingIndex, finalIndex);
+      announce(`Exercise moved to position ${finalIndex + 1} of ${arr.length}`);
+    }
+    draggingLi = null;
+    draggingIndex = -1;
+    onReorder();
+  });
+
+  list.addEventListener("dragend", () => {
+    document.body.classList.remove("is-dragging");
+    if (draggingLi) {
+      draggingLi.classList.remove("workout-selected__item--dragging");
+      draggingLi = null;
+    }
+    // If the drop didn't fire (e.g. dropped outside the list), restore order
+    if (!dropHandled) {
+      onReorder();
+    }
+    dropHandled = false;
+    draggingIndex = -1;
+  });
+
+  // ── Touch ──────────────────────────────────────────────────────────────────
+
+  let touchDragIndex = -1;
+  let touchClone: HTMLElement | null = null;
+  let touchCloneOffsetX = 0;
+  let touchCloneOffsetY = 0;
+
+  list.addEventListener("touchstart", (e: Event) => {
+    const ev = e as TouchEvent;
+    const handle = (ev.target as HTMLElement).closest(".workout-selected__drag-handle") as HTMLElement | null;
+    if (!handle) return;
+    const li = handle.closest("li[data-index]") as HTMLElement | null;
+    if (!li) return;
+
+    touchDragIndex = parseInt(li.dataset["index"] ?? "-1", 10);
+
+    const touch = ev.touches[0];
+    const rect = li.getBoundingClientRect();
+    touchCloneOffsetX = touch.clientX - rect.left;
+    touchCloneOffsetY = touch.clientY - rect.top;
+
+    touchClone = li.cloneNode(true) as HTMLElement;
+    touchClone.style.cssText = `
+      position: fixed;
+      left: ${rect.left}px;
+      top: ${rect.top}px;
+      width: ${rect.width}px;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.85;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    `;
+    document.body.appendChild(touchClone);
+    li.classList.add("workout-selected__item--dragging");
+    document.body.classList.add("is-dragging");
+  }, { passive: true });
+
+  list.addEventListener("touchmove", (e: Event) => {
+    const ev = e as TouchEvent;
+    if (touchDragIndex === -1 || !touchClone) return;
+    ev.preventDefault();
+
+    const touch = ev.touches[0];
+    touchClone.style.left = `${touch.clientX - touchCloneOffsetX}px`;
+    touchClone.style.top = `${touch.clientY - touchCloneOffsetY}px`;
+
+    // Live-reorder: find the real li under the finger and move the dragged li in the DOM
+    touchClone.style.visibility = "hidden";
+    const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest("li[data-index]") as HTMLElement | null;
+    touchClone.style.visibility = "";
+    const touchLi = getLiAtIndex(touchDragIndex) ?? list!.querySelector(".workout-selected__item--dragging") as HTMLElement | null;
+    if (target && touchLi && target !== touchLi) {
+      const targetRect = target.getBoundingClientRect();
+      if (touch.clientY < targetRect.top + targetRect.height / 2) {
+        list!.insertBefore(touchLi, target);
+      } else {
+        list!.insertBefore(touchLi, target.nextSibling);
+      }
+    }
+  }, { passive: false });
+
+  list.addEventListener("touchend", (_e: Event) => {
+    if (touchDragIndex === -1) return;
+
+    document.body.classList.remove("is-dragging");
+
+    if (touchClone) touchClone.style.visibility = "hidden";
+    const touchLi = list!.querySelector(".workout-selected__item--dragging") as HTMLElement | null;
+    const finalIndex = touchLi ? getLiveDomIndex(touchLi) : -1;
+
+    if (touchClone) {
+      touchClone.remove();
+      touchClone = null;
+    }
+
+    touchLi?.classList.remove("workout-selected__item--dragging");
+
+    const arr = getArray();
+    if (finalIndex !== -1 && finalIndex !== touchDragIndex) {
+      reorder(arr, touchDragIndex, finalIndex);
+      announce(`Exercise moved to position ${finalIndex + 1} of ${arr.length}`);
+    }
+    touchDragIndex = -1;
+    onReorder();
+  });
+
+  // ── Keyboard ───────────────────────────────────────────────────────────────
+
+  list.addEventListener("keydown", (e: Event) => {
+    const ev = e as KeyboardEvent;
+    const handle = (ev.target as HTMLElement).closest(".workout-selected__drag-handle") as HTMLElement | null;
+    if (!handle) return;
+
+    const li = handle.closest("li[data-index]") as HTMLElement | null;
+    if (!li) return;
+
+    const currentIndex = parseInt(li.dataset["index"] ?? "-1", 10);
+    const arr = getArray();
+    const isPickedUp = handle.getAttribute("aria-pressed") === "true";
+
+    if (ev.key === " " || ev.key === "Enter") {
+      ev.preventDefault();
+      if (!isPickedUp) {
+        snapshotBeforePickup = [...arr];
+        originalPickupIndex = currentIndex;
+        handle.setAttribute("aria-pressed", "true");
+        announce(`${li.querySelector(".workout-selected__name")?.textContent ?? "Exercise"} picked up. Use arrow keys to move, Space or Enter to drop, Escape to cancel.`);
+      } else {
+        handle.setAttribute("aria-pressed", "false");
+        originalPickupIndex = -1;
+        snapshotBeforePickup = [];
+        announce(`Exercise dropped at position ${currentIndex + 1} of ${arr.length}`);
+      }
+    } else if ((ev.key === "ArrowUp" || ev.key === "ArrowDown") && isPickedUp) {
+      ev.preventDefault();
+      const direction = ev.key === "ArrowUp" ? -1 : 1;
+      const newIndex = currentIndex + direction;
+      if (newIndex < 0 || newIndex >= arr.length) return;
+      reorder(arr, currentIndex, newIndex);
+      onReorder();
+      // Re-focus the handle at the new index after re-render
+      requestAnimationFrame(() => {
+        const newLi = getLiAtIndex(newIndex);
+        const newHandle = newLi?.querySelector(".workout-selected__drag-handle") as HTMLElement | null;
+        if (newHandle) {
+          newHandle.setAttribute("aria-pressed", "true");
+          newHandle.focus();
+        }
+        announce(`Exercise moved to position ${newIndex + 1} of ${arr.length}`);
+      });
+    } else if (ev.key === "Escape" && isPickedUp) {
+      ev.preventDefault();
+      // Restore snapshot and focus the handle at the original pickup position
+      const restoredIndex = originalPickupIndex;
+      arr.splice(0, arr.length, ...snapshotBeforePickup);
+      originalPickupIndex = -1;
+      snapshotBeforePickup = [];
+      onReorder();
+      requestAnimationFrame(() => {
+        const restoredLi = getLiAtIndex(restoredIndex);
+        const restoredHandle = restoredLi?.querySelector(".workout-selected__drag-handle") as HTMLElement | null;
+        if (restoredHandle) {
+          restoredHandle.setAttribute("aria-pressed", "false");
+          restoredHandle.focus();
+        }
+        announce("Reorder cancelled. Exercise returned to original position.");
+      });
+    }
+  });
 }
 
 async function handleEditSubmit(): Promise<void> {
@@ -606,7 +892,7 @@ async function handleEditSubmit(): Promise<void> {
     return;
   }
 
-  if (editSelectedExercises.size === 0) {
+  if (editSelectedExercises.length === 0) {
     errorEl.textContent = "At least one exercise is required.";
     return;
   }
@@ -618,7 +904,7 @@ async function handleEditSubmit(): Promise<void> {
   submitBtn.classList.add("workout-form__submit--loading");
 
   try {
-    const exercises = Array.from(editSelectedExercises).map(exerciseId => ({
+    const exercises = editSelectedExercises.map(exerciseId => ({
       exerciseId,
       targetReps: null as string | null,
       targetWeight: null as string | null,
@@ -657,7 +943,7 @@ function resetCreateForm(): void {
   const errorEl = document.getElementById("workout-error") as HTMLElement | null;
   const apiErrorEl = document.getElementById("workout-api-error") as HTMLElement | null;
 
-  selectedExercises = new Set();
+  selectedExercises = [];
 
   if (nameInput) {
     nameInput.value = "";

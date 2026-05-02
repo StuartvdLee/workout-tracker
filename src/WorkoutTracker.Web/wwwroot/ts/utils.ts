@@ -14,3 +14,16 @@ const EFFORT_LABELS: Record<number, string> = {
 export function getEffortLabel(value: number): string {
   return EFFORT_LABELS[value] ?? "";
 }
+
+export function reorder<T>(arr: T[], fromIndex: number, toIndex: number): void {
+  if (
+    fromIndex === toIndex ||
+    fromIndex < 0 ||
+    toIndex < 0 ||
+    fromIndex >= arr.length ||
+    toIndex >= arr.length
+  ) {
+    return;
+  }
+  arr.splice(toIndex, 0, arr.splice(fromIndex, 1)[0]);
+}
