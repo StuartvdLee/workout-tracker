@@ -36,6 +36,12 @@ resource containerApp 'Microsoft.App/containerApps@2026-01-01' = {
           affinity: 'none'
         }
       }
+      registries: [
+        {
+          server: '${containerRegistryName}.azurecr.io'
+          identity: 'system'
+        }
+      ]
     }
     template: {
       containers: [
