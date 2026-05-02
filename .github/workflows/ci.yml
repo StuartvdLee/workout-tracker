@@ -184,7 +184,7 @@ jobs:
       - name: Build and push Docker image
         run: |
           IMAGE=workouttrackercr.azurecr.io/workouttracker-api:${{ github.sha }}
-          docker build -f src/WorkoutTracker.Api/Dockerfile -t "$IMAGE"
+          docker build -f src/WorkoutTracker.Api/Dockerfile -t "$IMAGE" .
           docker push "$IMAGE"
 
       # - name: Deploy to Container App
