@@ -149,14 +149,6 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      # - name: Enable PostgreSQL access for runner
-      #   run: |
-      #     RUNNER_IP=$(curl -sf https://api.ipify.org)
-      #     az postgres flexible-server update \
-      #       --resource-group $RESOURCE_GROUP \
-      #       --name $POSTGRES_SERVER \
-      #       --public-access "$RUNNER_IP"
-
       - name: Restore .NET dependencies
         run: dotnet restore src/WorkoutTracker.slnx
 
@@ -168,11 +160,3 @@ jobs:
           dotnet ef database update \
             --project src/WorkoutTracker.Infrastructure \
             --connection "Host=${{ env.POSTGRES_SERVER }}.postgres.database.azure.com;Database=workouttracker_db;Username=${{ secrets.POSTGRES_ADMIN_USER }};Password=${{ secrets.POSTGRES_ADMIN_PASSWORD }};SSL Mode=Require"
-
-      # - name: Disable PostgreSQL public network access
-      #   if: always()
-      #   run: |
-      #     az postgres flexible-server update \
-      #       --resource-group $RESOURCE_GROUP \
-      #       --name $POSTGRES_SERVER \
-      #       --public-access Disabled
