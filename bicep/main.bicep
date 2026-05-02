@@ -11,6 +11,14 @@ param postgresqlAdministratorLoginPassword string
 var location = resourceGroup().location
 var appName = 'workouttracker'
 
+resource containerRegistry 'Microsoft.ContainerRegistry/registries@2025-11-01' = {
+  name: '${appName}cr'
+  location: location
+  sku: {
+    name: 'Basic'
+  }
+}
+
 resource containerAppsEnv 'Microsoft.App/managedEnvironments@2026-01-01' = {
   name: '${appName}-cae'
   location: location
@@ -62,7 +70,7 @@ resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2025-08-01' =
       mode: 'Disabled'
     }
     network: {
-      publicNetworkAccess: 'Disabled'
+      publicNetworkAccess: 'Enabled'
     }
   }
 }

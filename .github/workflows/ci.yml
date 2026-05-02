@@ -131,7 +131,6 @@ jobs:
 
     env:
       POSTGRES_SERVER: workouttracker-psql
-      RESOURCE_GROUP: workouttracker-rg
 
     steps:
       - name: Checkout repository
@@ -160,3 +159,19 @@ jobs:
           dotnet ef database update \
             --project src/WorkoutTracker.Infrastructure \
             --connection "Host=${{ env.POSTGRES_SERVER }}.postgres.database.azure.com;Database=workouttracker_db;Username=${{ secrets.POSTGRES_ADMIN_USER }};Password=${{ secrets.POSTGRES_ADMIN_PASSWORD }};SSL Mode=Require"
+
+      - name: Log in to Azure Container Registry
+        run: az acr login --name workouttrackercr
+
+      - name: Build and push API Docker image
+        run: |
+          IMAGE=workouttrackercr.azurecr.io/workouttracker-api:${{ github.sha }}
+          docker build -f src/WorkoutTracker.Api/Dockerfile -t "$IMAGE" .
+          docker push "$IMAGE"
+
+      - name: Deploy to API Container App
+        run: |
+          az containerapp update \
+            --name workouttracker-api-ca \
+            --resource-group workouttracker-rg \
+            --image workouttrackercr.azurecr.io/workouttracker-api:${{ github.sha }} \

@@ -16,7 +16,6 @@ COPY src/WorkoutTracker.ServiceDefaults/ WorkoutTracker.ServiceDefaults/
 COPY src/WorkoutTracker.Infrastructure/ WorkoutTracker.Infrastructure/
 COPY src/WorkoutTracker.Api/ WorkoutTracker.Api/
 RUN dotnet publish WorkoutTracker.Api/WorkoutTracker.Api.csproj \
-      --no-restore \
       -c Release \
       -o /app/publish
 
