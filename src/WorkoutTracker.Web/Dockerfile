@@ -33,7 +33,6 @@ COPY src/WorkoutTracker.Web/ WorkoutTracker.Web/
 # Reset the output file's timestamp so the incremental check sees it as up-to-date.
 RUN touch WorkoutTracker.Web/node_modules/.package-lock.json
 RUN dotnet publish WorkoutTracker.Web/WorkoutTracker.Web.csproj \
-      --no-restore \
       -c Release \
       -o /app/publish
 
