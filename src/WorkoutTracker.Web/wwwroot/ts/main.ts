@@ -1,5 +1,6 @@
 import { registerRoute, init } from "./router.js";
 import { initSidebar } from "./sidebar.js";
+import { initTheme } from "./theme.js";
 import { render as renderHome } from "./pages/home.js";
 import { render as renderWorkouts } from "./pages/workouts.js";
 import { render as renderExercises } from "./pages/exercises.js";
@@ -14,6 +15,7 @@ function initializeApp(): void {
   registerRoute("/active-session", renderActiveSession);
 
   initSidebar();
+  initTheme();
   init();
 }
 
