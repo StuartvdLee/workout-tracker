@@ -143,16 +143,6 @@ body {
   white-space: nowrap;
 }
 
-/* === Sidebar Footer === */
-.sidebar__footer {
-  padding: var(--spacing-sm);
-  border-top: 1px solid var(--color-border);
-}
-
-.sidebar__theme {
-  position: relative;
-}
-
 /* === Sidebar Backdrop (mobile) === */
 .sidebar__backdrop {
   display: none;
@@ -846,6 +836,21 @@ body {
 
 /* === Responsive: Desktop (768px+) === */
 @media (min-width: 768px) {
+  /* Show topbar as a transparent floating strip, top-right only */
+  .topbar {
+    display: flex;
+    background: transparent;
+    border-bottom: none;
+    left: auto;
+    width: auto;
+    padding: var(--spacing-xs);
+  }
+
+  .topbar__toggle,
+  .topbar__title {
+    display: none;
+  }
+
   .content > .app {
     padding-top: 4rem;
   }
@@ -1801,21 +1806,6 @@ body.is-dragging .workout-selected__drag-handle {
 .topbar__theme {
   margin-left: auto;
   position: relative;
-}
-
-/* In sidebar footer the button doesn't need to be pushed right */
-.sidebar__theme .topbar__theme-btn {
-  width: auto;
-  padding: 0 var(--spacing-sm);
-  gap: var(--spacing-sm);
-}
-
-/* Theme menu opens upward when anchored at the bottom of the sidebar */
-.sidebar__theme .theme-menu {
-  top: auto;
-  bottom: calc(100% + 0.25rem);
-  right: auto;
-  left: 0;
 }
 
 .topbar__theme-btn {
