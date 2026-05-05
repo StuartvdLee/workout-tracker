@@ -13,7 +13,12 @@ The app now supports three display themes: **Light**, **Dark**, and **System**. 
 
 ### Step 1 — Find the Theme Button
 
-Look for the icon in the **top-right corner** of the page header:
+Look for the icon in the **top-right corner** of the screen:
+
+- On **desktop**, the icon floats transparently in the top-right corner of the viewport with no visible bar behind it.
+- On **mobile**, the icon appears in the top-right corner of the navigation bar at the top of the screen.
+
+The icon indicates the current theme:
 
 - A **moon icon** means the app is currently displaying in light mode.
 - A **sun icon** means the app is currently displaying in dark mode.

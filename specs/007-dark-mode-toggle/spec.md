@@ -2,7 +2,7 @@
 
 **Feature Branch**: `007-dark-mode-toggle`  
 **Created**: 2026-05-05  
-**Status**: Draft  
+**Status**: Delivered  
 **Input**: User description: "I want to add a dark mode to the app. When in light mode, a little moon icon should be displayed in the top right corner, indicating to the user that dark mode is available. When switching to dark mode, the moon icon should turn into a little sun, indicating to the user that light mode is available. All text, fields and buttons should be clearly visible in both light and dark mode"
 
 ## Clarifications

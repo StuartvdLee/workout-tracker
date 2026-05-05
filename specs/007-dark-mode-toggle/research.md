@@ -5,7 +5,7 @@
 
 ## Summary
 
-All design decisions are resolved. This feature is a **pure frontend change** — no backend, API, or database modifications are required. Dark mode is delivered by redefining the 8 existing CSS colour custom properties under `[data-theme="dark"]` on `<html>`. A new `theme.ts` module handles preference storage, resolution, and DOM application. The topbar is made always visible (desktop + mobile) so the theme selector button is persistently accessible in the top-right corner on all viewport sizes.
+All design decisions are resolved. This feature is a **pure frontend change** — no backend, API, or database modifications are required. Dark mode is delivered by redefining the 8 existing CSS colour custom properties under `[data-theme="dark"]` on `<html>`. A new `theme.ts` module handles preference storage, resolution, and DOM application. The theme selector button is placed inside the `.topbar` element; on mobile the full topbar is shown, while on desktop the topbar renders as a transparent, borderless, auto-width strip so only the theme button is visible, floating in the top-right corner of the viewport.
 
 ---
 
@@ -78,17 +78,20 @@ WCAG AA verification (4.5:1 minimum for normal text):
 
 ---
 
-## Decision 4: Topbar Always Visible (Layout Change)
+## Decision 4: Theme Button Placement — Transparent Desktop Overlay
 
-**Decision**: Make the `.topbar` always visible on all viewport sizes. On desktop (≥ 768 px), offset it with `left: var(--sidebar-width)` so it appears to the right of the sidebar. Apply `padding-top: calc(var(--topbar-height) + var(--spacing-lg))` to `.content` at all breakpoints (currently mobile-only).
+**Decision**: The theme button lives inside `<header class="topbar">` on all breakpoints. On mobile (< 768 px) the full topbar is shown (`display: flex`) with hamburger toggle, app title, and theme button. On desktop (≥ 768 px) the topbar is made `display: flex` again but stripped of its background, border, and width constraint — only the theme button is visible, floating transparently in the top-right corner. The hamburger toggle and title are hidden via `display: none` on desktop.
 
-**Rationale**: The spec requires the theme selector to be visible in the top right corner on every page. On desktop, the current layout has no persistent top bar — the sidebar is the only persistent chrome. Making the topbar always visible is the least-disruptive change that delivers "top right corner" on all viewport sizes without duplicating the button into the sidebar.
+**Rationale**:
+- A single DOM element (`#theme-btn`) and a single `#theme-menu` avoids duplicate IDs and duplicate event listeners.
+- On desktop, hiding the hamburger/title and making the topbar transparent produces a clean floating icon in the top-right with no visible bar, satisfying "top right corner on every page" without adding any layout shift to the main content area.
+- No `padding-top` offset is needed on desktop (the transparent topbar overlays content without blocking it); the mobile media query restores the topbar-height offset for mobile where the full bar is shown.
 
 **Visual result**:
-- Desktop: narrow topbar strip runs from the right edge of the sidebar to the viewport right edge; contains the app title (left) and theme button (right).
-- Mobile: topbar spans full width as before; hamburger (left), title (centre), theme button (right).
+- Desktop: a transparent, borderless, width-auto `<header>` pinned `top: 0; right: 0` shows only the theme icon button in the top-right corner of the viewport.
+- Mobile: full-width topbar with hamburger (left), app title (centre), theme button (right); content has `padding-top: calc(var(--topbar-height) + var(--spacing-lg))` so it clears the bar.
 
-**Alternatives considered**: Adding a second theme button to the sidebar footer for desktop — rejected as it duplicates state management and creates two sources of truth for the active-indicator markup.
+**Alternatives considered**: Making the topbar always visible with `left: var(--sidebar-width)` offset on desktop — this caused a visible bar spanning the full content-column width, which the user found unexpected. Placing the button in the sidebar footer — rejected because it buries the toggle behind the sidebar open gesture on mobile. A truly independent `position: fixed` element — rejected because reusing the topbar avoids duplicate IDs and keeps event-listener setup in one place.
 
 ---
 
@@ -120,8 +123,8 @@ WCAG AA verification (4.5:1 minimum for normal text):
 |---|---|
 | Backend changes required? | No — localStorage-only, no server involvement |
 | FOUC prevention strategy? | Inline `<script>` in `<head>` reads localStorage before first paint |
-| Where to place button on desktop? | Topbar made always visible; `left: var(--sidebar-width)` on desktop |
-| Two buttons (topbar + sidebar) or one? | One — topbar made always visible; no duplication |
+| Where to place button on desktop? | Transparent topbar on desktop: `display: flex`, `background: transparent`, `border: none`, title/hamburger hidden via `display: none` |
+| Two buttons (topbar + sidebar) or one? | One — single `#theme-btn` inside `<header class="topbar">` across all breakpoints |
 | CSS approach? | CSS custom property overrides under `[data-theme="dark"]` on `<html>` |
 | OS change tracking strategy? | `matchMedia 'change'` event — no polling |
 | Allowlist validation needed? | Yes — stored value validated before use; defaults to `'system'` |

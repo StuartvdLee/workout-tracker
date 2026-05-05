@@ -5,19 +5,23 @@
 
 ---
 
-## Topbar Layout (Updated)
+## Topbar Layout (Responsive)
 
-The `.topbar` element is made always-visible at all viewport widths. It is a fixed bar at the top of the viewport.
+The `.topbar` element is hidden by default and rendered differently per breakpoint.
 
 ### Desktop (≥ 768 px)
+
+The topbar is `display: flex` but has `background: transparent`, `border-bottom: none`, `left: auto`, and `width: auto`. The hamburger toggle and app title are hidden via `display: none`. Only the theme button is visible, floating transparently in the top-right corner of the viewport. No topbar height offset is added to `.content` on desktop.
+
 ```
-┌──────────────────────────────────────────────────────────────────────────┐
-│ ← sidebar →  │ Workout Tracker                      [theme-btn ☾/☀] │
-└──────────────────────────────────────────────────────────────────────────┘
-                left: var(--sidebar-width)             width: remaining
+                                                          [theme-btn ☾/☀]
+                                          (transparent, top-right corner)
 ```
 
 ### Mobile (< 768 px)
+
+The topbar is `display: flex` as a full-width bar. Content has `padding-top: calc(var(--topbar-height) + var(--spacing-lg))` to clear it.
+
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
 │ [☰]      Workout Tracker                             [theme-btn ☾/☀] │
@@ -35,7 +39,7 @@ The `.topbar` element is made always-visible at all viewport widths. It is a fix
   <button
     class="topbar__theme-btn"
     id="theme-btn"
-    aria-label="Open theme menu"
+    aria-label="Theme: System"
     aria-haspopup="menu"
     aria-expanded="false"
     aria-controls="theme-menu"
@@ -224,7 +228,7 @@ The `.theme-menu__check` SVG is hidden by default. JavaScript adds `.theme-menu_
 
 | Element | Role | Required ARIA attributes |
 |---------|------|--------------------------|
-| `.topbar__theme-btn` | `button` (implicit) | `aria-haspopup="menu"`, `aria-expanded`, `aria-controls="theme-menu"`, `aria-label="Open theme menu"` |
+| `.topbar__theme-btn` | `button` (implicit) | `aria-haspopup="menu"`, `aria-expanded`, `aria-controls="theme-menu"`, `aria-label="Theme: <current>"` (dynamic; initialised to `"Theme: System"`, updated by `applyTheme()` to `"Theme: Light"`, `"Theme: Dark"`, or `"Theme: System"`) |
 | `#theme-menu` | `menu` | `aria-labelledby="theme-btn"` |
 | `<li>` wrappers | `none` | — |
 | `.theme-menu__item` | `menuitem` | — |
