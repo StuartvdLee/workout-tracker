@@ -14,7 +14,7 @@ The `.topbar` element is hidden by default and rendered differently per breakpoi
 The topbar is `display: flex` but has `background: transparent`, `border-bottom: none`, `left: auto`, and `width: auto`. The hamburger toggle and app title are hidden via `display: none`. Only the theme button is visible, floating transparently in the top-right corner of the viewport. No topbar height offset is added to `.content` on desktop.
 
 ```
-                                                          [theme-btn ☾/☀]
+                                                          [theme-btn ☀/☾/🖥]
                                           (transparent, top-right corner)
 ```
 
@@ -24,7 +24,7 @@ The topbar is `display: flex` as a full-width bar. Content has `padding-top: cal
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│ [☰]      Workout Tracker                             [theme-btn ☾/☀] │
+│ [☰]      Workout Tracker                          [theme-btn ☀/☾/🖥] │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -45,22 +45,7 @@ The topbar is `display: flex` as a full-width bar. Content has `padding-top: cal
     aria-controls="theme-menu"
     type="button"
   >
-    <!-- Moon icon (shown in light mode) -->
-    <svg
-      class="topbar__theme-icon topbar__theme-icon--moon"
-      aria-hidden="true"
-      focusable="false"
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    >
-      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-    </svg>
-    <!-- Sun icon (shown in dark mode) -->
+    <!-- Sun icon (shown when light preference is active) -->
     <svg
       class="topbar__theme-icon topbar__theme-icon--sun"
       aria-hidden="true"
@@ -83,8 +68,38 @@ The topbar is `display: flex` as a full-width bar. Content has `padding-top: cal
       <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
       <line x1="18.36" y1="5.64"  x2="19.78" y2="4.22"/>
     </svg>
-    <!-- System indicator dot (visible only when data-theme-pref="system") -->
-    <span class="topbar__theme-indicator" aria-hidden="true"></span>
+    <!-- Moon icon (shown when dark preference is active) -->
+    <svg
+      class="topbar__theme-icon topbar__theme-icon--moon"
+      aria-hidden="true"
+      focusable="false"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>
+    <!-- Monitor icon (shown when system preference is active) -->
+    <svg
+      class="topbar__theme-icon topbar__theme-icon--system"
+      aria-hidden="true"
+      focusable="false"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+      <line x1="8" y1="21" x2="16" y2="21"/>
+      <line x1="12" y1="17" x2="12" y2="21"/>
+    </svg>
     <span class="sr-only">Theme</span>
   </button>
 
@@ -97,12 +112,20 @@ The topbar is `display: flex` as a full-width bar. Content has `padding-top: cal
   >
     <li role="none">
       <button class="theme-menu__item" role="menuitem" data-theme-value="light" type="button">
-        <!-- Moon icon (small, inline) -->
+        <!-- Sun icon (small, inline) -->
         <svg class="theme-menu__icon" aria-hidden="true" focusable="false"
              xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
              fill="none" stroke="currentColor" stroke-width="2"
              stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1"  x2="12" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22"  x2="5.64" y2="5.64"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1"  y1="12" x2="3"  y2="12"/>
+          <line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78"  x2="5.64" y2="18.36"/>
+          <line x1="18.36" y1="5.64"  x2="19.78" y2="4.22"/>
         </svg>
         Light
         <svg class="theme-menu__check" aria-hidden="true" focusable="false"
@@ -115,20 +138,12 @@ The topbar is `display: flex` as a full-width bar. Content has `padding-top: cal
     </li>
     <li role="none">
       <button class="theme-menu__item" role="menuitem" data-theme-value="dark" type="button">
-        <!-- Sun icon (small, inline) -->
+        <!-- Moon icon (small, inline) -->
         <svg class="theme-menu__icon" aria-hidden="true" focusable="false"
              xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
              fill="none" stroke="currentColor" stroke-width="2"
              stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="5"/>
-          <line x1="12" y1="1"  x2="12" y2="3"/>
-          <line x1="12" y1="21" x2="12" y2="23"/>
-          <line x1="4.22" y1="4.22"   x2="5.64" y2="5.64"/>
-          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-          <line x1="1"  y1="12" x2="3"  y2="12"/>
-          <line x1="21" y1="12" x2="23" y2="12"/>
-          <line x1="4.22" y1="19.78"  x2="5.64" y2="18.36"/>
-          <line x1="18.36" y1="5.64"  x2="19.78" y2="4.22"/>
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
         </svg>
         Dark
         <svg class="theme-menu__check" aria-hidden="true" focusable="false"
@@ -173,7 +188,7 @@ The topbar is `display: flex` as a full-width bar. Content has `padding-top: cal
 | `data-theme`           | `"dark"`       | Dark theme active                          |
 | `data-theme-pref`      | `"light"`      | User explicitly selected light             |
 | `data-theme-pref`      | `"dark"`       | User explicitly selected dark              |
-| `data-theme-pref`      | `"system"`     | Following OS; indicator dot visible        |
+| `data-theme-pref`      | `"system"`     | Following OS; monitor icon visible         |
 | `aria-expanded`        | `"true"`       | Dropdown menu is open                      |
 | `aria-expanded`        | `"false"`      | Dropdown menu is closed                    |
 | `.theme-menu[hidden]`  | present        | Menu hidden (CSS `display: none`)          |
@@ -187,17 +202,19 @@ The topbar is `display: flex` as a full-width bar. Content has `padding-top: cal
 
 | Class | Condition when visible |
 |---|---|
-| `.topbar__theme-icon--moon` | `html[data-theme="light"] .topbar__theme-btn` |
-| `.topbar__theme-icon--sun`  | `html[data-theme="dark"] .topbar__theme-btn`  |
-| `.topbar__theme-indicator`  | `html[data-theme-pref="system"] .topbar__theme-btn` |
+| `.topbar__theme-icon--sun`    | `html[data-theme-pref="light"]`   |
+| `.topbar__theme-icon--moon`   | `html[data-theme-pref="dark"]`    |
+| `.topbar__theme-icon--system` | `html[data-theme-pref="system"]`  |
 
-Both icon SVGs are rendered in the DOM at all times; CSS hides the inactive one:
+All three icon SVGs are rendered in the DOM at all times; CSS shows the one matching the active preference:
 ```css
+.topbar__theme-icon--sun,
 .topbar__theme-icon--moon,
-.topbar__theme-icon--sun { display: none; }
+.topbar__theme-icon--system { display: none; }
 
-html[data-theme="light"] .topbar__theme-icon--moon { display: block; }
-html[data-theme="dark"]  .topbar__theme-icon--sun  { display: block; }
+html[data-theme-pref="light"]  .topbar__theme-icon--sun    { display: block; }
+html[data-theme-pref="dark"]   .topbar__theme-icon--moon   { display: block; }
+html[data-theme-pref="system"] .topbar__theme-icon--system { display: block; }
 ```
 
 ### Active Menu Item (checkmark)
@@ -233,7 +250,6 @@ The `.theme-menu__check` SVG is hidden by default. JavaScript adds `.theme-menu_
 | `<li>` wrappers | `none` | — |
 | `.theme-menu__item` | `menuitem` | — |
 | `.topbar__theme-icon--*` SVGs | decorative | `aria-hidden="true"`, `focusable="false"` |
-| `.topbar__theme-indicator` | decorative | `aria-hidden="true"` |
 | `<span class="sr-only">Theme</span>` | — | Provides accessible label text for screen readers |
 
 `aria-expanded` is toggled by JavaScript (`"false"` ↔ `"true"`) alongside the `hidden` attribute on `#theme-menu`.

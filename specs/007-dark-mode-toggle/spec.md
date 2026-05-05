@@ -26,9 +26,9 @@ A user clicks the theme icon in the top right corner of the app, which opens a s
 **Acceptance Scenarios**:
 
 1. **Given** any state, **When** the user clicks the theme icon, **Then** a menu with three options (Light, Dark, System) appears.
-2. **Given** the menu is open, **When** the user selects "Light", **Then** the app applies the light colour scheme, the menu closes, and the header shows a moon icon.
-3. **Given** the menu is open, **When** the user selects "Dark", **Then** the app applies the dark colour scheme, the menu closes, and the header shows a sun icon.
-4. **Given** the menu is open, **When** the user selects "System", **Then** the app applies the colour scheme matching the OS preference, the menu closes, and the header shows the resolved theme icon with a subtle indicator.
+2. **Given** the menu is open, **When** the user selects "Light", **Then** the app applies the light colour scheme, the menu closes, and the header shows a sun icon.
+3. **Given** the menu is open, **When** the user selects "Dark", **Then** the app applies the dark colour scheme, the menu closes, and the header shows a moon icon.
+4. **Given** the menu is open, **When** the user selects "System", **Then** the app applies the colour scheme matching the OS preference, the menu closes, and the header shows a monitor icon.
 5. **Given** either theme is active, **When** the theme is applied, **Then** all text, input fields, and buttons are clearly visible with sufficient contrast.
 
 ---
@@ -60,8 +60,8 @@ A user selects "System" from the theme menu. The app mirrors the OS-level light/
 
 **Acceptance Scenarios**:
 
-1. **Given** the user has selected "System" and the OS is in dark mode, **When** the app loads, **Then** the dark colour scheme is applied with the subtle System indicator on the header icon.
-2. **Given** the user has selected "System" and the OS is in light mode, **When** the app loads, **Then** the light colour scheme is applied with the subtle System indicator on the header icon.
+1. **Given** the user has selected "System" and the OS is in dark mode, **When** the app loads, **Then** the dark colour scheme is applied and the header shows a monitor icon.
+2. **Given** the user has selected "System" and the OS is in light mode, **When** the app loads, **Then** the light colour scheme is applied and the header shows a monitor icon.
 3. **Given** "System" is the active selection, **When** the OS preference changes during an active session, **Then** the app immediately updates its theme to match the new OS preference without a page reload.
 
 ---
@@ -80,8 +80,8 @@ A user selects "System" from the theme menu. The app mirrors the OS-level light/
 
 - **FR-001**: The app MUST display a theme selector icon in the top right corner of every page.
 - **FR-002**: Clicking the theme selector icon MUST open a menu with exactly three options: **Light**, **Dark**, and **System**.
-- **FR-003**: Selecting "Light" MUST immediately apply the light colour scheme across the entire app and display a moon icon in the header.
-- **FR-004**: Selecting "Dark" MUST immediately apply the dark colour scheme across the entire app and display a sun icon in the header.
+- **FR-003**: Selecting "Light" MUST immediately apply the light colour scheme across the entire app and display a sun icon in the header.
+- **FR-004**: Selecting "Dark" MUST immediately apply the dark colour scheme across the entire app and display a moon icon in the header.
 - **FR-005**: Selecting "System" MUST apply the colour scheme matching the user's current OS-level preference.
 - **FR-006**: When "System" is the active selection, the app MUST update its theme immediately if the OS preference changes during an active session, without requiring a page reload.
 - **FR-007**: When "System" is active and the OS preference cannot be detected, the app MUST fall back to light mode.
@@ -89,7 +89,7 @@ A user selects "System" from the theme menu. The app mirrors the OS-level light/
 - **FR-009**: The selected theme option MUST be persisted locally so that it is restored when the user returns to the app.
 - **FR-010**: When no saved preference exists, the app MUST default to the "System" option.
 - **FR-011**: The theme selector icon MUST be visible and accessible on every page of the app.
-- **FR-012**: When "System" is the active selection, the header icon MUST display the resolved theme icon (moon when the effective theme is light, sun when the effective theme is dark) with a subtle visual indicator to distinguish it from a manually pinned Light or Dark selection.
+- **FR-012**: When "System" is the active selection, the header MUST display a monitor icon.
 - **FR-013**: The currently active theme option MUST be visually indicated inside the menu (e.g., a checkmark or highlighted row).
 
 ### Security & Privacy Requirements

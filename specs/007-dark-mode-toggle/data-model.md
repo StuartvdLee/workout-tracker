@@ -38,12 +38,14 @@ The *effective* theme applied to the UI — computed from the stored preference 
 
 `ResolvedTheme` is applied as the `data-theme` attribute on `<html>`. It is always either `'light'` or `'dark'` — never `'system'`.
 
-### System Indicator
+### Button Icon
 
-A separate `data-theme-pref` attribute is also set on `<html>` (value: `'light'`, `'dark'`, or `'system'`). CSS uses this to show or hide the subtle System indicator dot on the theme button icon:
+A separate `data-theme-pref` attribute is also set on `<html>` (value: `'light'`, `'dark'`, or `'system'`). CSS uses this to show the icon that represents the active preference:
 
 ```css
-html[data-theme-pref="system"] .topbar__theme-indicator { display: block; }
+html[data-theme-pref="light"]  .topbar__theme-icon--sun    { display: block; }
+html[data-theme-pref="dark"]   .topbar__theme-icon--moon   { display: block; }
+html[data-theme-pref="system"] .topbar__theme-icon--system { display: block; }
 ```
 
 ---
@@ -81,9 +83,9 @@ type ResolvedTheme   = 'light' | 'dark';
 
 | Trigger | Action |
 |---|---|
-| User selects "Light" | Store `'light'`; set `data-theme="light"`; update icon to moon; hide indicator dot |
-| User selects "Dark" | Store `'dark'`; set `data-theme="dark"`; update icon to sun; hide indicator dot |
-| User selects "System" | Store `'system'`; resolve from OS; set `data-theme`; show indicator dot on icon |
+| User selects "Light" | Store `'light'`; set `data-theme="light"`; update button icon to sun |
+| User selects "Dark" | Store `'dark'`; set `data-theme="dark"`; update button icon to moon |
+| User selects "System" | Store `'system'`; resolve from OS; set `data-theme`; show monitor icon |
 | OS preference changes (while `'system'` is stored) | Re-resolve; update `data-theme`; update icon |
 | Page load (preference exists) | Read stored value; resolve; set `data-theme` (via inline script + `initTheme()`) |
 | Page load (no stored preference) | Default to `'system'`; resolve from OS; set `data-theme` |

@@ -20,9 +20,9 @@ Look for the icon in the **top-right corner** of the screen:
 
 The icon indicates the current theme:
 
-- A **moon icon** means the app is currently displaying in light mode.
-- A **sun icon** means the app is currently displaying in dark mode.
-- Either icon with a **small dot** means the app is following your system preference automatically.
+- A **sun icon** means the app is currently set to light mode.
+- A **moon icon** means the app is currently set to dark mode.
+- A **monitor icon** means the app is following your system preference automatically.
 
 ### Step 2 — Open the Theme Menu
 
@@ -46,7 +46,7 @@ When **System** is selected:
 
 - The app uses your OS or browser's current dark/light mode setting.
 - If you change your OS theme while the app is open, the app updates **automatically** to match — you do not need to reload the page or change anything in the app.
-- The header icon shows the moon or sun (matching the resolved theme) with a **small dot** to indicate that System mode is active.
+- The header shows a **monitor icon** to indicate that System mode is active.
 
 ---
 
