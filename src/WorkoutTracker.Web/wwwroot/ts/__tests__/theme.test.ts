@@ -232,42 +232,58 @@ describe('persistence via initTheme()', () => {
 });
 
 // ---------------------------------------------------------------------------
-// T021 — real-time OS tracking
+// T021 — real-time OS tracking via initTheme() change listener
 // ---------------------------------------------------------------------------
 
 describe('real-time OS tracking (matchMedia change event)', () => {
+  let mql: ReturnType<typeof mockMatchMedia>;
+
   beforeEach(() => {
     clearLs();
     buildDOM();
+    mql = mockMatchMedia(false);
+    initTheme();
+  });
+
+  function fireChangeEvent() {
+    const handler = mql.addEventListener.mock.calls.find(([event]) => event === 'change')?.[1] as ((e?: Event) => void) | undefined;
+    expect(handler, 'initTheme() must register a "change" listener on the media query').toBeDefined();
+    handler!();
+  }
+
+  it('registers a "change" listener on the system media query', () => {
+    const changeCall = mql.addEventListener.mock.calls.find(([event]) => event === 'change');
+    expect(changeCall).toBeDefined();
   });
 
   it('updates to dark when stored pref is "system" and OS changes to dark', () => {
     lsMock.setItem('workout-tracker-theme', 'system');
-    mockMatchMedia(true); // OS reports dark
-    applyTheme('system');
+    mql.matches = true;
+    fireChangeEvent();
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
   });
 
   it('updates to light when stored pref is "system" and OS changes to light', () => {
     lsMock.setItem('workout-tracker-theme', 'system');
-    mockMatchMedia(false); // OS reports light
-    applyTheme('system');
+    mql.matches = false;
+    fireChangeEvent();
     expect(document.documentElement.getAttribute('data-theme')).toBe('light');
   });
 
-  it('does NOT apply "system" when stored pref is "dark"', () => {
+  it('does NOT update theme when stored pref is "dark" and OS changes', () => {
     lsMock.setItem('workout-tracker-theme', 'dark');
-    mockMatchMedia(true); // OS dark, but pref is 'dark' (explicit)
-    // Simulate change listener guard: only calls applyTheme when pref === 'system'
-    if (getStoredPreference() === 'system') applyTheme('system');
-    expect(document.documentElement.getAttribute('data-theme')).toBeNull(); // unchanged
+    applyTheme('dark');
+    mql.matches = false; // OS changes to light
+    fireChangeEvent();
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
   });
 
-  it('does NOT apply "system" when stored pref is "light"', () => {
+  it('does NOT update theme when stored pref is "light" and OS changes', () => {
     lsMock.setItem('workout-tracker-theme', 'light');
-    mockMatchMedia(true); // OS dark, but pref is 'light' (explicit)
-    if (getStoredPreference() === 'system') applyTheme('system');
-    expect(document.documentElement.getAttribute('data-theme')).toBeNull(); // unchanged
+    applyTheme('light');
+    mql.matches = true; // OS changes to dark
+    fireChangeEvent();
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
   });
 });
 

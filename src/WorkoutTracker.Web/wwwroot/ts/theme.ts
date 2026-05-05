@@ -42,12 +42,16 @@ export function applyTheme(pref: ThemePreference): void {
 export function initTheme(): void {
   applyTheme(getStoredPreference());
 
-  const systemMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-  systemMediaQuery.addEventListener('change', () => {
-    if (getStoredPreference() === 'system') {
-      applyTheme('system');
-    }
-  });
+  try {
+    const systemMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    systemMediaQuery.addEventListener('change', () => {
+      if (getStoredPreference() === 'system') {
+        applyTheme('system');
+      }
+    });
+  } catch {
+    // OS preference tracking unavailable; skip live updates
+  }
 
   const btn = document.getElementById('theme-btn');
   const menu = document.getElementById('theme-menu');
@@ -94,6 +98,8 @@ export function initTheme(): void {
     if (e.key === 'Escape') {
       e.preventDefault();
       closeMenu();
+    } else if (e.key === 'Tab') {
+      closeMenu(false);
     }
   });
 
