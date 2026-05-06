@@ -257,6 +257,49 @@ app.MapGet("/api/workouts/{workoutId:guid}", async (Guid workoutId, WorkoutTrack
     });
 });
 
+app.MapGet("/api/workouts/{workoutId:guid}/previous-performance", async (Guid workoutId, WorkoutTrackerDbContext db) =>
+{
+    var workoutExists = await db.PlannedWorkouts
+        .AnyAsync(pw => pw.PlannedWorkoutId == workoutId);
+
+    if (!workoutExists)
+    {
+        return Results.Json(new { error = "Workout not found." }, statusCode: 404);
+    }
+
+    var lastSession = await db.WorkoutSessions
+        .Where(ws => ws.PlannedWorkoutId == workoutId)
+        .OrderByDescending(ws => EF.Property<DateTime>(ws, "CompletedAt"))
+        .Select(ws => new
+        {
+            CompletedAt = EF.Property<DateTime>(ws, "CompletedAt"),
+            LoggedExercises = ws.LoggedExercises.Select(le => new
+            {
+                le.ExerciseId,
+                le.LoggedWeight,
+                le.Effort,
+            }).ToList(),
+        })
+        .FirstOrDefaultAsync();
+
+    if (lastSession is null)
+    {
+        return Results.Ok(new
+        {
+            hasPreviousSession = false,
+            completedAt = (DateTime?)null,
+            exercises = Array.Empty<object>(),
+        });
+    }
+
+    return Results.Ok(new
+    {
+        hasPreviousSession = true,
+        completedAt = (DateTime?)lastSession.CompletedAt,
+        exercises = lastSession.LoggedExercises,
+    });
+});
+
 app.MapPost("/api/workouts", async (HttpContext context, WorkoutTrackerDbContext db) =>
 {
     var body = await context.Request.ReadFromJsonAsync<WorkoutCreateRequest>();

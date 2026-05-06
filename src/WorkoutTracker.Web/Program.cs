@@ -140,6 +140,22 @@ app.MapGet("/api/workouts/{workoutId:guid}", async (Guid workoutId, ILogger<Prog
     }
 });
 
+app.MapGet("/api/workouts/{workoutId:guid}/previous-performance", async (Guid workoutId, ILogger<Program> logger, IHttpClientFactory httpClientFactory) =>
+{
+    try
+    {
+        var client = httpClientFactory.CreateClient("api");
+        var response = await client.GetAsync($"/api/workouts/{workoutId}/previous-performance");
+        var content = await response.Content.ReadAsStringAsync();
+        return Results.Content(content, "application/json", statusCode: (int)response.StatusCode);
+    }
+    catch (Exception ex)
+    {
+        WebProxyLog.ProxyError(logger, $"GET /api/workouts/{workoutId}/previous-performance", ex);
+        return Results.Json(new { error = "API unavailable." }, statusCode: 502);
+    }
+});
+
 app.MapPost("/api/workouts", async (ILogger<Program> logger, HttpRequest request, IHttpClientFactory httpClientFactory) =>
 {
     try
