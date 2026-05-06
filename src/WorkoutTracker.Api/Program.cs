@@ -592,6 +592,32 @@ app.MapGet("/api/sessions", async (WorkoutTrackerDbContext db) =>
     return Results.Ok(sessions);
 });
 
+app.MapGet("/api/sessions/latest", async (WorkoutTrackerDbContext db) =>
+{
+    var latest = await db.WorkoutSessions
+        .Include(ws => ws.PlannedWorkout)
+        .OrderByDescending(ws => EF.Property<DateTime>(ws, "CompletedAt"))
+        .ThenByDescending(ws => ws.WorkoutSessionId)
+        .Select(ws => new
+        {
+            WorkoutName = ws.WorkoutName ?? (ws.PlannedWorkout != null ? ws.PlannedWorkout.Name : null),
+            CompletedAt = EF.Property<DateTime>(ws, "CompletedAt"),
+        })
+        .FirstOrDefaultAsync();
+
+    if (latest is null)
+    {
+        return Results.Ok(new { hasSession = false });
+    }
+
+    return Results.Ok(new
+    {
+        hasSession = true,
+        workoutName = latest.WorkoutName,
+        completedAt = (DateTime?)latest.CompletedAt,
+    });
+});
+
 app.Run();
 
 // Expose Program class for WebApplicationFactory in tests

@@ -9,6 +9,7 @@ Auto-generated from all feature plans. Last updated: 2026-05-06
 - TypeScript 5.9.3 (frontend — primary change); C# on .NET 10 (backend — no changes) + Vanilla TypeScript (no JS frameworks or libraries); `window.matchMedia` Web API for OS preference detection; `localStorage` for preference persistence (007-dark-mode-toggle)
 - `localStorage` key `workout-tracker-theme` with values `'light' | 'dark' | 'system'` — no database changes (007-dark-mode-toggle)
 - PostgreSQL via EF Core — no schema changes; all required data is in the existing `workout_session` and `logged_exercise` tables (008-workout-exercise-history)
+- PostgreSQL via EF Core — no schema changes; all required data is in the existing `workout_session` table (009-last-workout-hint)
 
 - C# on .NET 10.0 (backend), TypeScript 5.9.3 (frontend) + ASP.NET Core minimal API, .NET Aspire 13.1.2, Entity Framework Core with Npgsql, vanilla TypeScript (no JS frameworks) (003-add-exercises)
 
@@ -28,9 +29,9 @@ npm test && npm run lint
 C# on .NET 10.0 (backend), TypeScript 5.9.3 (frontend): Follow standard conventions
 
 ## Recent Changes
+- 009-last-workout-hint: Added C# on .NET 10.0 (backend), TypeScript 5.9.3 (frontend) + ASP.NET Core minimal API, .NET Aspire 13.1.2, Entity Framework Core with Npgsql, vanilla TypeScript (no JS frameworks)
 - 008-workout-exercise-history: Added C# on .NET 10.0 (backend), TypeScript 5.9.3 (frontend) + ASP.NET Core minimal API, .NET Aspire 13.1.2, Entity Framework Core with Npgsql, vanilla TypeScript (no JS frameworks)
 - 007-dark-mode-toggle: Added TypeScript 5.9.3 (frontend — primary change); C# on .NET 10 (backend — no changes) + Vanilla TypeScript (no JS frameworks or libraries); `window.matchMedia` Web API for OS preference detection; `localStorage` for preference persistence
-- 006-reorder-exercises: Added C# on .NET 10.0 (backend — no changes), TypeScript 5.9.3 (frontend — primary change) + ASP.NET Core minimal API, .NET Aspire 13.1.2, Entity Framework Core with Npgsql, vanilla TypeScript (no JS frameworks or libraries)
 
 
 <!-- MANUAL ADDITIONS START -->

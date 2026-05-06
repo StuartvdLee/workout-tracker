@@ -5,6 +5,12 @@ interface PlannedWorkout {
   readonly name: string;
 }
 
+interface LastWorkoutDto {
+  readonly hasSession: boolean;
+  readonly workoutName?: string;
+  readonly completedAt?: string;
+}
+
 let loadedWorkoutIds: Set<string> = new Set();
 
 export function render(container: HTMLElement): void {
@@ -42,6 +48,37 @@ export function render(container: HTMLElement): void {
 
   loadedWorkoutIds = new Set();
   initForm();
+  const formEl = document.getElementById("workout-form");
+  if (formEl) {
+    void loadLastWorkoutHint(formEl);
+  }
+}
+
+async function loadLastWorkoutHint(formEl: HTMLElement): Promise<void> {
+  try {
+    const response = await fetch("/api/sessions/latest");
+    if (!response.ok) {
+      return;
+    }
+    const dto: LastWorkoutDto = await response.json();
+    if (!dto.hasSession || !dto.workoutName || !dto.completedAt) {
+      return;
+    }
+    if (!document.contains(formEl)) {
+      return;
+    }
+    const date = new Date(dto.completedAt).toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+    const hint = document.createElement("p");
+    hint.className = "workout-form__last-workout";
+    hint.textContent = `Last workout: ${dto.workoutName} \u2014 ${date}`;
+    formEl.appendChild(hint);
+  } catch {
+    // API unavailable — hint remains absent
+  }
 }
 
 function initForm(): void {
