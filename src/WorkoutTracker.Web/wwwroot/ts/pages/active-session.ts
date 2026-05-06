@@ -19,6 +19,18 @@ interface LogEntry {
   loggedEffort: number | null;
 }
 
+interface PreviousExerciseData {
+  readonly exerciseId: string;
+  readonly loggedWeight: string | null;
+  readonly effort: number | null;
+}
+
+interface PreviousPerformance {
+  readonly hasPreviousSession: boolean;
+  readonly completedAt: string | null;
+  readonly exercises: PreviousExerciseData[];
+}
+
 let workout: WorkoutDetail | null = null;
 let logEntries: Map<string, LogEntry> = new Map();
 let isSaving = false;
@@ -159,26 +171,50 @@ async function loadWorkout(workoutId: string): Promise<void> {
   const titleEl = document.getElementById("session-title") as HTMLElement | null;
   const errorEl = document.getElementById("session-error") as HTMLElement | null;
 
-  try {
-    const response = await fetch(`/api/workouts/${workoutId}`);
+  const [workoutResult, prevResult] = await Promise.allSettled([
+    fetch(`/api/workouts/${workoutId}`),
+    fetch(`/api/workouts/${workoutId}/previous-performance`),
+  ]);
 
-    if (response.ok) {
-      workout = await response.json();
-      if (titleEl && workout) {
-        titleEl.textContent = workout.name;
-      }
-      renderExerciseInputs();
-    } else {
-      if (titleEl) titleEl.textContent = "Workout";
-      if (errorEl) errorEl.textContent = "Failed to load workout. Please try again.";
-    }
+  // Handle workout fetch failure (blocks the whole page)
+  if (workoutResult.status === "rejected" || !workoutResult.value.ok) {
+    if (titleEl) titleEl.textContent = "Workout";
+    if (errorEl) errorEl.textContent = "Failed to load workout. Please try again.";
+    return;
+  }
+
+  try {
+    workout = await workoutResult.value.json();
   } catch {
     if (titleEl) titleEl.textContent = "Workout";
-    if (errorEl) errorEl.textContent = "An unexpected error occurred. Please try again.";
+    if (errorEl) errorEl.textContent = "Failed to load workout. Please try again.";
+    return;
   }
+  if (titleEl && workout) {
+    titleEl.textContent = workout.name;
+  }
+
+  // Determine previous-performance data to pass to renderer
+  let previousData: Map<string, PreviousExerciseData> | "error" | null = null;
+
+  if (prevResult.status === "fulfilled" && prevResult.value.ok) {
+    try {
+      const perf: PreviousPerformance = await prevResult.value.json();
+      if (perf.hasPreviousSession) {
+        previousData = new Map(perf.exercises.map((e) => [e.exerciseId, e]));
+      }
+      // hasPreviousSession === false → previousData stays null (first-session state)
+    } catch {
+      previousData = "error";
+    }
+  } else {
+    previousData = "error";
+  }
+
+  renderExerciseInputs(previousData);
 }
 
-function renderExerciseInputs(): void {
+function renderExerciseInputs(previousData: Map<string, PreviousExerciseData> | "error" | null): void {
   const exercisesEl = document.getElementById("session-exercises") as HTMLElement | null;
   if (!exercisesEl || !workout) return;
 
@@ -206,6 +242,55 @@ function renderExerciseInputs(): void {
       targetsDiv.textContent = targets.join(" ");
       item.appendChild(targetsDiv);
     }
+
+    // Previous performance display (inserted before inputs)
+    const previousDiv = document.createElement("div");
+    previousDiv.className = "active-session__exercise-previous";
+    previousDiv.id = `previous-${exercise.exerciseId}`;
+
+    if (previousData === "error") {
+      const errorSpan = document.createElement("span");
+      errorSpan.className = "active-session__previous-error";
+      errorSpan.textContent = "Could not load previous data";
+      previousDiv.appendChild(errorSpan);
+    } else {
+      const entry = previousData !== null ? previousData.get(exercise.exerciseId) : undefined;
+
+      if (entry !== undefined) {
+        // Build value string from non-null fields
+        const parts: string[] = [];
+        if (entry.loggedWeight !== null) parts.push(`${entry.loggedWeight} KG`);
+        if (entry.effort !== null) parts.push(`${entry.effort} — ${getEffortLabel(entry.effort)}`);
+
+        if (parts.length > 0) {
+          // State 2/3/4: weight, effort, or both available
+          const labelSpan = document.createElement("span");
+          labelSpan.className = "active-session__previous-label";
+          labelSpan.textContent = "Last time:";
+
+          const valueSpan = document.createElement("span");
+          valueSpan.className = "active-session__previous-value";
+          valueSpan.textContent = parts.join(" · ");
+
+          previousDiv.appendChild(labelSpan);
+          previousDiv.appendChild(valueSpan);
+        } else {
+          // State 5: entry exists but both fields null — treat same as first-session
+          const emptySpan = document.createElement("span");
+          emptySpan.className = "active-session__previous-empty";
+          emptySpan.textContent = "First session — no previous data";
+          previousDiv.appendChild(emptySpan);
+        }
+      } else {
+        // State 1: no session, or no map entry for this exercise
+        const emptySpan = document.createElement("span");
+        emptySpan.className = "active-session__previous-empty";
+        emptySpan.textContent = "First session — no previous data";
+        previousDiv.appendChild(emptySpan);
+      }
+    }
+
+    item.appendChild(previousDiv);
 
     const inputsDiv = document.createElement("div");
     inputsDiv.className = "active-session__exercise-inputs";

@@ -36,13 +36,13 @@
 /* === Dark Theme Overrides === */
 [data-theme="dark"] {
   --color-primary-light: #1e3a5f;
-  --color-error:         #f87171;
-  --color-error-bg:      #450a0a;
-  --color-text:          #f9fafb;
-  --color-text-light:    #9ca3af;
-  --color-bg:            #111827;
-  --color-white:         #1f2937;
-  --color-border:        #374151;
+  --color-error: #f87171;
+  --color-error-bg: #450a0a;
+  --color-text: #f9fafb;
+  --color-text-light: #9ca3af;
+  --color-bg: #111827;
+  --color-white: #1f2937;
+  --color-border: #374151;
 }
 
 /* === Reset === */
@@ -211,7 +211,7 @@ body {
 }
 
 /* === Content Inner Layout === */
-.content > .app {
+.content>.app {
   width: 100%;
   max-width: var(--max-content-width);
   display: flex;
@@ -836,6 +836,7 @@ body {
 
 /* === Responsive: Desktop (768px+) === */
 @media (min-width: 768px) {
+
   /* Show topbar as a transparent floating strip, top-right only */
   .topbar {
     display: flex;
@@ -851,7 +852,7 @@ body {
     display: none;
   }
 
-  .content > .app {
+  .content>.app {
     padding-top: 4rem;
   }
 
@@ -1388,6 +1389,30 @@ body.is-dragging .workout-selected__drag-handle {
   color: var(--color-text-light);
 }
 
+.active-session__exercise-previous {
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+  min-height: 1.2em;
+}
+
+.active-session__previous-label {
+  color: var(--color-text-light);
+  margin-right: 0.25rem;
+}
+
+.active-session__previous-value {
+  color: var(--color-text-light);
+}
+
+.active-session__previous-empty {
+  color: var(--color-text-light);
+  font-style: italic;
+}
+
+.active-session__previous-error {
+  color: var(--color-error);
+}
+
 .active-session__exercise-inputs {
   display: flex;
   flex-direction: column;
@@ -1783,7 +1808,7 @@ body.is-dragging .workout-selected__drag-handle {
   padding: var(--spacing-xs) 0;
 }
 
-.history-session__exercise + .history-session__exercise {
+.history-session__exercise+.history-session__exercise {
   border-top: 1px solid var(--color-bg);
 }
 

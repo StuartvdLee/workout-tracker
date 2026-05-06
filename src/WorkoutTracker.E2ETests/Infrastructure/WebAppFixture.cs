@@ -518,6 +518,52 @@ public class WebAppFixture : WebApplicationFactory<Program>
             }
         });
 
+        // Mock API endpoint for previous performance (returns no previous session by default)
+        app.MapGet("/api/workouts/{workoutId}/previous-performance", (string workoutId) =>
+        {
+            bool workoutExists;
+            lock (_workoutsLock)
+            {
+                workoutExists = _workouts.Any(w =>
+                    string.Equals(w.PlannedWorkoutId, workoutId, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (!workoutExists)
+            {
+                return Results.Json(new { error = "Workout not found." }, statusCode: 404);
+            }
+
+            List<MockWorkoutSession> sessionSnapshot;
+            lock (_sessionsLock)
+            {
+                sessionSnapshot = [.. _sessions];
+            }
+
+            var lastSession = sessionSnapshot
+                .Where(s => string.Equals(s.PlannedWorkoutId, workoutId, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(s => s.CompletedAt)
+                .FirstOrDefault();
+
+            if (lastSession is null)
+            {
+                return Results.Ok(new
+                {
+                    hasPreviousSession = false,
+                    completedAt = (DateTime?)null,
+                    exercises = Array.Empty<object>(),
+                });
+            }
+
+            return Results.Ok(new
+            {
+                hasPreviousSession = true,
+                completedAt = (DateTime?)lastSession.CompletedAt,
+                exercises = lastSession.LoggedExercises
+                    .Select(le => new { le.ExerciseId, le.LoggedWeight, le.Effort })
+                    .ToArray(),
+            });
+        });
+
         // Mock API endpoint to create a workout session
         app.MapPost("/api/workouts/{workoutId}/sessions", async (string workoutId, HttpRequest request) =>
         {
