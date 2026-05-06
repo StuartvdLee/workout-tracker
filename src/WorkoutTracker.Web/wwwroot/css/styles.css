@@ -320,6 +320,12 @@ body {
   transform: scale(0.98);
 }
 
+.workout-form__last-workout {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-light);
+  text-align: center;
+}
+
 /* === Placeholder Pages === */
 .page-placeholder {
   width: 100%;

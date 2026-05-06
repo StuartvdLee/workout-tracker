@@ -468,6 +468,67 @@ public class SessionApiTests : IAsyncLifetime
         Assert.Empty(result.Exercises);
     }
 
+    // --- GET /api/sessions/latest ---
+
+    [Fact]
+    public async Task GetLatestSession_ReturnsHasSessionFalse_WhenNoSessions()
+    {
+        var response = await _client.GetAsync("/api/sessions/latest");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<LatestSessionDto>();
+        Assert.NotNull(result);
+        Assert.False(result.HasSession);
+    }
+
+    [Fact]
+    public async Task GetLatestSession_ReturnsWorkoutNameAndDate_AfterOneSession()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Push Day", "Push-up");
+        await CreateSessionAsync(workoutId, exerciseId);
+
+        var response = await _client.GetAsync("/api/sessions/latest");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<LatestSessionDto>();
+        Assert.NotNull(result);
+        Assert.True(result.HasSession);
+        Assert.Equal("Push Day", result.WorkoutName);
+        Assert.NotNull(result.CompletedAt);
+    }
+
+    [Fact]
+    public async Task GetLatestSession_ReturnsMostRecentSession_WhenMultipleSessionsExist()
+    {
+        var (workoutIdA, exerciseIdA) = await CreateWorkoutWithExerciseAsync("Push Day", "Push-up");
+        var (workoutIdB, exerciseIdB) = await CreateWorkoutWithExerciseAsync("Pull Day", "Pull-up");
+
+        await CreateSessionAsync(workoutIdA, exerciseIdA);
+        await CreateSessionAsync(workoutIdB, exerciseIdB);
+
+        var response = await _client.GetAsync("/api/sessions/latest");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<LatestSessionDto>();
+        Assert.NotNull(result);
+        Assert.True(result.HasSession);
+        Assert.Equal("Pull Day", result.WorkoutName);
+    }
+
+    [Fact]
+    public async Task GetLatestSession_ReturnsHasSessionFalse_AfterReset()
+    {
+        var response = await _client.GetAsync("/api/sessions/latest");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var doc = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonDocument>();
+        Assert.NotNull(doc);
+        var root = doc.RootElement;
+        Assert.False(root.GetProperty("hasSession").GetBoolean());
+        Assert.False(root.TryGetProperty("workoutName", out _));
+        Assert.False(root.TryGetProperty("completedAt", out _));
+    }
+
     // --- Helpers ---
 
     private async Task<(Guid WorkoutId, Guid ExerciseId)> CreateWorkoutWithExerciseAsync(
@@ -511,5 +572,6 @@ public class SessionApiTests : IAsyncLifetime
     private sealed record SessionWithDetailDto(Guid WorkoutSessionId, Guid? PlannedWorkoutId, string? WorkoutName, List<SessionLoggedExerciseDto> LoggedExercises);
     private sealed record PreviousPerformanceDto(bool HasPreviousSession, DateTime? CompletedAt, List<PreviousExerciseDataDto> Exercises);
     private sealed record PreviousExerciseDataDto(Guid ExerciseId, string? LoggedWeight, int? Effort);
+    private sealed record LatestSessionDto(bool HasSession, string? WorkoutName, DateTime? CompletedAt);
     private sealed record ErrorDto(string Error);
 }
