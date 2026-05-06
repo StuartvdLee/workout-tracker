@@ -183,7 +183,13 @@ async function loadWorkout(workoutId: string): Promise<void> {
     return;
   }
 
-  workout = await workoutResult.value.json();
+  try {
+    workout = await workoutResult.value.json();
+  } catch {
+    if (titleEl) titleEl.textContent = "Workout";
+    if (errorEl) errorEl.textContent = "Failed to load workout. Please try again.";
+    return;
+  }
   if (titleEl && workout) {
     titleEl.textContent = workout.name;
   }
@@ -192,11 +198,15 @@ async function loadWorkout(workoutId: string): Promise<void> {
   let previousData: Map<string, PreviousExerciseData> | "error" | null = null;
 
   if (prevResult.status === "fulfilled" && prevResult.value.ok) {
-    const perf: PreviousPerformance = await prevResult.value.json();
-    if (perf.hasPreviousSession) {
-      previousData = new Map(perf.exercises.map((e) => [e.exerciseId, e]));
+    try {
+      const perf: PreviousPerformance = await prevResult.value.json();
+      if (perf.hasPreviousSession) {
+        previousData = new Map(perf.exercises.map((e) => [e.exerciseId, e]));
+      }
+      // hasPreviousSession === false → previousData stays null (first-session state)
+    } catch {
+      previousData = "error";
     }
-    // hasPreviousSession === false → previousData stays null (first-session state)
   } else {
     previousData = "error";
   }

@@ -270,6 +270,7 @@ app.MapGet("/api/workouts/{workoutId:guid}/previous-performance", async (Guid wo
     var lastSession = await db.WorkoutSessions
         .Where(ws => ws.PlannedWorkoutId == workoutId)
         .OrderByDescending(ws => EF.Property<DateTime>(ws, "CompletedAt"))
+        .ThenByDescending(ws => ws.WorkoutSessionId)
         .Select(ws => new
         {
             CompletedAt = EF.Property<DateTime>(ws, "CompletedAt"),

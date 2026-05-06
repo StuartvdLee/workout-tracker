@@ -1396,16 +1396,16 @@ body.is-dragging .workout-selected__drag-handle {
 }
 
 .active-session__previous-label {
-  color: var(--color-text-muted);
+  color: var(--color-text-light);
   margin-right: 0.25rem;
 }
 
 .active-session__previous-value {
-  color: var(--color-text-muted);
+  color: var(--color-text-light);
 }
 
 .active-session__previous-empty {
-  color: var(--color-text-muted);
+  color: var(--color-text-light);
   font-style: italic;
 }
 
