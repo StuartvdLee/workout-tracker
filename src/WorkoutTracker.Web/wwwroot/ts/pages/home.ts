@@ -48,10 +48,13 @@ export function render(container: HTMLElement): void {
 
   loadedWorkoutIds = new Set();
   initForm();
-  void loadLastWorkoutHint();
+  const formEl = document.getElementById("workout-form");
+  if (formEl) {
+    void loadLastWorkoutHint(formEl);
+  }
 }
 
-async function loadLastWorkoutHint(): Promise<void> {
+async function loadLastWorkoutHint(formEl: HTMLElement): Promise<void> {
   try {
     const response = await fetch("/api/sessions/latest");
     if (!response.ok) {
@@ -59,6 +62,9 @@ async function loadLastWorkoutHint(): Promise<void> {
     }
     const dto: LastWorkoutDto = await response.json();
     if (!dto.hasSession || !dto.workoutName || !dto.completedAt) {
+      return;
+    }
+    if (!document.contains(formEl)) {
       return;
     }
     const date = new Date(dto.completedAt).toLocaleDateString("en-GB", {
@@ -69,8 +75,7 @@ async function loadLastWorkoutHint(): Promise<void> {
     const hint = document.createElement("p");
     hint.className = "workout-form__last-workout";
     hint.textContent = `Last workout: ${dto.workoutName} \u2014 ${date}`;
-    const form = document.getElementById("workout-form");
-    form?.appendChild(hint);
+    formEl.appendChild(hint);
   } catch {
     // API unavailable — hint remains absent
   }

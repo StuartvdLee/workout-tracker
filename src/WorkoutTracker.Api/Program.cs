@@ -595,10 +595,12 @@ app.MapGet("/api/sessions", async (WorkoutTrackerDbContext db) =>
 app.MapGet("/api/sessions/latest", async (WorkoutTrackerDbContext db) =>
 {
     var latest = await db.WorkoutSessions
+        .Include(ws => ws.PlannedWorkout)
         .OrderByDescending(ws => EF.Property<DateTime>(ws, "CompletedAt"))
+        .ThenByDescending(ws => ws.WorkoutSessionId)
         .Select(ws => new
         {
-            WorkoutName = ws.WorkoutName,
+            WorkoutName = ws.WorkoutName ?? (ws.PlannedWorkout != null ? ws.PlannedWorkout.Name : null),
             CompletedAt = EF.Property<DateTime>(ws, "CompletedAt"),
         })
         .FirstOrDefaultAsync();
