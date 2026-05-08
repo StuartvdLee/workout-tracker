@@ -16,6 +16,8 @@ public class LoggedExercise
 
     public int? Effort { get; set; }
 
+    public int? Sequence { get; set; }
+
     public WorkoutSession WorkoutSession { get; set; } = null!;
 
     public Exercise Exercise { get; set; } = null!;

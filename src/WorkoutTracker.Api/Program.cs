@@ -542,6 +542,7 @@ app.MapPost("/api/workouts/{workoutId:guid}/sessions", async (Guid workoutId, Ht
             LoggedWeight = item.LoggedWeight,
             Notes = item.Notes,
             Effort = item.Effort,
+            Sequence = item.Sequence,
         });
     }
 
@@ -560,6 +561,7 @@ app.MapPost("/api/workouts/{workoutId:guid}/sessions", async (Guid workoutId, Ht
             le.LoggedWeight,
             le.Notes,
             le.Effort,
+            le.Sequence,
         }).ToList(),
     }, statusCode: 201);
 });
@@ -647,6 +649,7 @@ internal sealed class SessionLoggedExerciseItem
     public string? LoggedWeight { get; set; }
     public string? Notes { get; set; }
     public int? Effort { get; set; }
+    public int? Sequence { get; set; }
 }
 
 internal sealed class ExerciseCreateRequest

@@ -1,5 +1,5 @@
 import { navigate } from "../router.js";
-import { getEffortLabel } from "../utils.js";
+import { getEffortLabel, applyOrder } from "../utils.js";
 
 interface WorkoutExercise {
   readonly exerciseId: string;
@@ -35,6 +35,7 @@ let workout: WorkoutDetail | null = null;
 let logEntries: Map<string, LogEntry> = new Map();
 let isSaving = false;
 let hasChanges = false;
+let exerciseOrder: string[] | null = null;
 
 export async function render(container: HTMLElement): Promise<void> {
   const params = new URLSearchParams(window.location.search);
@@ -54,6 +55,10 @@ export async function render(container: HTMLElement): Promise<void> {
   logEntries = new Map();
   isSaving = false;
   hasChanges = false;
+  exerciseOrder = null;
+
+  const orderParam = params.get("order");
+  exerciseOrder = orderParam ? orderParam.split(",").map(id => id.trim()).filter(id => id.length > 0) : null;
 
   container.innerHTML = `
     <div class="active-session">
@@ -189,6 +194,12 @@ async function loadWorkout(workoutId: string): Promise<void> {
     if (titleEl) titleEl.textContent = "Workout";
     if (errorEl) errorEl.textContent = "Failed to load workout. Please try again.";
     return;
+  }
+
+  // Apply shuffled order if provided via ?order= URL param (T011).
+  // This reorders workout.exercises in memory only — PlannedWorkoutExercise.Sequence is never modified.
+  if (workout !== null && exerciseOrder !== null) {
+    workout = { ...workout, exercises: applyOrder(workout.exercises, exerciseOrder) };
   }
   if (titleEl && workout) {
     titleEl.textContent = workout.name;
@@ -412,13 +423,17 @@ async function handleSave(): Promise<void> {
   saveBtn.textContent = "Saving...";
 
   try {
-    const loggedExercises = workout.exercises.map((exercise) => {
+    // Records the actual display position (sequence) for each exercise.
+    // Note: this POST targets /sessions only — no PUT/PATCH to any workout template
+    // endpoint is made here or anywhere in the session flow (T021, US3).
+    const loggedExercises = workout.exercises.map((exercise, index) => {
       const entry = logEntries.get(exercise.exerciseId);
       const weightStr = entry?.loggedWeight ?? "";
       return {
         exerciseId: exercise.exerciseId,
         loggedWeight: weightStr !== "" ? weightStr : null,
         effort: entry?.loggedEffort ?? null,
+        sequence: index,
       };
     });
 
