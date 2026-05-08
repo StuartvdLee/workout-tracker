@@ -5,11 +5,20 @@ export interface PrestartExercisePreview {
 export function getVisibleModalButtons(modal: HTMLElement): HTMLButtonElement[] {
   return Array.from(modal.querySelectorAll<HTMLButtonElement>("button:not([disabled])"))
     .filter((button) => {
+      let node: HTMLElement | null = button;
+      while (node && node !== document.body) {
+        const style = getComputedStyle(node);
+        if (style.display === "none" || style.visibility === "hidden") {
+          return false;
+        }
+        node = node.parentElement;
+      }
+
       if (button.getClientRects().length === 0) {
         return false;
       }
 
-      return getComputedStyle(button).display !== "none";
+      return true;
     });
 }
 
