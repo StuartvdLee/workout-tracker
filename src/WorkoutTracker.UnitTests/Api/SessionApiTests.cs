@@ -287,6 +287,156 @@ public class SessionApiTests : IAsyncLifetime
         Assert.Equal("Test Workout", sessions[0].WorkoutName);
     }
 
+    // --- POST /api/workouts/{id}/sessions — Sequence field ---
+
+    [Fact]
+    public async Task CreateSession_StoresSequence_WhenProvided()
+    {
+        var exerciseAResponse = await _client.PostAsJsonAsync("/api/exercises", new { Name = "Sequence Exercise A" });
+        exerciseAResponse.EnsureSuccessStatusCode();
+        var exerciseA = (await exerciseAResponse.Content.ReadFromJsonAsync<ExerciseDto>())!;
+
+        var exerciseBResponse = await _client.PostAsJsonAsync("/api/exercises", new { Name = "Sequence Exercise B" });
+        exerciseBResponse.EnsureSuccessStatusCode();
+        var exerciseB = (await exerciseBResponse.Content.ReadFromJsonAsync<ExerciseDto>())!;
+
+        var workoutResponse = await _client.PostAsJsonAsync("/api/workouts", new
+        {
+            Name = "Sequence Workout",
+            Exercises = new[]
+            {
+                new { ExerciseId = exerciseA.ExerciseId },
+                new { ExerciseId = exerciseB.ExerciseId },
+            }
+        });
+        workoutResponse.EnsureSuccessStatusCode();
+        var workout = (await workoutResponse.Content.ReadFromJsonAsync<WorkoutDto>())!;
+
+        // Submit with reversed (shuffled) sequence: B first (0), A second (1)
+        var postResponse = await _client.PostAsJsonAsync(
+            $"/api/workouts/{workout.PlannedWorkoutId}/sessions",
+            new
+            {
+                LoggedExercises = new[]
+                {
+                    new { ExerciseId = exerciseB.ExerciseId, LoggedWeight = (string?)null, Effort = (int?)null, Sequence = (int?)0 },
+                    new { ExerciseId = exerciseA.ExerciseId, LoggedWeight = (string?)null, Effort = (int?)null, Sequence = (int?)1 },
+                }
+            });
+
+        Assert.Equal(HttpStatusCode.Created, postResponse.StatusCode);
+
+        var session = await postResponse.Content.ReadFromJsonAsync<SessionDetailDto>();
+        Assert.NotNull(session);
+        Assert.Equal(2, session.LoggedExercises.Count);
+
+        var loggedB = session.LoggedExercises.First(le => le.ExerciseId == exerciseB.ExerciseId);
+        var loggedA = session.LoggedExercises.First(le => le.ExerciseId == exerciseA.ExerciseId);
+        Assert.Equal(0, loggedB.Sequence);
+        Assert.Equal(1, loggedA.Sequence);
+    }
+
+    [Fact]
+    public async Task CreateSession_AcceptsNullSequence_ForBackwardCompatibility()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Null Sequence Workout", "Null Sequence Exercise");
+
+        var postResponse = await _client.PostAsJsonAsync(
+            $"/api/workouts/{workoutId}/sessions",
+            new
+            {
+                LoggedExercises = new[]
+                {
+                    new { ExerciseId = exerciseId, LoggedWeight = (string?)null, Effort = (int?)null, Sequence = (int?)null }
+                }
+            });
+
+        Assert.Equal(HttpStatusCode.Created, postResponse.StatusCode);
+
+        var session = await postResponse.Content.ReadFromJsonAsync<SessionDetailDto>();
+        Assert.NotNull(session);
+        Assert.Single(session.LoggedExercises);
+        Assert.Null(session.LoggedExercises[0].Sequence);
+    }
+
+    [Fact]
+    public async Task CreateSession_StoresNullSequence_WhenSequenceOmittedFromPayload()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Omitted Sequence Workout", "Omitted Sequence Exercise");
+
+        var postResponse = await _client.PostAsJsonAsync(
+            $"/api/workouts/{workoutId}/sessions",
+            new
+            {
+                LoggedExercises = new[]
+                {
+                    new { ExerciseId = exerciseId, LoggedWeight = (string?)null }
+                }
+            });
+
+        Assert.Equal(HttpStatusCode.Created, postResponse.StatusCode);
+
+        var session = await postResponse.Content.ReadFromJsonAsync<SessionDetailDto>();
+        Assert.NotNull(session);
+        Assert.Single(session.LoggedExercises);
+        Assert.Null(session.LoggedExercises[0].Sequence);
+    }
+
+    [Fact]
+    public async Task CreateSession_WithShuffledSequence_DoesNotModifyWorkoutTemplateOrder()
+    {
+        var exerciseAResponse = await _client.PostAsJsonAsync("/api/exercises", new { Name = "Template Order A" });
+        exerciseAResponse.EnsureSuccessStatusCode();
+        var exerciseA = (await exerciseAResponse.Content.ReadFromJsonAsync<ExerciseDto>())!;
+
+        var exerciseBResponse = await _client.PostAsJsonAsync("/api/exercises", new { Name = "Template Order B" });
+        exerciseBResponse.EnsureSuccessStatusCode();
+        var exerciseB = (await exerciseBResponse.Content.ReadFromJsonAsync<ExerciseDto>())!;
+
+        var exerciseCResponse = await _client.PostAsJsonAsync("/api/exercises", new { Name = "Template Order C" });
+        exerciseCResponse.EnsureSuccessStatusCode();
+        var exerciseC = (await exerciseCResponse.Content.ReadFromJsonAsync<ExerciseDto>())!;
+
+        // Create workout with A→B→C order
+        var workoutResponse = await _client.PostAsJsonAsync("/api/workouts", new
+        {
+            Name = "Template Immutability Workout",
+            Exercises = new[]
+            {
+                new { ExerciseId = exerciseA.ExerciseId },
+                new { ExerciseId = exerciseB.ExerciseId },
+                new { ExerciseId = exerciseC.ExerciseId },
+            }
+        });
+        workoutResponse.EnsureSuccessStatusCode();
+        var workout = (await workoutResponse.Content.ReadFromJsonAsync<WorkoutDto>())!;
+
+        // Submit session with shuffled order: C first (0), A second (1), B third (2)
+        var postResponse = await _client.PostAsJsonAsync(
+            $"/api/workouts/{workout.PlannedWorkoutId}/sessions",
+            new
+            {
+                LoggedExercises = new[]
+                {
+                    new { ExerciseId = exerciseC.ExerciseId, LoggedWeight = (string?)null, Sequence = (int?)0 },
+                    new { ExerciseId = exerciseA.ExerciseId, LoggedWeight = (string?)null, Sequence = (int?)1 },
+                    new { ExerciseId = exerciseB.ExerciseId, LoggedWeight = (string?)null, Sequence = (int?)2 },
+                }
+            });
+        Assert.Equal(HttpStatusCode.Created, postResponse.StatusCode);
+
+        // Verify that GET /api/workouts/{id} still returns exercises in A→B→C template order
+        var templateResponse = await _client.GetAsync($"/api/workouts/{workout.PlannedWorkoutId}");
+        Assert.Equal(HttpStatusCode.OK, templateResponse.StatusCode);
+
+        var templateWorkout = await templateResponse.Content.ReadFromJsonAsync<WorkoutDetailDto>();
+        Assert.NotNull(templateWorkout);
+        Assert.Equal(3, templateWorkout.Exercises.Count);
+        Assert.Equal(exerciseA.ExerciseId, templateWorkout.Exercises[0].ExerciseId);
+        Assert.Equal(exerciseB.ExerciseId, templateWorkout.Exercises[1].ExerciseId);
+        Assert.Equal(exerciseC.ExerciseId, templateWorkout.Exercises[2].ExerciseId);
+    }
+
     // --- GET /api/workouts/{id}/previous-performance ---
 
     [Fact]
@@ -566,9 +716,11 @@ public class SessionApiTests : IAsyncLifetime
 
     private sealed record ExerciseDto(Guid ExerciseId, string Name, List<object> Muscles);
     private sealed record WorkoutDto(Guid PlannedWorkoutId, string Name, int ExerciseCount);
+    private sealed record WorkoutDetailDto(Guid PlannedWorkoutId, string Name, int ExerciseCount, List<WorkoutExerciseDto> Exercises);
+    private sealed record WorkoutExerciseDto(Guid ExerciseId, string Name, string? TargetReps, string? TargetWeight);
     private sealed record SessionDto(Guid WorkoutSessionId, Guid? PlannedWorkoutId, string? WorkoutName);
     private sealed record SessionDetailDto(Guid WorkoutSessionId, Guid PlannedWorkoutId, string WorkoutName, List<SessionLoggedExerciseDto> LoggedExercises);
-    private sealed record SessionLoggedExerciseDto(Guid LoggedExerciseId, Guid ExerciseId, string? LoggedWeight, string? Notes, int? Effort);
+    private sealed record SessionLoggedExerciseDto(Guid LoggedExerciseId, Guid ExerciseId, string? LoggedWeight, string? Notes, int? Effort, int? Sequence);
     private sealed record SessionWithDetailDto(Guid WorkoutSessionId, Guid? PlannedWorkoutId, string? WorkoutName, List<SessionLoggedExerciseDto> LoggedExercises);
     private sealed record PreviousPerformanceDto(bool HasPreviousSession, DateTime? CompletedAt, List<PreviousExerciseDataDto> Exercises);
     private sealed record PreviousExerciseDataDto(Guid ExerciseId, string? LoggedWeight, int? Effort);

@@ -60,6 +60,16 @@ public class WorkoutsPageTests
         await page.Locator(".workout-list__name").Filter(new() { HasText = name }).WaitForAsync();
     }
 
+    /// <summary>
+    /// Clicks the Start button on the first workout and confirms through the pre-start modal.
+    /// </summary>
+    private static async Task StartWorkoutViaPrestartModalAsync(IPage page)
+    {
+        await page.Locator(".workout-list__start-btn").First.ClickAsync();
+        await page.WaitForSelectorAsync("#workout-prestart-backdrop", new() { State = WaitForSelectorState.Visible });
+        await page.Locator("#prestart-start").ClickAsync();
+    }
+
     // ──────────────────────────────────────────
     // Navigation & Page Loading
     // ──────────────────────────────────────────
@@ -834,6 +844,8 @@ public class WorkoutsPageTests
 
             var startBtn = page.Locator(".workout-list__start-btn").First;
             await startBtn.ClickAsync();
+            await page.WaitForSelectorAsync("#workout-prestart-backdrop", new() { State = WaitForSelectorState.Visible });
+            await page.Locator("#prestart-start").ClickAsync();
 
             await Expect(page).ToHaveURLAsync(new Regex(@"/active-session\?id="));
         }

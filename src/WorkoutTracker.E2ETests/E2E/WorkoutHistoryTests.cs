@@ -66,6 +66,16 @@ public class WorkoutHistoryTests
     }
 
     /// <summary>
+    /// Clicks the Start button on the first workout and confirms through the pre-start modal.
+    /// </summary>
+    private static async Task StartWorkoutViaPrestartModalAsync(IPage page)
+    {
+        await page.Locator(".workout-list__start-btn").First.ClickAsync();
+        await page.WaitForSelectorAsync("#workout-prestart-backdrop", new() { State = WaitForSelectorState.Visible });
+        await page.Locator("#prestart-start").ClickAsync();
+    }
+
+    /// <summary>
     /// Seeds an exercise, creates a workout via API, logs a session, and returns the exerciseId.
     /// </summary>
     private async Task<(string WorkoutId, string ExerciseId)> CreateWorkoutAndSessionViaApiAsync(
@@ -292,7 +302,7 @@ public class WorkoutHistoryTests
             await NavigateToWorkoutsAsync(page);
             await CreateWorkoutViaUIAsync(page, "Push Day", "Bench Press");
 
-            await page.Locator(".workout-list__start-btn").First.ClickAsync();
+            await StartWorkoutViaPrestartModalAsync(page);
 
             await Expect(page).ToHaveURLAsync(new Regex(@"/active-session\?id="));
         }
@@ -312,7 +322,7 @@ public class WorkoutHistoryTests
             await NavigateToWorkoutsAsync(page);
             await CreateWorkoutViaUIAsync(page, "Push Day", "Bench Press");
 
-            await page.Locator(".workout-list__start-btn").First.ClickAsync();
+            await StartWorkoutViaPrestartModalAsync(page);
             await Expect(page).ToHaveURLAsync(new Regex(@"/active-session\?id="));
 
             var exerciseItem = page.Locator(".active-session__exercise-item");
@@ -335,7 +345,7 @@ public class WorkoutHistoryTests
             await NavigateToWorkoutsAsync(page);
             await CreateWorkoutViaUIAsync(page, "Push Day", "Bench Press");
 
-            await page.Locator(".workout-list__start-btn").First.ClickAsync();
+            await StartWorkoutViaPrestartModalAsync(page);
             await Expect(page).ToHaveURLAsync(new Regex(@"/active-session\?id="));
 
             await page.Locator("#session-cancel").ClickAsync();
@@ -359,7 +369,7 @@ public class WorkoutHistoryTests
             await NavigateToWorkoutsAsync(page);
             await CreateWorkoutViaUIAsync(page, "Push Day", "Bench Press");
 
-            await page.Locator(".workout-list__start-btn").First.ClickAsync();
+            await StartWorkoutViaPrestartModalAsync(page);
             await Expect(page).ToHaveURLAsync(new Regex(@"/active-session\?id="));
 
             // Get the exerciseId from the exercise item
@@ -390,7 +400,7 @@ public class WorkoutHistoryTests
             await NavigateToWorkoutsAsync(page);
             await CreateWorkoutViaUIAsync(page, "Push Day", "Bench Press");
 
-            await page.Locator(".workout-list__start-btn").First.ClickAsync();
+            await StartWorkoutViaPrestartModalAsync(page);
             await Expect(page).ToHaveURLAsync(new Regex(@"/active-session\?id="));
 
             // Cancel without making any changes
@@ -416,7 +426,7 @@ public class WorkoutHistoryTests
             await NavigateToWorkoutsAsync(page);
             await CreateWorkoutViaUIAsync(page, "Push Day", "Bench Press");
 
-            await page.Locator(".workout-list__start-btn").First.ClickAsync();
+            await StartWorkoutViaPrestartModalAsync(page);
             await Expect(page).ToHaveURLAsync(new Regex(@"/active-session\?id="));
 
             // Make a change by filling in a reps input
@@ -446,7 +456,7 @@ public class WorkoutHistoryTests
             await NavigateToWorkoutsAsync(page);
             await CreateWorkoutViaUIAsync(page, "Push Day", "Bench Press");
 
-            await page.Locator(".workout-list__start-btn").First.ClickAsync();
+            await StartWorkoutViaPrestartModalAsync(page);
             await Expect(page).ToHaveURLAsync(new Regex(@"/active-session\?id="));
 
             // Make a change and cancel to trigger discard modal
@@ -479,7 +489,7 @@ public class WorkoutHistoryTests
             await NavigateToWorkoutsAsync(page);
             await CreateWorkoutViaUIAsync(page, "Push Day", "Bench Press");
 
-            await page.Locator(".workout-list__start-btn").First.ClickAsync();
+            await StartWorkoutViaPrestartModalAsync(page);
             await Expect(page).ToHaveURLAsync(new Regex(@"/active-session\?id="));
 
             // Make a change and cancel to trigger discard modal
