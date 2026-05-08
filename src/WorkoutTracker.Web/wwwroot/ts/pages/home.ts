@@ -1,4 +1,5 @@
 import { navigate } from "../router.js";
+import { renderPrestartExercisePreview, trapModalTabKey } from "../prestart-modal.js";
 import { shuffle } from "../utils.js";
 
 interface PlannedWorkout {
@@ -217,30 +218,10 @@ function initPreStartModal(): void {
       return;
     }
 
-    if (event.key === "Tab") {
-      const modal = backdrop.querySelector(".prestart-modal") as HTMLElement | null;
-      if (!modal) return;
+    const modal = backdrop.querySelector(".prestart-modal") as HTMLElement | null;
+    if (!modal) return;
 
-      const focusable = Array.from(
-        modal.querySelectorAll<HTMLElement>("button:not([disabled])")
-      ).filter(el => el.style.display !== "none");
-      if (focusable.length === 0) return;
-
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-
-      if (event.shiftKey) {
-        if (document.activeElement === first) {
-          event.preventDefault();
-          last.focus();
-        }
-      } else {
-        if (document.activeElement === last) {
-          event.preventDefault();
-          first.focus();
-        }
-      }
-    }
+    trapModalTabKey(event, modal);
   });
 }
 
@@ -295,23 +276,7 @@ function closePreStartModal(): void {
 function renderExercisePreview(exercises: readonly WorkoutExercise[]): void {
   const list = document.getElementById("prestart-exercise-list") as HTMLOListElement | null;
   if (!list) return;
-
-  list.innerHTML = "";
-
-  if (exercises.length === 0) {
-    const li = document.createElement("li");
-    li.className = "prestart-modal__exercise-empty";
-    li.textContent = "No exercises configured";
-    list.appendChild(li);
-    return;
-  }
-
-  for (const exercise of exercises) {
-    const li = document.createElement("li");
-    li.className = "prestart-modal__exercise-item";
-    li.textContent = exercise.name;
-    list.appendChild(li);
-  }
+  renderPrestartExercisePreview(list, exercises);
 }
 
 function handleShuffleToggle(): void {
