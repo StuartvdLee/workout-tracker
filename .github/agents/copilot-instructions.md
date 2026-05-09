@@ -1,6 +1,6 @@
 # stark-ray Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-05-08
+Auto-generated from all feature plans. Last updated: 2026-05-09
 
 ## Active Technologies
 - PostgreSQL via EF Core — adding one nullable integer column (`effort`) to the existing `logged_exercise` table (005-active-workout-effort)
@@ -11,6 +11,7 @@ Auto-generated from all feature plans. Last updated: 2026-05-08
 - PostgreSQL via EF Core — no schema changes; all required data is in the existing `workout_session` and `logged_exercise` tables (008-workout-exercise-history)
 - PostgreSQL via EF Core — no schema changes; all required data is in the existing `workout_session` table (009-last-workout-hint)
 - PostgreSQL via EF Core — one new nullable `int` column on `logged_exercise`; migration required (010-randomize-exercise-order)
+- No changes — no schema changes, no migration required (011-randomise-exercise-order)
 
 - C# on .NET 10.0 (backend), TypeScript 5.9.3 (frontend) + ASP.NET Core minimal API, .NET Aspire 13.1.2, Entity Framework Core with Npgsql, vanilla TypeScript (no JS frameworks) (003-add-exercises)
 
@@ -30,9 +31,9 @@ npm test && npm run lint
 C# on .NET 10.0 (backend), TypeScript 5.9.3 (frontend): Follow standard conventions
 
 ## Recent Changes
+- 011-randomise-exercise-order: Added C# on .NET 10.0 (backend), TypeScript 5.9.3 (frontend) + ASP.NET Core minimal API, .NET Aspire 13.1.2, Entity Framework Core with Npgsql, vanilla TypeScript (no JS frameworks)
 - 010-randomize-exercise-order: Added C# on .NET 10.0 (backend), TypeScript 5.9.3 (frontend) + ASP.NET Core minimal API, .NET Aspire 13.1.2, Entity Framework Core with Npgsql, vanilla TypeScript (no JS frameworks)
 - 009-last-workout-hint: Added C# on .NET 10.0 (backend), TypeScript 5.9.3 (frontend) + ASP.NET Core minimal API, .NET Aspire 13.1.2, Entity Framework Core with Npgsql, vanilla TypeScript (no JS frameworks)
-- 008-workout-exercise-history: Added C# on .NET 10.0 (backend), TypeScript 5.9.3 (frontend) + ASP.NET Core minimal API, .NET Aspire 13.1.2, Entity Framework Core with Npgsql, vanilla TypeScript (no JS frameworks)
 
 
 <!-- MANUAL ADDITIONS START -->

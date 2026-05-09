@@ -67,7 +67,7 @@ public class WorkoutsPageTests
     {
         await page.Locator(".workout-list__start-btn").First.ClickAsync();
         await page.WaitForSelectorAsync("#workout-prestart-backdrop", new() { State = WaitForSelectorState.Visible });
-        await page.Locator("#prestart-start").ClickAsync();
+        await page.Locator("#prestart-no").ClickAsync();
     }
 
     // ──────────────────────────────────────────
@@ -845,7 +845,7 @@ public class WorkoutsPageTests
             var startBtn = page.Locator(".workout-list__start-btn").First;
             await startBtn.ClickAsync();
             await page.WaitForSelectorAsync("#workout-prestart-backdrop", new() { State = WaitForSelectorState.Visible });
-            await page.Locator("#prestart-start").ClickAsync();
+            await page.Locator("#prestart-no").ClickAsync();
 
             await Expect(page).ToHaveURLAsync(new Regex(@"/active-session\?id="));
         }
@@ -853,5 +853,80 @@ public class WorkoutsPageTests
         {
             await page.CloseAsync();
         }
+    }
+
+    [Fact]
+    public async Task PrestartModal_ClickYes_NavigatesWithOrderParam()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await CreateTwoExerciseWorkoutViaApiAsync(page);
+            await NavigateToWorkoutsAsync(page);
+
+            await page.Locator(".workout-list__start-btn").First.ClickAsync();
+            await page.WaitForSelectorAsync("#workout-prestart-backdrop", new() { State = WaitForSelectorState.Visible });
+            await page.Locator("#prestart-yes").ClickAsync();
+
+            await Expect(page).ToHaveURLAsync(new Regex(@"/active-session\?id=.*&order="));
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task HomeToggle_Enabled_NavigatesWithOrderParam()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await CreateTwoExerciseWorkoutViaApiAsync(page, "Toggle Test Workout");
+
+            await page.Locator(".sidebar__link[data-page='home']").ClickAsync();
+            await page.Locator("#workout-select option:not([disabled])").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
+            await page.Locator("#workout-select").SelectOptionAsync(new SelectOptionValue { Label = "Toggle Test Workout" });
+
+            var toggle = page.Locator("#home-randomise-toggle");
+            await Expect(toggle).ToBeVisibleAsync();
+            await toggle.ClickAsync();
+
+            await page.Locator("button[type='submit']").ClickAsync();
+
+            await Expect(page).ToHaveURLAsync(new Regex(@"/active-session\?id=.*&order="));
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    private async Task<string> CreateTwoExerciseWorkoutViaApiAsync(IPage page, string workoutName = "Two Exercise Workout")
+    {
+        await SeedExerciseAsync(page, "Bench Press");
+        await SeedExerciseAsync(page, "Squat");
+
+        var exercisesResponse = await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/exercises");
+        var exercisesJson = await exercisesResponse.JsonAsync();
+        var exerciseIds = exercisesJson?.EnumerateArray()
+            .Select(e => e.GetProperty("exerciseId").GetString()!)
+            .Take(2)
+            .ToArray() ?? [];
+
+        var createResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts", new()
+        {
+            DataObject = new
+            {
+                name = workoutName,
+                exercises = new[]
+                {
+                    new { exerciseId = exerciseIds[0] },
+                    new { exerciseId = exerciseIds[1] },
+                },
+            },
+        });
+        var workoutData = await createResponse.JsonAsync();
+        return workoutData?.GetProperty("plannedWorkoutId").GetString()!;
     }
 }

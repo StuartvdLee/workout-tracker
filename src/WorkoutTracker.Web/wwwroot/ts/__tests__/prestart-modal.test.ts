@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
 
-import { getVisibleModalButtons, renderPrestartExercisePreview, trapModalTabKey } from '../prestart-modal';
+import { getVisibleModalButtons, trapModalTabKey } from '../prestart-modal';
 
 function mockRects(element: HTMLElement, hasRects: boolean): void {
   Object.defineProperty(element, 'getClientRects', {
@@ -111,14 +111,5 @@ describe('trapModalTabKey', () => {
     trapModalTabKey(event, modal);
 
     expect(event.defaultPrevented).toBe(false);
-  });
-});
-
-describe('renderPrestartExercisePreview', () => {
-  it('renders empty-state content when there are no exercises', () => {
-    const list = document.createElement('ol');
-    renderPrestartExercisePreview(list, []);
-
-    expect(list.querySelector('.prestart-modal__exercise-empty')?.textContent).toBe('No exercises configured');
   });
 });

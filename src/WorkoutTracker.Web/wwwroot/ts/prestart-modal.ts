@@ -1,7 +1,3 @@
-export interface PrestartExercisePreview {
-  readonly name: string;
-}
-
 export function getVisibleModalButtons(modal: HTMLElement): HTMLButtonElement[] {
   return Array.from(modal.querySelectorAll<HTMLButtonElement>("button:not([disabled])"))
     .filter((button) => {
@@ -46,27 +42,5 @@ export function trapModalTabKey(event: KeyboardEvent, modal: HTMLElement): void 
   if (document.activeElement === last) {
     event.preventDefault();
     first.focus();
-  }
-}
-
-export function renderPrestartExercisePreview(
-  list: HTMLOListElement,
-  exercises: readonly PrestartExercisePreview[]
-): void {
-  list.innerHTML = "";
-
-  if (exercises.length === 0) {
-    const li = document.createElement("li");
-    li.className = "prestart-modal__exercise-empty";
-    li.textContent = "No exercises configured";
-    list.appendChild(li);
-    return;
-  }
-
-  for (const exercise of exercises) {
-    const li = document.createElement("li");
-    li.className = "prestart-modal__exercise-item";
-    li.textContent = exercise.name;
-    list.appendChild(li);
   }
 }

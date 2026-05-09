@@ -1,10 +1,10 @@
 import { navigate } from "../router.js";
-import { renderPrestartExercisePreview, trapModalTabKey } from "../prestart-modal.js";
 import { shuffle } from "../utils.js";
 
 interface PlannedWorkout {
   readonly plannedWorkoutId: string;
   readonly name: string;
+  readonly exerciseCount: number;
 }
 
 interface WorkoutExercise {
@@ -24,12 +24,7 @@ interface LastWorkoutDto {
   readonly completedAt?: string;
 }
 
-let loadedWorkoutIds: Set<string> = new Set();
-
-// Pre-start modal state
-let prestartWorkout: WorkoutDetail | null = null;
-let prestartCurrentOrder: WorkoutExercise[] = [];
-let prestartIsShuffled = false;
+let loadedWorkouts: Map<string, PlannedWorkout> = new Map();
 
 export function render(container: HTMLElement): void {
   container.innerHTML = `
@@ -50,6 +45,16 @@ export function render(container: HTMLElement): void {
             <option value="" disabled selected>Select a workout</option>
           </select>
         </div>
+        <div class="workout-form__randomise" id="home-randomise-row" style="display:none;">
+          <label class="workout-form__randomise-label" for="home-randomise-toggle">Randomise exercise order</label>
+          <button
+            class="workout-form__randomise-btn"
+            type="button"
+            id="home-randomise-toggle"
+            role="switch"
+            aria-checked="false"
+          ><span class="sr-only">Randomise exercise order</span></button>
+        </div>
         <div
           class="workout-form__error"
           id="workout-error"
@@ -61,37 +66,12 @@ export function render(container: HTMLElement): void {
           Start Workout
         </button>
       </form>
-      <div class="prestart-modal-backdrop" id="workout-prestart-backdrop" style="display:none;">
-        <div class="prestart-modal" role="dialog" aria-modal="true" aria-labelledby="prestart-modal-title">
-          <h2 class="prestart-modal__title" id="prestart-modal-title">Start Workout</h2>
-          <div class="prestart-modal__shuffle" id="prestart-shuffle-row">
-            <label class="prestart-modal__shuffle-label" for="prestart-shuffle-toggle">Randomise order</label>
-            <button
-              class="prestart-modal__shuffle-btn"
-              type="button"
-              id="prestart-shuffle-toggle"
-              role="switch"
-              aria-checked="false"
-            ><span class="sr-only">Randomise order</span></button>
-          </div>
-          <ol class="prestart-modal__exercise-list" id="prestart-exercise-list" aria-label="Exercise order preview"></ol>
-          <button class="prestart-modal__reshuffle-btn" type="button" id="prestart-reshuffle" style="display:none;">Re-shuffle</button>
-          <div class="prestart-modal__actions">
-            <button class="prestart-modal__start-btn" type="button" id="prestart-start">Start Workout</button>
-            <button class="prestart-modal__cancel-btn" type="button" id="prestart-cancel">Cancel</button>
-          </div>
-        </div>
-      </div>
     </div>
   `;
 
-  loadedWorkoutIds = new Set();
-  prestartWorkout = null;
-  prestartCurrentOrder = [];
-  prestartIsShuffled = false;
+  loadedWorkouts = new Map();
 
   initForm();
-  initPreStartModal();
   const formEl = document.getElementById("workout-form");
   if (formEl) {
     void loadLastWorkoutHint(formEl);
@@ -129,6 +109,7 @@ function initForm(): void {
   const form = document.getElementById("workout-form") as HTMLFormElement | null;
   const select = document.getElementById("workout-select") as HTMLSelectElement | null;
   const errorEl = document.getElementById("workout-error") as HTMLElement | null;
+  const toggleBtn = document.getElementById("home-randomise-toggle") as HTMLButtonElement | null;
 
   if (!form || !select || !errorEl) {
     return;
@@ -145,6 +126,12 @@ function initForm(): void {
     if (select.value && isValidWorkoutValue(select.value)) {
       clearError(select, errorEl);
     }
+    updateRandomiseRowVisibility(select.value);
+  });
+
+  toggleBtn?.addEventListener("click", () => {
+    const current = toggleBtn.getAttribute("aria-checked") === "true";
+    toggleBtn.setAttribute("aria-checked", String(!current));
   });
 }
 
@@ -156,7 +143,7 @@ async function populateWorkoutOptions(select: HTMLSelectElement): Promise<void> 
     }
 
     const workouts: PlannedWorkout[] = await response.json();
-    loadedWorkoutIds = new Set(workouts.map((w) => w.plannedWorkoutId));
+    loadedWorkouts = new Map(workouts.map((w) => [w.plannedWorkoutId, w]));
 
     for (const w of workouts) {
       const optionEl = document.createElement("option");
@@ -166,6 +153,19 @@ async function populateWorkoutOptions(select: HTMLSelectElement): Promise<void> 
     }
   } catch {
     // API unavailable — dropdown remains empty
+  }
+}
+
+function updateRandomiseRowVisibility(selectedValue: string): void {
+  const row = document.getElementById("home-randomise-row") as HTMLElement | null;
+  const toggleBtn = document.getElementById("home-randomise-toggle") as HTMLButtonElement | null;
+  if (!row) return;
+
+  const workout = loadedWorkouts.get(selectedValue);
+  const show = workout !== undefined && workout.exerciseCount >= 2;
+  row.style.display = show ? "" : "none";
+  if (!show && toggleBtn) {
+    toggleBtn.setAttribute("aria-checked", "false");
   }
 }
 
@@ -179,6 +179,14 @@ async function handleStartWorkout(select: HTMLSelectElement, errorEl: HTMLElemen
 
   clearError(select, errorEl);
 
+  const toggleBtn = document.getElementById("home-randomise-toggle") as HTMLButtonElement | null;
+  const isRandomise = toggleBtn?.getAttribute("aria-checked") === "true";
+
+  if (!isRandomise) {
+    navigate(`/active-session?id=${selectedValue}`);
+    return;
+  }
+
   try {
     const response = await fetch(`/api/workouts/${selectedValue}`);
     if (!response.ok) {
@@ -186,141 +194,17 @@ async function handleStartWorkout(select: HTMLSelectElement, errorEl: HTMLElemen
       return;
     }
     const workout: WorkoutDetail = await response.json();
-    openPreStartModal(workout);
+    const order = shuffle(workout.exercises).map((ex) => ex.exerciseId).join(",");
+    navigate(`/active-session?id=${selectedValue}&order=${order}`);
   } catch {
     navigate(`/active-session?id=${selectedValue}`);
-  }
-}
-
-// === Pre-start Modal =========================================================
-
-function initPreStartModal(): void {
-  const backdrop = document.getElementById("workout-prestart-backdrop") as HTMLElement | null;
-  if (!backdrop) return;
-
-  const cancelBtn = document.getElementById("prestart-cancel") as HTMLButtonElement | null;
-  const startBtn = document.getElementById("prestart-start") as HTMLButtonElement | null;
-  const shuffleToggle = document.getElementById("prestart-shuffle-toggle") as HTMLButtonElement | null;
-  const reshuffleBtn = document.getElementById("prestart-reshuffle") as HTMLButtonElement | null;
-
-  cancelBtn?.addEventListener("click", () => { closePreStartModal(); });
-  startBtn?.addEventListener("click", () => { handleConfirmStart(); });
-  shuffleToggle?.addEventListener("click", () => { handleShuffleToggle(); });
-  reshuffleBtn?.addEventListener("click", () => { handleReshuffle(); });
-
-  backdrop.addEventListener("click", (event: Event) => {
-    if (event.target === backdrop) closePreStartModal();
-  });
-
-  backdrop.addEventListener("keydown", (event: KeyboardEvent) => {
-    if (event.key === "Escape") {
-      closePreStartModal();
-      return;
-    }
-
-    const modal = backdrop.querySelector(".prestart-modal") as HTMLElement | null;
-    if (!modal) return;
-
-    trapModalTabKey(event, modal);
-  });
-}
-
-function openPreStartModal(workout: WorkoutDetail): void {
-  const backdrop = document.getElementById("workout-prestart-backdrop") as HTMLElement | null;
-  const shuffleRow = document.getElementById("prestart-shuffle-row") as HTMLElement | null;
-  const startBtn = document.getElementById("prestart-start") as HTMLButtonElement | null;
-  const cancelBtn = document.getElementById("prestart-cancel") as HTMLButtonElement | null;
-  const shuffleToggle = document.getElementById("prestart-shuffle-toggle") as HTMLButtonElement | null;
-  const reshuffleBtn = document.getElementById("prestart-reshuffle") as HTMLButtonElement | null;
-
-  if (!backdrop) return;
-
-  prestartWorkout = workout;
-  prestartCurrentOrder = [...workout.exercises];
-  prestartIsShuffled = false;
-
-  if (shuffleToggle) shuffleToggle.setAttribute("aria-checked", "false");
-  if (reshuffleBtn) reshuffleBtn.style.display = "none";
-
-  if (shuffleRow) {
-    shuffleRow.style.display = workout.exercises.length >= 2 ? "" : "none";
-  }
-
-  if (startBtn) {
-    startBtn.disabled = workout.exercises.length === 0;
-  }
-
-  renderExercisePreview(prestartCurrentOrder);
-
-  backdrop.style.display = "";
-
-  if (workout.exercises.length > 0) {
-    startBtn?.focus();
-  } else {
-    cancelBtn?.focus();
-  }
-}
-
-function closePreStartModal(): void {
-  const backdrop = document.getElementById("workout-prestart-backdrop") as HTMLElement | null;
-  if (backdrop) backdrop.style.display = "none";
-
-  prestartWorkout = null;
-  prestartCurrentOrder = [];
-  prestartIsShuffled = false;
-
-  const submitBtn = document.querySelector<HTMLButtonElement>(".workout-form__button");
-  submitBtn?.focus();
-}
-
-function renderExercisePreview(exercises: readonly WorkoutExercise[]): void {
-  const list = document.getElementById("prestart-exercise-list") as HTMLOListElement | null;
-  if (!list) return;
-  renderPrestartExercisePreview(list, exercises);
-}
-
-function handleShuffleToggle(): void {
-  const toggleBtn = document.getElementById("prestart-shuffle-toggle") as HTMLButtonElement | null;
-  const reshuffleBtn = document.getElementById("prestart-reshuffle") as HTMLButtonElement | null;
-  if (!toggleBtn || !prestartWorkout) return;
-
-  const newChecked = toggleBtn.getAttribute("aria-checked") !== "true";
-  toggleBtn.setAttribute("aria-checked", String(newChecked));
-
-  if (newChecked) {
-    prestartCurrentOrder = shuffle(prestartWorkout.exercises);
-    if (reshuffleBtn) reshuffleBtn.style.display = "";
-  } else {
-    prestartCurrentOrder = [...prestartWorkout.exercises];
-    if (reshuffleBtn) reshuffleBtn.style.display = "none";
-  }
-
-  prestartIsShuffled = newChecked;
-  renderExercisePreview(prestartCurrentOrder);
-}
-
-function handleReshuffle(): void {
-  if (!prestartWorkout) return;
-  prestartCurrentOrder = shuffle(prestartWorkout.exercises);
-  renderExercisePreview(prestartCurrentOrder);
-}
-
-function handleConfirmStart(): void {
-  if (!prestartWorkout) return;
-  const workoutId = prestartWorkout.plannedWorkoutId;
-
-  if (prestartIsShuffled) {
-    const order = prestartCurrentOrder.map(ex => ex.exerciseId).join(",");
-    navigate(`/active-session?id=${workoutId}&order=${encodeURIComponent(order)}`);
-  } else {
-    navigate(`/active-session?id=${workoutId}`);
   }
 }
 
 // =============================================================================
 
 function isValidWorkoutValue(value: string): boolean {
-  return loadedWorkoutIds.has(value);
+  return loadedWorkouts.has(value);
 }
 
 function showError(select: HTMLSelectElement, errorEl: HTMLElement, message: string): void {

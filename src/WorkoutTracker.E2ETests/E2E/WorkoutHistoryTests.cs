@@ -72,7 +72,7 @@ public class WorkoutHistoryTests
     {
         await page.Locator(".workout-list__start-btn").First.ClickAsync();
         await page.WaitForSelectorAsync("#workout-prestart-backdrop", new() { State = WaitForSelectorState.Visible });
-        await page.Locator("#prestart-start").ClickAsync();
+        await page.Locator("#prestart-no").ClickAsync();
     }
 
     /// <summary>
