@@ -61,13 +61,12 @@ public class WorkoutsPageTests
     }
 
     /// <summary>
-    /// Clicks the Start button on the first workout and confirms through the pre-start modal.
+    /// Clicks the Start button on the first workout. Workouts with fewer than 2 exercises
+    /// skip the pre-start modal and navigate directly to the active session.
     /// </summary>
     private static async Task StartWorkoutViaPrestartModalAsync(IPage page)
     {
         await page.Locator(".workout-list__start-btn").First.ClickAsync();
-        await page.WaitForSelectorAsync("#workout-prestart-backdrop", new() { State = WaitForSelectorState.Visible });
-        await page.Locator("#prestart-no").ClickAsync();
     }
 
     // ──────────────────────────────────────────
@@ -844,9 +843,7 @@ public class WorkoutsPageTests
 
             var startBtn = page.Locator(".workout-list__start-btn").First;
             await startBtn.ClickAsync();
-            await page.WaitForSelectorAsync("#workout-prestart-backdrop", new() { State = WaitForSelectorState.Visible });
-            await page.Locator("#prestart-no").ClickAsync();
-
+            // 1-exercise workouts skip the pre-start modal and navigate directly.
             await Expect(page).ToHaveURLAsync(new Regex(@"/active-session\?id="));
         }
         finally
@@ -884,6 +881,9 @@ public class WorkoutsPageTests
         {
             await CreateTwoExerciseWorkoutViaApiAsync(page, "Toggle Test Workout");
 
+            // Navigate to workouts then back to home so the page re-mounts and fetches the new workout.
+            await page.Locator(".sidebar__link[data-page='workouts']").ClickAsync();
+            await page.WaitForSelectorAsync(".workouts-page");
             await page.Locator(".sidebar__link[data-page='home']").ClickAsync();
             await page.Locator("#workout-select option:not([disabled])").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
             await page.Locator("#workout-select").SelectOptionAsync(new SelectOptionValue { Label = "Toggle Test Workout" });

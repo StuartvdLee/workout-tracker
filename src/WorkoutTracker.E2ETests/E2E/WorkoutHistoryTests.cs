@@ -71,8 +71,7 @@ public class WorkoutHistoryTests
     private static async Task StartWorkoutViaPrestartModalAsync(IPage page)
     {
         await page.Locator(".workout-list__start-btn").First.ClickAsync();
-        await page.WaitForSelectorAsync("#workout-prestart-backdrop", new() { State = WaitForSelectorState.Visible });
-        await page.Locator("#prestart-no").ClickAsync();
+        // Workouts with fewer than 2 exercises skip the pre-start modal and navigate directly.
     }
 
     /// <summary>
