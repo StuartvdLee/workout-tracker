@@ -61,13 +61,12 @@ public class WorkoutsPageTests
     }
 
     /// <summary>
-    /// Clicks the Start button on the first workout and confirms through the pre-start modal.
+    /// Clicks the Start button on the first workout. Workouts with fewer than 2 exercises
+    /// skip the pre-start modal and navigate directly to the active session.
     /// </summary>
     private static async Task StartWorkoutViaPrestartModalAsync(IPage page)
     {
         await page.Locator(".workout-list__start-btn").First.ClickAsync();
-        await page.WaitForSelectorAsync("#workout-prestart-backdrop", new() { State = WaitForSelectorState.Visible });
-        await page.Locator("#prestart-start").ClickAsync();
     }
 
     // ──────────────────────────────────────────
@@ -844,14 +843,93 @@ public class WorkoutsPageTests
 
             var startBtn = page.Locator(".workout-list__start-btn").First;
             await startBtn.ClickAsync();
-            await page.WaitForSelectorAsync("#workout-prestart-backdrop", new() { State = WaitForSelectorState.Visible });
-            await page.Locator("#prestart-start").ClickAsync();
-
+            // 1-exercise workouts skip the pre-start modal and navigate directly.
             await Expect(page).ToHaveURLAsync(new Regex(@"/active-session\?id="));
         }
         finally
         {
             await page.CloseAsync();
         }
+    }
+
+    [Fact]
+    public async Task PrestartModal_ClickYes_NavigatesWithOrderParam()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await CreateTwoExerciseWorkoutViaApiAsync(page);
+            await NavigateToWorkoutsAsync(page);
+
+            await page.Locator(".workout-list__start-btn").First.ClickAsync();
+            await page.WaitForSelectorAsync("#workout-prestart-backdrop", new() { State = WaitForSelectorState.Visible });
+            await page.Locator("#prestart-yes").ClickAsync();
+
+            await Expect(page).ToHaveURLAsync(new Regex(@"/active-session\?id=.*&order="));
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task HomeToggle_Enabled_NavigatesWithOrderParam()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await CreateTwoExerciseWorkoutViaApiAsync(page, "Toggle Test Workout");
+
+            // Navigate to workouts then back to home so the page re-mounts and fetches the new workout.
+            await page.Locator(".sidebar__link[data-page='workouts']").ClickAsync();
+            await page.WaitForSelectorAsync(".workouts-page");
+            await page.Locator(".sidebar__link[data-page='home']").ClickAsync();
+            await page.Locator("#workout-select option:not([disabled])").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
+            await page.Locator("#workout-select").SelectOptionAsync(new SelectOptionValue { Label = "Toggle Test Workout" });
+
+            var toggle = page.Locator("#home-randomise-toggle");
+            await Expect(toggle).ToBeVisibleAsync();
+            await toggle.ClickAsync();
+
+            await page.Locator("button[type='submit']").ClickAsync();
+
+            await Expect(page).ToHaveURLAsync(new Regex(@"/active-session\?id=.*&order="));
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    private async Task<string> CreateTwoExerciseWorkoutViaApiAsync(IPage page, string workoutName = "Two Exercise Workout")
+    {
+        await SeedExerciseAsync(page, "Bench Press");
+        await SeedExerciseAsync(page, "Squat");
+
+        var exercisesResponse = await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/exercises");
+        Assert.True(exercisesResponse.Ok, $"GET /api/exercises failed with status {exercisesResponse.Status}");
+        var exercisesJson = await exercisesResponse.JsonAsync();
+        var exerciseIds = exercisesJson?.EnumerateArray()
+            .Select(e => e.GetProperty("exerciseId").GetString()!)
+            .Take(2)
+            .ToArray() ?? [];
+        Assert.True(exerciseIds.Length >= 2, $"Expected at least 2 exercise IDs but got {exerciseIds.Length}");
+
+        var createResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts", new()
+        {
+            DataObject = new
+            {
+                name = workoutName,
+                exercises = new[]
+                {
+                    new { exerciseId = exerciseIds[0] },
+                    new { exerciseId = exerciseIds[1] },
+                },
+            },
+        });
+        Assert.True(createResponse.Ok, $"POST /api/workouts failed with status {createResponse.Status}");
+        var workoutData = await createResponse.JsonAsync();
+        return workoutData?.GetProperty("plannedWorkoutId").GetString()!;
     }
 }

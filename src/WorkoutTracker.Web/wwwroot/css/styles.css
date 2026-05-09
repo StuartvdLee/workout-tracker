@@ -1977,110 +1977,6 @@ html[data-theme-pref="system"] .topbar__theme-icon--system {
   margin-bottom: var(--spacing-lg);
 }
 
-/* --- Shuffle toggle row --- */
-
-.prestart-modal__shuffle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--spacing-md);
-}
-
-.prestart-modal__shuffle-label {
-  font-size: var(--font-size-base);
-  font-weight: 500;
-  color: var(--color-text);
-}
-
-.prestart-modal__shuffle-btn {
-  position: relative;
-  width: 2.75rem;
-  height: 1.5rem;
-  border: none;
-  border-radius: 9999px;
-  background-color: var(--color-border);
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-  flex-shrink: 0;
-  padding: 0;
-}
-
-.prestart-modal__shuffle-btn::after {
-  content: "";
-  position: absolute;
-  top: 0.125rem;
-  left: 0.125rem;
-  width: 1.25rem;
-  height: 1.25rem;
-  border-radius: 50%;
-  background-color: var(--color-white);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  transition: transform 0.2s ease;
-}
-
-.prestart-modal__shuffle-btn[aria-checked="true"] {
-  background-color: var(--color-primary);
-}
-
-.prestart-modal__shuffle-btn[aria-checked="true"]::after {
-  transform: translateX(1.25rem);
-}
-
-/* --- Exercise preview list --- */
-
-.prestart-modal__exercise-list {
-  list-style: decimal inside;
-  margin: 0 0 var(--spacing-md);
-  padding: 0;
-  max-height: 14rem;
-  overflow-y: auto;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background-color: var(--color-bg);
-}
-
-.prestart-modal__exercise-item,
-.prestart-modal__exercise-empty {
-  padding: var(--spacing-sm) var(--spacing-md);
-  font-size: var(--font-size-sm);
-  color: var(--color-text);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.prestart-modal__exercise-item:last-child,
-.prestart-modal__exercise-empty:last-child {
-  border-bottom: none;
-}
-
-.prestart-modal__exercise-empty {
-  color: var(--color-text-light);
-  font-style: italic;
-}
-
-/* --- Re-shuffle button --- */
-
-.prestart-modal__reshuffle-btn {
-  display: block;
-  width: 100%;
-  min-height: var(--min-touch-target);
-  padding: var(--spacing-sm) var(--spacing-md);
-  margin-bottom: var(--spacing-md);
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  font-family: var(--font-family);
-  color: var(--color-primary);
-  background-color: transparent;
-  border: 1px solid var(--color-primary);
-  border-radius: var(--radius);
-  cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
-}
-
-.prestart-modal__reshuffle-btn:hover {
-  background-color: var(--color-primary);
-  color: var(--color-white);
-}
-
 /* --- Action buttons --- */
 
 .prestart-modal__actions {
@@ -2128,4 +2024,94 @@ html[data-theme-pref="system"] .topbar__theme-icon--system {
 
 .prestart-modal__cancel-btn:hover {
   background-color: var(--color-bg);
+}
+
+.prestart-modal__yes-btn {
+  flex: 1;
+  min-height: var(--min-touch-target);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  font-family: var(--font-family);
+  color: var(--color-white);
+  background-color: var(--color-primary);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.prestart-modal__yes-btn:hover {
+  background-color: var(--color-primary-dark, #1d4ed8);
+}
+
+.prestart-modal__no-btn {
+  flex: 1;
+  min-height: var(--min-touch-target);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  font-family: var(--font-family);
+  color: var(--color-text);
+  background-color: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.prestart-modal__no-btn:hover {
+  background-color: var(--color-bg);
+}
+
+/* ============================================================================
+   Homepage — Randomise exercise order toggle row
+   ============================================================================ */
+
+.workout-form__randomise {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) 0;
+  margin-bottom: var(--spacing-sm);
+}
+
+.workout-form__randomise-label {
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.workout-form__randomise-btn {
+  position: relative;
+  width: 2.75rem;
+  height: 1.5rem;
+  border: none;
+  border-radius: 9999px;
+  background-color: var(--color-border);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.workout-form__randomise-btn::after {
+  content: "";
+  position: absolute;
+  top: 0.125rem;
+  left: 0.125rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background-color: var(--color-white);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease;
+}
+
+.workout-form__randomise-btn[aria-checked="true"] {
+  background-color: var(--color-primary);
+}
+
+.workout-form__randomise-btn[aria-checked="true"]::after {
+  transform: translateX(1.25rem);
 }
