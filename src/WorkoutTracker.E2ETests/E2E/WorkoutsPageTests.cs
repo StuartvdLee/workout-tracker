@@ -908,11 +908,13 @@ public class WorkoutsPageTests
         await SeedExerciseAsync(page, "Squat");
 
         var exercisesResponse = await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/exercises");
+        Assert.True(exercisesResponse.Ok, $"GET /api/exercises failed with status {exercisesResponse.Status}");
         var exercisesJson = await exercisesResponse.JsonAsync();
         var exerciseIds = exercisesJson?.EnumerateArray()
             .Select(e => e.GetProperty("exerciseId").GetString()!)
             .Take(2)
             .ToArray() ?? [];
+        Assert.True(exerciseIds.Length >= 2, $"Expected at least 2 exercise IDs but got {exerciseIds.Length}");
 
         var createResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts", new()
         {
@@ -926,6 +928,7 @@ public class WorkoutsPageTests
                 },
             },
         });
+        Assert.True(createResponse.Ok, $"POST /api/workouts failed with status {createResponse.Status}");
         var workoutData = await createResponse.JsonAsync();
         return workoutData?.GetProperty("plannedWorkoutId").GetString()!;
     }

@@ -164,7 +164,7 @@ function updateRandomiseRowVisibility(selectedValue: string): void {
   const workout = loadedWorkouts.get(selectedValue);
   const show = workout !== undefined && workout.exerciseCount >= 2;
   row.style.display = show ? "" : "none";
-  if (!show && toggleBtn) {
+  if (toggleBtn) {
     toggleBtn.setAttribute("aria-checked", "false");
   }
 }
