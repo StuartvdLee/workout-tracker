@@ -62,7 +62,6 @@ async function loadSessions(): Promise<void> {
 
 function formatDate(isoDate: string): string {
   const datePart = new Intl.DateTimeFormat("en-GB", {
-    weekday: "long",
     day: "numeric",
     month: "long",
     year: "numeric",
