@@ -1725,20 +1725,6 @@ body.is-dragging .workout-selected__drag-handle {
   font-size: var(--font-size-base);
 }
 
-/* === History Session Groups === */
-.history-group {
-  margin-bottom: var(--spacing-lg);
-}
-
-.history-group__date-label {
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--color-text-light);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: var(--spacing-sm);
-}
-
 /* === History Session Items === */
 .history-session {
   background-color: var(--color-white);
@@ -1766,14 +1752,19 @@ body.is-dragging .workout-selected__drag-handle {
 .history-session__workout-name {
   font-weight: 600;
   color: var(--color-text);
-  flex: 1;
-  min-width: 0;
 }
 
-.history-session__time {
+.history-session__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.history-session__date {
   font-size: var(--font-size-sm);
   color: var(--color-text-light);
-  flex-shrink: 0;
 }
 
 .history-session__exercise-count {

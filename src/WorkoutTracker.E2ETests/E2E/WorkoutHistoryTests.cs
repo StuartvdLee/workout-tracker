@@ -253,22 +253,32 @@ public class WorkoutHistoryTests
     }
 
     [Fact]
-    public async Task HistoryPage_DateGrouping_ShowsToday()
+    public async Task HistoryPage_NoGroupHeaders_FlatList()
     {
         var page = await CreatePageAsync();
         try
         {
             await CreateWorkoutAndSessionViaApiAsync(page);
-
             await NavigateToHistoryAsync(page);
+            await Expect(page.Locator(".history-session")).ToBeVisibleAsync();
+            await Expect(page.Locator(".history-group__date-label")).ToHaveCountAsync(0);
+        }
+        finally { await page.CloseAsync(); }
+    }
 
-            var dateLabel = page.Locator(".history-group__date-label").First;
-            await Expect(dateLabel).ToContainTextAsync("Today");
-        }
-        finally
+    [Fact]
+    public async Task HistoryPage_EntryShowsDateBelowName()
+    {
+        var page = await CreatePageAsync();
+        try
         {
-            await page.CloseAsync();
+            await CreateWorkoutAndSessionViaApiAsync(page);
+            await NavigateToHistoryAsync(page);
+            var dateEl = page.Locator(".history-session__date").First;
+            await Expect(dateEl).ToBeVisibleAsync();
+            await Expect(dateEl).ToContainTextAsync(new Regex(".+"));
         }
+        finally { await page.CloseAsync(); }
     }
 
     [Fact]
