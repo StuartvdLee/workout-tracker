@@ -19,7 +19,7 @@ A user opens the History page to review their past workouts. Instead of seeing s
 
 1. **Given** the user has completed workouts on multiple different days, **When** they open the History page, **Then** no "Today", "Yesterday", or "X days ago" headers are visible anywhere on the page.
 2. **Given** the user opens the History page, **When** they view any history entry, **Then** the workout name is displayed in bold as the primary text.
-3. **Given** the user opens the History page, **When** they view any history entry, **Then** the full date (e.g., "Saturday, 10 May 2026") is displayed directly below the workout name in a visually less prominent style.
+3. **Given** the user opens the History page, **When** they view any history entry, **Then** the full date and time (e.g., "10 May 2026 · 2:30 PM") are displayed directly below the workout name in a visually less prominent style.
 4. **Given** the user has multiple workouts logged on the same day, **When** they view the History page, **Then** each workout appears as its own entry with its own date — no grouping occurs.
 
 ---
@@ -44,7 +44,7 @@ A user taps on a history entry to see the exercises logged in that session. The 
 - What happens when the History page loads with no sessions? The empty-state message is displayed unchanged; the new entry layout is not relevant.
 - What happens when a session has no exercises logged? The entry still shows the workout name and date; when expanded, a "No exercises logged" message is displayed.
 - What happens on slow networks or delayed data? The existing loading state is shown while data loads; entries render with the new layout once data arrives.
-- What is the date format for a session completed today? The full date is shown (e.g., "Saturday, 10 May 2026") — no special-casing for "today" or "yesterday".
+- What is the date format for a session completed today? The full date and time are shown (e.g., "10 May 2026 · 2:30 PM") — no special-casing for "today" or "yesterday".
 
 ## Requirements *(mandatory)*
 
@@ -52,7 +52,7 @@ A user taps on a history entry to see the exercises logged in that session. The 
 
 - **FR-001**: The History page MUST NOT display any relative date group headers ("Today", "Yesterday", "X days ago").
 - **FR-002**: Each history entry MUST display the workout name as the primary, bold text.
-- **FR-003**: Each history entry MUST display the full, human-readable date (day of week, day number, month, and year) beneath the workout name as secondary text.
+- **FR-003**: Each history entry MUST display the full, human-readable date and time (day number, month, year, and time-of-day) beneath the workout name as secondary text.
 - **FR-004**: Sessions MUST be displayed in a flat list, ordered from most recent to oldest, with no grouping by date.
 - **FR-005**: The expand/collapse interaction on each entry MUST continue to function as before.
 - **FR-006**: The exercise count indicator on each entry MUST remain visible.

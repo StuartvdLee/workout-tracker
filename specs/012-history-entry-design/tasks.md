@@ -7,7 +7,7 @@
 (`HistoryPage_DateGrouping_ShowsToday`) must be replaced with two new tests that
 fail before implementation and pass after.
 
-**Organization**: This feature touches 3 files (no new files). Tasks are ordered
+**Organization**: This feature touches 3 source files (no new source files). Tasks are ordered
 so tests are written first (and fail), then implementation satisfies them.
 
 ## Format: `[ID] [P?] [Story] Description`

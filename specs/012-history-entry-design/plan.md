@@ -9,7 +9,7 @@ Remove the relative date group headers ("Today", "Yesterday", "X days ago") from
 
 ## Technical Context
 
-**Language/Version**: TypeScript 5.9.3 (frontend — all changes); C# on .NET 10.0 (backend — no changes)
+**Language/Version**: TypeScript 6.0.3 (frontend — all changes); C# on .NET 10.0 (backend — no changes)
 **Primary Dependencies**: Vanilla TypeScript; `Intl.DateTimeFormat` Web API for locale-aware date formatting
 **Storage**: N/A — no database or localStorage changes
 **Testing**: Vitest frontend unit tests; xUnit + Playwright E2E tests (`WorkoutHistoryTests.cs`)
@@ -17,7 +17,7 @@ Remove the relative date group headers ("Today", "Yesterday", "X days ago") from
 **Project Type**: Web application (SPA with Aspire orchestration)
 **Performance Goals**: Rendering is synchronous DOM manipulation — no measurable budget change from current implementation
 **Constraints**: No external JS/CSS frameworks; vanilla TypeScript only; existing E2E tests must pass (one existing test asserting the old group header must be replaced)
-**Scale/Scope**: Changes touch 3 files (`history.ts`, `styles.css`, `WorkoutHistoryTests.cs`); no new files
+**Scale/Scope**: Source changes touch 3 files (`history.ts`, `styles.css`, `WorkoutHistoryTests.cs`); additional specification files are added under `specs/012-history-entry-design/`
 
 ## Constitution Check
 
@@ -32,7 +32,7 @@ Remove the relative date group headers ("Today", "Yesterday", "X days ago") from
 
 - **Security**: Workout names and dates rendered to the DOM MUST continue to use the existing `escapeHtml()` utility. No new user inputs, API endpoints, or trust boundaries introduced. ✅
 
-- **User Experience Consistency**: `.history-session__date` uses `var(--color-text-light)` and `var(--font-size-sm)` — the same tokens used for muted secondary labels throughout the app. Date format: `Intl.DateTimeFormat` with `{ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }` (e.g., "Saturday, 10 May 2026") combined with the existing `formatTime()` output via " · " separator. Loading, empty, and error states are unchanged. ✅
+- **User Experience Consistency**: `.history-session__date` uses `var(--color-text-light)` and `var(--font-size-sm)` — the same tokens used for muted secondary labels throughout the app. Date format: `Intl.DateTimeFormat` with `{ day: 'numeric', month: 'long', year: 'numeric' }` (e.g., "10 May 2026") combined with the existing `formatTime()` output via " · " separator. Loading, empty, and error states are unchanged. ✅
 
 - **Performance**: Removing the grouping loop simplifies rendering. `Intl.DateTimeFormat` is a browser-native API with negligible overhead. No new network requests introduced. ✅
 
@@ -76,7 +76,7 @@ src/WorkoutTracker.Infrastructure/              # UNCHANGED
 src/WorkoutTracker.UnitTests/                   # UNCHANGED
 ```
 
-**Structure Decision**: Existing .NET Aspire solution structure preserved. No new projects, no new files. All changes are surgical modifications to three existing files.
+**Structure Decision**: Existing .NET Aspire solution structure preserved. No new projects. Source code changes are surgical modifications to three existing files, with feature documentation added under `specs/012-history-entry-design/`.
 
 ## Complexity Tracking
 
@@ -91,7 +91,7 @@ src/WorkoutTracker.UnitTests/                   # UNCHANGED
 **Key findings**:
 1. **No backend changes needed** — `workoutName` and `completedAt` are already present in the `WorkoutSession` objects returned by `GET /api/sessions`.
 2. **`Intl.DateTimeFormat`** is the correct browser-native API; consistent with the existing `formatTime()` usage in `history.ts`.
-3. **Date format**: `{ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }` → "Saturday, 10 May 2026". Combined with `formatTime()` via " · " → "Saturday, 10 May 2026 · 2:30 PM".
+3. **Date format**: `{ day: 'numeric', month: 'long', year: 'numeric' }` → "10 May 2026". Combined with `formatTime()` via " · " → "10 May 2026 · 2:30 PM".
 4. **E2E test**: `HistoryPage_DateGrouping_ShowsToday` must be replaced — the `.history-group__date-label` CSS class is deleted, making the existing assertion permanently invalid.
 5. **CSS delta**: Remove `.history-group`, `.history-group__date-label`, `.history-session__time`. Add `.history-session__info`, `.history-session__date`.
 

@@ -33,9 +33,9 @@ This feature is a **pure presentational change** — the same `WorkoutSession` d
 ```
 formatDate(completedAt):
   datePart = Intl.DateTimeFormat("en-GB", {
-    weekday: "long", day: "numeric", month: "long", year: "numeric"
+    day: "numeric", month: "long", year: "numeric"
   }).format(new Date(completedAt))
-  → "Saturday, 10 May 2026"
+  → "10 May 2026"
 
   timePart = Intl.DateTimeFormat("en-US", {
     hour: "numeric", minute: "2-digit", hour12: true
@@ -43,7 +43,7 @@ formatDate(completedAt):
   → "2:30 PM"
 
   result = `${datePart} · ${timePart}`
-  → "Saturday, 10 May 2026 · 2:30 PM"
+  → "10 May 2026 · 2:30 PM"
 ```
 
 ---

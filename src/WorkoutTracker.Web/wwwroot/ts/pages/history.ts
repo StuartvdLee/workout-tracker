@@ -17,6 +17,18 @@ interface WorkoutSession {
   readonly loggedExercises: LoggedExercise[];
 }
 
+const historyDateFormatter = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
+
+const historyTimeFormatter = new Intl.DateTimeFormat("en-US", {
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+});
+
 export async function render(container: HTMLElement): Promise<void> {
   container.innerHTML = `
     <div class="history-page">
@@ -61,21 +73,12 @@ async function loadSessions(): Promise<void> {
 }
 
 function formatDate(isoDate: string): string {
-  const datePart = new Intl.DateTimeFormat("en-GB", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(new Date(isoDate));
+  const datePart = historyDateFormatter.format(new Date(isoDate));
   return `${datePart} · ${formatTime(isoDate)}`;
 }
 
 function formatTime(isoDate: string): string {
-  const date = new Date(isoDate);
-  return new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  }).format(date);
+  return historyTimeFormatter.format(new Date(isoDate));
 }
 
 function renderSessions(sessions: WorkoutSession[], container: HTMLElement): void {
@@ -113,7 +116,7 @@ function renderSession(session: WorkoutSession): string {
       <button class="history-session__header" type="button" aria-expanded="false" aria-controls="session-details-${escapeHtml(session.workoutSessionId)}">
         <div class="history-session__info">
           <span class="history-session__workout-name">${escapeHtml(session.workoutName)}</span>
-          <span class="history-session__date">${formatDate(session.completedAt)}</span>
+          <span class="history-session__date">${escapeHtml(formatDate(session.completedAt))}</span>
         </div>
         <span class="history-session__exercise-count">${exerciseLabel}</span>
         <span class="history-session__toggle">▸</span>

@@ -69,4 +69,4 @@ Example output: `"10 May 2026 · 2:30 PM"`
 **Decision**: Use existing tokens only — no new design tokens needed.
 
 - `.history-session__date` uses `var(--color-text-light)` and `var(--font-size-sm)` — identical to the existing `.history-session__time` and `.history-session__exercise-count` styles.
-- `gap: 2px` (hardcoded) is used for the small spacing between name and date within the info block. A spacing token (`var(--spacing-xs)`) could be used but `2px` is a tighter visual separation appropriate for a label-sublabel relationship. This is consistent with how `gap: 2px` appears in other list-item designs in the codebase.
+- `gap: 2px` (hardcoded) is used for the small spacing between name and date within the info block. A spacing token (`var(--spacing-xs)`) could be used but `2px` is a deliberate new choice for a tighter label-sublabel relationship in this specific component.

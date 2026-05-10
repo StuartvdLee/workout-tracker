@@ -1747,6 +1747,7 @@ body.is-dragging .workout-selected__drag-handle {
   border: none;
   width: 100%;
   text-align: left;
+  font: inherit;
 }
 
 .history-session__header:hover {
