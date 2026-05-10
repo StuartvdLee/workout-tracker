@@ -1754,6 +1754,7 @@ body.is-dragging .workout-selected__drag-handle {
 }
 
 .history-session__workout-name {
+  font-size: var(--font-size-base);
   font-weight: 600;
   color: var(--color-text);
 }
