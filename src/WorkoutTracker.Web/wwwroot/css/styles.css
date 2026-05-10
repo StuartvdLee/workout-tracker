@@ -1743,6 +1743,10 @@ body.is-dragging .workout-selected__drag-handle {
   cursor: pointer;
   min-height: var(--min-touch-target);
   transition: background-color 0.15s ease;
+  background-color: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
 }
 
 .history-session__header:hover {
