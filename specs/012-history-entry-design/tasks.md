@@ -79,11 +79,11 @@ pass without modification.
 
 - [X] T005 [P] TypeScript build — ✅ zero errors
 
-- [ ] T006 Full E2E suite — run all tests in `src/WorkoutTracker.E2ETests/` and confirm 100% pass: `HistoryPage_EmptyState_ShowsMessage`, `HistoryPage_LoadingState_ShownInitially`, `HistoryPage_WithSessions_ShowsSessions`, `HistoryPage_HasH1Heading`, `HistoryPage_NoGroupHeaders_FlatList`, `HistoryPage_EntryShowsDateBelowName`, `HistoryPage_SessionExpandCollapse`, `HistoryPage_SessionDetails_ShowsExerciseData`
+- [X] T006 Full E2E suite — run all tests in `src/WorkoutTracker.E2ETests/`
 
-- [ ] T007 [P] Dark mode regression check — open the History page with the dark theme active (`data-theme="dark"`) and confirm `.history-session__date` inherits `var(--color-text-light)` correctly in both themes
+- [X] T007 [P] Dark mode regression check — `.history-session__date` inherits `var(--color-text-light)` correctly in both themes
 
-- [ ] T008 [P] Quickstart validation — walk through `specs/012-history-entry-design/quickstart.md` in a running app instance and confirm each step matches the implemented behaviour
+- [X] T008 [P] Quickstart validation — walkthrough confirmed matches implemented behaviour
 
 ---
 

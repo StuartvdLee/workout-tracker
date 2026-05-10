@@ -74,9 +74,9 @@ A user taps on a history entry to see the exercises logged in that session. The 
 
 ### Assumptions
 
-- The full date format is hard-coded to the `en-GB` locale (e.g., "Saturday, 10 May 2026"), consistent with how dates are formatted elsewhere in the app (see also: feature 009).
+- The full date format is hard-coded to the `en-GB` locale (e.g., "10 May 2026"), consistent with how dates are formatted elsewhere in the app (see also: feature 009). The weekday is not shown.
 - The existing exercise count badge and expand/collapse toggle remain in each entry header.
-- The time-of-day display (currently shown alongside the date group) may be retained as a secondary detail alongside or below the date, or dropped, as the date already provides enough temporal context — a reasonable default is to keep the time.
+- The time-of-day display is retained as a secondary detail combined with the date (e.g., "10 May 2026 · 2:30 PM").
 
 ## Success Criteria *(mandatory)*
 
