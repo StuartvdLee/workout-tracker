@@ -17,6 +17,18 @@ interface WorkoutSession {
   readonly loggedExercises: LoggedExercise[];
 }
 
+const historyDateFormatter = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
+
+const historyTimeFormatter = new Intl.DateTimeFormat("en-US", {
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+});
+
 export async function render(container: HTMLElement): Promise<void> {
   container.innerHTML = `
     <div class="history-page">
@@ -60,63 +72,19 @@ async function loadSessions(): Promise<void> {
   }
 }
 
-function getDateLabel(isoDate: string): string {
-  const date = new Date(isoDate);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const sessionDate = new Date(date);
-  sessionDate.setHours(0, 0, 0, 0);
-
-  const diffDays = Math.round(
-    (today.getTime() - sessionDate.getTime()) / (1000 * 60 * 60 * 24)
-  );
-
-  if (diffDays <= 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  return `${diffDays} days ago`;
+function formatDate(isoDate: string): string {
+  const datePart = historyDateFormatter.format(new Date(isoDate));
+  return `${datePart} · ${formatTime(isoDate)}`;
 }
 
 function formatTime(isoDate: string): string {
-  const date = new Date(isoDate);
-  return new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  }).format(date);
+  return historyTimeFormatter.format(new Date(isoDate));
 }
 
 function renderSessions(sessions: WorkoutSession[], container: HTMLElement): void {
-  // Group sessions by date label, preserving order (API returns DESC by completedAt)
-  const groups: { label: string; sessions: WorkoutSession[] }[] = [];
-  let currentLabel = "";
-
-  for (const session of sessions) {
-    const label = getDateLabel(session.completedAt);
-    if (label !== currentLabel) {
-      groups.push({ label, sessions: [session] });
-      currentLabel = label;
-    } else {
-      groups[groups.length - 1].sessions.push(session);
-    }
-  }
-
-  const html = groups
-    .map(
-      (group) => `
-      <div class="history-group" role="region" aria-label="Sessions from ${escapeHtml(group.label)}">
-        <div class="history-group__date-label">${escapeHtml(group.label)}</div>
-        ${group.sessions.map((s) => renderSession(s)).join("")}
-      </div>`
-    )
-    .join("");
-
-  container.innerHTML = html;
-
-  // Attach expand/collapse listeners
+  container.innerHTML = sessions.map((s) => renderSession(s)).join("");
   container.querySelectorAll<HTMLButtonElement>(".history-session__header").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      toggleSession(btn);
-    });
+    btn.addEventListener("click", () => { toggleSession(btn); });
   });
 }
 
@@ -146,8 +114,10 @@ function renderSession(session: WorkoutSession): string {
   return `
     <div class="history-session" data-session-id="${escapeHtml(session.workoutSessionId)}">
       <button class="history-session__header" type="button" aria-expanded="false" aria-controls="session-details-${escapeHtml(session.workoutSessionId)}">
-        <span class="history-session__workout-name">${escapeHtml(session.workoutName)}</span>
-        <span class="history-session__time">${formatTime(session.completedAt)}</span>
+        <div class="history-session__info">
+          <span class="history-session__workout-name">${escapeHtml(session.workoutName)}</span>
+          <span class="history-session__date">${escapeHtml(formatDate(session.completedAt))}</span>
+        </div>
         <span class="history-session__exercise-count">${exerciseLabel}</span>
         <span class="history-session__toggle">▸</span>
       </button>
