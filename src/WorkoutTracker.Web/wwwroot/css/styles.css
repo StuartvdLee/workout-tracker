@@ -1867,7 +1867,8 @@ body.is-dragging .workout-selected__drag-handle {
   width: 100%;
   border-collapse: collapse;
   background-color: var(--color-white);
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-sm);
+  table-layout: fixed;
 }
 
 .session-detail__head-row {
@@ -1876,11 +1877,16 @@ body.is-dragging .workout-selected__drag-handle {
 
 .session-detail__th {
   text-align: left;
-  padding: var(--spacing-sm) var(--spacing-md);
+  padding: var(--spacing-sm);
   font-weight: 600;
   color: var(--color-text);
   border-bottom: 1px solid var(--color-border);
-  white-space: nowrap;
+  word-break: break-word;
+  width: 15%;
+}
+
+.session-detail__th:first-child {
+  width: 40%;
 }
 
 .session-detail__th--prev {
@@ -1893,13 +1899,18 @@ body.is-dragging .workout-selected__drag-handle {
 }
 
 .session-detail__cell {
-  padding: var(--spacing-sm) var(--spacing-md);
+  padding: var(--spacing-sm);
   color: var(--color-text);
   vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .session-detail__cell--exercise {
   font-weight: 500;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .session-detail__cell--prev {

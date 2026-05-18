@@ -1,5 +1,4 @@
 import { navigate } from "../router.js";
-import { getEffortLabel } from "../utils.js";
 
 interface SessionExerciseWithPrevious {
   readonly loggedExerciseId: string;
@@ -106,8 +105,8 @@ function renderDetail(session: SessionDetailWithPrevious): string {
           .map((ex) => {
             const weight = ex.loggedWeight !== null ? escapeHtml(ex.loggedWeight) : `<span class="session-detail__no-data">—</span>`;
             const prevWeight = ex.previousWeight !== null ? escapeHtml(ex.previousWeight) : `<span class="session-detail__no-data">—</span>`;
-            const effort = ex.effort !== null ? `${ex.effort} — ${getEffortLabel(ex.effort)}` : `<span class="session-detail__no-data">—</span>`;
-            const prevEffort = ex.previousEffort !== null ? `${ex.previousEffort} — ${getEffortLabel(ex.previousEffort)}` : `<span class="session-detail__no-data">—</span>`;
+            const effort = ex.effort !== null ? `${ex.effort}` : `<span class="session-detail__no-data">—</span>`;
+            const prevEffort = ex.previousEffort !== null ? `${ex.previousEffort}` : `<span class="session-detail__no-data">—</span>`;
 
             return `
             <tr class="session-detail__row">
