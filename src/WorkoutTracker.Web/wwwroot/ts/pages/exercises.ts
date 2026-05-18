@@ -422,7 +422,6 @@ async function handleAddMuscle(): Promise<void> {
       const data = await response.json() as { muscleId: string; name: string };
       const newMuscle: Muscle = { muscleId: data.muscleId, name: data.name };
       insertMuscleAlphabetically(newMuscle);
-      selectedMuscleIds.add(newMuscle.muscleId);
       renderMuscleToggles();
       renderEditMuscleToggles();
       input.value = "";
@@ -481,7 +480,6 @@ async function handleEditAddMuscle(): Promise<void> {
       const data = await response.json() as { muscleId: string; name: string };
       const newMuscle: Muscle = { muscleId: data.muscleId, name: data.name };
       insertMuscleAlphabetically(newMuscle);
-      selectedEditMuscleIds.add(newMuscle.muscleId);
       renderMuscleToggles();
       renderEditMuscleToggles();
       input.value = "";

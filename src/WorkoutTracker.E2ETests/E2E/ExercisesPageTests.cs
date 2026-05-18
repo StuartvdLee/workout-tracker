@@ -1250,6 +1250,9 @@ public class ExercisesPageTests
 
             var newToggle = page.Locator("#exercise-muscles .muscle-toggle", new PageLocatorOptions { HasText = "Hip Flexors" });
             await Expect(newToggle).ToBeVisibleAsync();
+            await Expect(newToggle).Not.ToHaveClassAsync(new System.Text.RegularExpressions.Regex("muscle-toggle--active"));
+
+            await newToggle.ClickAsync();
             await Expect(newToggle).ToHaveClassAsync(new System.Text.RegularExpressions.Regex("muscle-toggle--active"));
 
             await page.Locator("#exercise-name").FillAsync("Squat Variation");
