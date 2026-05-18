@@ -714,13 +714,15 @@ public class WebAppFixture : WebApplicationFactory<Program>
                 sessionSnapshot = [.. _sessions];
             }
 
+            var currentSessionId = Guid.Parse(session.SessionId);
             var priorSession = sessionSnapshot
                 .Where(s =>
                     string.Equals(s.PlannedWorkoutId, session.PlannedWorkoutId, StringComparison.OrdinalIgnoreCase) &&
+                    Guid.TryParse(s.SessionId, out var candidateSessionId) &&
                     (
                         s.CompletedAt < session.CompletedAt ||
                         (s.CompletedAt == session.CompletedAt &&
-                         string.Compare(s.SessionId, session.SessionId, StringComparison.OrdinalIgnoreCase) < 0)
+                         candidateSessionId.CompareTo(currentSessionId) < 0)
                     ))
                 .OrderByDescending(s => s.CompletedAt)
                 .ThenByDescending(s => s.SessionId)
