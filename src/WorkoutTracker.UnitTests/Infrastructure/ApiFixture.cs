@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using WorkoutTracker.Infrastructure.Data;
 using Xunit;
@@ -35,12 +36,17 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
         // so tests don't need the Aspire service bus running
         builder.ConfigureServices(services =>
         {
-            // Remove all existing WorkoutTrackerDbContext and its options registrations
+            // Remove all existing WorkoutTrackerDbContext registrations, options, and any
+            // IDbContextOptionsConfiguration<WorkoutTrackerDbContext> that Aspire may register
+            // to apply EnableRetryOnFailure — which breaks test-initiated transactions.
             var descriptors = services
                 .Where(d =>
                     d.ServiceType == typeof(WorkoutTrackerDbContext) ||
                     d.ServiceType == typeof(DbContextOptions<WorkoutTrackerDbContext>) ||
-                    d.ServiceType == typeof(DbContextOptions))
+                    d.ServiceType == typeof(DbContextOptions) ||
+                    (d.ServiceType.IsGenericType &&
+                     d.ServiceType.GetGenericTypeDefinition() == typeof(IDbContextOptionsConfiguration<>) &&
+                     d.ServiceType.GenericTypeArguments[0] == typeof(WorkoutTrackerDbContext)))
                 .ToList();
 
             foreach (var d in descriptors)
