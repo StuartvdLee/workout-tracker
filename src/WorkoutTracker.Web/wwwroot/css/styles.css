@@ -1819,8 +1819,8 @@ body.is-dragging .workout-selected__drag-handle {
 
 .session-detail__header {
   display: flex;
-  align-items: flex-start;
-  gap: var(--spacing-md);
+  flex-direction: column;
+  gap: var(--spacing-sm);
   margin-bottom: var(--spacing-lg);
 }
 
