@@ -63,12 +63,12 @@ if (duplicate)
 
 **Question**: Should a newly added muscle be automatically selected (toggled on) in the current form after it is created?
 
-**Decision**: Yes — the new muscle is automatically selected in the current context (`selectedMuscleIds` for the create form, `selectedEditMuscleIds` for the edit modal) immediately after the successful API response.
+**Decision**: No — the new muscle appears in the list in correct alphabetical position but is left unselected. The user explicitly toggles it if they want to associate it with the current exercise.
 
-**Rationale**: The primary motivation for adding a muscle is to use it on the exercise being created or edited. Auto-selecting saves a click and matches the "optimistic, task-completing" UX of the surrounding form. The user can deselect it if they change their mind.
+**Rationale**: Auto-selection was initially considered but rejected by the user: adding a muscle is a separate action from choosing to use it on the current exercise. Leaving it unselected keeps the interaction consistent with how the existing seed muscles behave and avoids unexpected form state changes.
 
 **Alternatives considered**:
-- No auto-select: Forces a second click; less helpful.
+- Auto-select: Saves a click for the common case but creates surprise if the user added the muscle for future use rather than the current exercise.
 
 ---
 

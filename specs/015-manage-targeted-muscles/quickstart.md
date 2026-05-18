@@ -23,9 +23,9 @@ The Aspire dashboard will print URLs for the API and Web projects.
 4. Confirm:
    - [ ] "Hip Flexors" appears immediately as a toggle button in the muscle list.
    - [ ] It is alphabetically positioned between "Hamstrings" and "Quads".
-   - [ ] It is already selected (active toggle state).
+   - [ ] It is **not** selected (toggle is in the default unselected state).
    - [ ] No page reload occurred.
-5. Fill in an exercise name, then click **Add Exercise**.
+5. Click the "Hip Flexors" toggle to select it, fill in an exercise name, then click **Add Exercise**.
 6. Confirm the saved exercise shows "Hip Flexors" as a muscle chip.
 7. Reload the page.
 8. Confirm "Hip Flexors" still appears in the muscle list.
@@ -33,7 +33,7 @@ The Aspire dashboard will print URLs for the API and Web projects.
 10. Try to add an empty name — confirm the error "Muscle name is required." appears.
 11. Open the **Edit** modal for any exercise.
 12. Confirm "Hip Flexors" appears in the edit modal's muscle toggle list at the correct alphabetical position.
-13. Add a new muscle from the edit modal (e.g., "Neck") — confirm it appears immediately and is auto-selected.
+13. Add a new muscle from the edit modal (e.g., "Neck") — confirm it appears immediately, unselected, at the correct alphabetical position.
 
 ---
 

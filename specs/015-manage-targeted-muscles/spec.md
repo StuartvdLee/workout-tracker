@@ -2,7 +2,7 @@
 
 **Feature Branch**: `015-manage-targeted-muscles`  
 **Created**: 2026-05-18  
-**Status**: Draft  
+**Status**: Implemented  
 **Input**: User description: "I want to be able to add targeted muscles in the app itself. When a targeted muscle is added, it should immediately be displayed without a manual refresh. The order of targeted muscles should stay alphabetised"
 
 ## User Scenarios & Testing *(mandatory)*

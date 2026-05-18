@@ -5,7 +5,7 @@
 
 ## Summary
 
-Users currently cannot add muscles from within the app — the list is entirely seeded via database migrations. This feature introduces a `POST /api/muscles` endpoint and an inline "Add muscle" mini-form below the targeted muscles toggles on the exercises page. When a valid, unique name is submitted, the new muscle is immediately inserted into the client-side `muscles[]` array in alphabetical order, both toggle containers are re-rendered, and the new muscle is auto-selected in the current form — all without a page reload. The change touches one API file, one web proxy file, one TypeScript page module, one CSS file, and adds unit + E2E tests. No schema migrations are required.
+Users currently cannot add muscles from within the app — the list is entirely seeded via database migrations. This feature introduces a `POST /api/muscles` endpoint and an inline "Add muscle" mini-form below the targeted muscles toggles on the exercises page. When a valid, unique name is submitted, the new muscle is immediately inserted into the client-side `muscles[]` array in alphabetical order, both toggle containers are re-rendered, and the new muscle appears unselected (the user may toggle it as desired) — all without a page reload. The change touches one API file, one web proxy file, one TypeScript page module, one CSS file, and adds unit + E2E tests. No schema migrations are required.
 
 ## Technical Context
 

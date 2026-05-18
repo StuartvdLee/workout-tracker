@@ -30,7 +30,7 @@
 
 **Goal**: A user can type a new muscle name inline on the exercises page (create form and edit modal), click Add, and see the muscle immediately appear as a selected toggle in the correct alphabetical position — without a page reload — and it is persisted across sessions.
 
-**Independent Test**: Open the exercises page, type "Hip Flexors" in the add-muscle input, click Add. Confirm the toggle appears between "Hamstrings" and "Quads" without a reload, is auto-selected, and survives a page refresh.
+**Independent Test**: Open the exercises page, type "Hip Flexors" in the add-muscle input, click Add. Confirm the toggle appears between "Hamstrings" and "Quads" without a reload, unselected, and survives a page refresh.
 
 ### Tests for User Story 1 ⚠️
 
@@ -40,7 +40,7 @@
 - [X] T002a [P] [US1] Add backend integration tests `PostMuscle_EmptyName_Returns400`, `PostMuscle_WhitespaceName_Returns400`, and `PostMuscle_NameTooLong_Returns400` to `src/WorkoutTracker.UnitTests/Api/MusclesApiTests.cs` — these validate input rejection logic implemented in T007 and MUST fail before T007 is complete
 - [X] T003 [P] [US1] Add E2E test `AddMuscle_NewMuscleAppearsInCreateFormImmediately` (type name → click Add → assert toggle present without reload) in `src/WorkoutTracker.E2ETests/E2E/ExercisesPageTests.cs`
 - [X] T004 [P] [US1] Add E2E test `AddMuscle_IsSortedAlphabetically` (add "Hip Flexors" → assert it appears between "Hamstrings" and "Quads" toggles) in `src/WorkoutTracker.E2ETests/E2E/ExercisesPageTests.cs`
-- [X] T005 [P] [US1] Add E2E test `AddMuscle_CanBeSelectedAndSavedWithExercise` (add muscle → auto-selected → save exercise → verify muscle chip shown) in `src/WorkoutTracker.E2ETests/E2E/ExercisesPageTests.cs`
+- [X] T005 [P] [US1] Add E2E test `AddMuscle_CanBeSelectedAndSavedWithExercise` (add muscle → assert unselected → click to select → save exercise → verify muscle chip shown) in `src/WorkoutTracker.E2ETests/E2E/ExercisesPageTests.cs`
 - [X] T006 [P] [US1] Add E2E test `AddMuscle_InEditModal_AppearsImmediately` (open edit modal → add new muscle → assert toggle appears in modal immediately) in `src/WorkoutTracker.E2ETests/E2E/ExercisesPageTests.cs`
 
 ### Implementation for User Story 1
@@ -49,14 +49,12 @@
 - [X] T008 [P] [US1] Add `POST /api/muscles` proxy route in `src/WorkoutTracker.Web/Program.cs` following the exact `POST /api/exercises` proxy pattern (lines 55–72)
 - [X] T009 [P] [US1] Add `.muscle-add`, `.muscle-add__input`, `.muscle-add__btn`, and `.muscle-add__error` CSS rules in `src/WorkoutTracker.Web/wwwroot/css/styles.css` using existing CSS custom properties (`--spacing-xs`, `--color-error`, `--font-size-sm`, etc.)
 - [X] T010 [US1] Add add-muscle form HTML to the create form and edit modal scaffolds in `src/WorkoutTracker.Web/wwwroot/ts/pages/exercises.ts`: `#add-muscle-name` input + `#add-muscle-btn` button + `#add-muscle-error` div (with `role="alert"` and `aria-live="polite"`) below `#exercise-muscles`; same with `edit-` prefix IDs below `#edit-exercise-muscles`
-- [X] T011 [US1] Implement `insertMuscleAlphabetically(muscle: Muscle): void` helper and `handleAddMuscle()` / `handleEditAddMuscle()` async functions in `src/WorkoutTracker.Web/wwwroot/ts/pages/exercises.ts`: call `POST /api/muscles`, show "Adding..." + `aria-disabled` during fetch, on 201 insert into `muscles[]` in sorted order, call `renderMuscleToggles()` and `renderEditMuscleToggles()`, add new muscle to active selection set (`selectedMuscleIds` or `selectedEditMuscleIds`), clear input, return focus to input
+- [X] T011 [US1] Implement `insertMuscleAlphabetically(muscle: Muscle): void` helper and `handleAddMuscle()` / `handleEditAddMuscle()` async functions in `src/WorkoutTracker.Web/wwwroot/ts/pages/exercises.ts`: call `POST /api/muscles`, show "Adding..." + `aria-disabled` during fetch, on 201 insert into `muscles[]` in sorted order, call `renderMuscleToggles()` and `renderEditMuscleToggles()` (new muscle left unselected), clear input, return focus to input
 - [X] T012 [US1] Wire click event on `#add-muscle-btn` / `#edit-add-muscle-btn` and `keydown` Enter on the name inputs to call `handleAddMuscle()` / `handleEditAddMuscle()` in `src/WorkoutTracker.Web/wwwroot/ts/pages/exercises.ts`; add `isAddingMuscle` and `isEditAddingMuscle` guard flags
 
 **Checkpoint**: User Story 1 happy-path is fully functional and independently testable. All T002, T002a, T003–T006 tests should now pass. Error handling for non-2xx API responses is completed in US2 (T018).
 
----
-
-## Phase 4: User Story 2 — Prevent Duplicate Muscles (Priority: P2)
+---: User Story 2 — Prevent Duplicate Muscles (Priority: P2)
 
 **Goal**: Attempts to add a muscle whose name already exists (case-insensitive) are rejected with a clear error message. The muscle list is not mutated; the user can correct the name and try again.
 

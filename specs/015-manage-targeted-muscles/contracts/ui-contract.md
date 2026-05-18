@@ -82,7 +82,7 @@ Same structure with IDs prefixed `edit-`:
 5. On 201:
    - New muscle inserted into `muscles[]` at correct alphabetical position.
    - `renderMuscleToggles()` and `renderEditMuscleToggles()` called.
-   - New muscle auto-selected in the active context (`selectedMuscleIds` or `selectedEditMuscleIds`).
+   - New muscle appears unselected; user toggles it manually if desired.
    - Input cleared.
    - Error container cleared.
 6. On 400 or network error:
