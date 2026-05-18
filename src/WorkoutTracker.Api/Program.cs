@@ -655,8 +655,11 @@ app.MapGet("/api/sessions/{sessionId:guid}", async (Guid sessionId, WorkoutTrack
         : await db.WorkoutSessions
             .Where(ws =>
                 ws.PlannedWorkoutId == session.PlannedWorkoutId &&
-                ws.WorkoutSessionId != sessionId &&
-                EF.Property<DateTime>(ws, "CompletedAt") <= session.CompletedAt)
+                (
+                    EF.Property<DateTime>(ws, "CompletedAt") < session.CompletedAt ||
+                    (EF.Property<DateTime>(ws, "CompletedAt") == session.CompletedAt &&
+                     ws.WorkoutSessionId.CompareTo(sessionId) < 0)
+                ))
             .OrderByDescending(ws => EF.Property<DateTime>(ws, "CompletedAt"))
             .ThenByDescending(ws => ws.WorkoutSessionId)
             .Select(ws => ws.LoggedExercises

@@ -32,11 +32,22 @@ const detailTimeFormatter = new Intl.DateTimeFormat("en-US", {
 export async function render(container: HTMLElement): Promise<void> {
   container.innerHTML = `
     <div class="session-detail">
+      <div class="session-detail__header">
+        <button class="session-detail__back" id="session-detail-back" type="button" aria-label="Back to history">← Back</button>
+        <div class="session-detail__title-group" id="session-detail-title-group" style="display:none;">
+          <h1 class="session-detail__title" id="session-detail-title"></h1>
+          <span class="session-detail__date" id="session-detail-date"></span>
+        </div>
+      </div>
       <div class="session-detail__loading" id="session-detail-loading">Loading...</div>
       <div id="session-detail-content" style="display:none;"></div>
       <div class="session-detail__error" id="session-detail-error" style="display:none;"></div>
     </div>
   `;
+
+  document.getElementById("session-detail-back")?.addEventListener("click", () => {
+    navigate("/history");
+  });
 
   const params = new URLSearchParams(window.location.search);
   const sessionId = params.get("id");
@@ -53,6 +64,9 @@ async function loadSessionDetail(sessionId: string): Promise<void> {
   const loadingEl = document.getElementById("session-detail-loading") as HTMLElement | null;
   const contentEl = document.getElementById("session-detail-content") as HTMLElement | null;
   const errorEl = document.getElementById("session-detail-error") as HTMLElement | null;
+  const titleGroupEl = document.getElementById("session-detail-title-group") as HTMLElement | null;
+  const titleEl = document.getElementById("session-detail-title") as HTMLElement | null;
+  const dateEl = document.getElementById("session-detail-date") as HTMLElement | null;
 
   try {
     const response = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}`);
@@ -73,12 +87,16 @@ async function loadSessionDetail(sessionId: string): Promise<void> {
     const session: SessionDetailWithPrevious = await response.json();
 
     if (loadingEl) loadingEl.style.display = "none";
+    if (titleGroupEl) titleGroupEl.style.display = "";
+    if (titleEl) {
+      titleEl.textContent = session.workoutName ?? "Workout";
+    }
+    if (dateEl) {
+      dateEl.textContent = formatDate(session.completedAt);
+    }
     if (contentEl) {
-      contentEl.innerHTML = renderDetail(session);
+      contentEl.innerHTML = renderDetailTable(session);
       contentEl.style.display = "";
-      contentEl.querySelector<HTMLButtonElement>(".session-detail__back")?.addEventListener("click", () => {
-        navigate("/history");
-      });
     }
   } catch {
     if (loadingEl) loadingEl.style.display = "none";
@@ -94,10 +112,7 @@ function formatDate(isoDate: string): string {
   return `${detailDateFormatter.format(date)} · ${detailTimeFormatter.format(date)}`;
 }
 
-function renderDetail(session: SessionDetailWithPrevious): string {
-  const workoutName = session.workoutName ?? "Workout";
-  const dateStr = formatDate(session.completedAt);
-
+function renderDetailTable(session: SessionDetailWithPrevious): string {
   const rows =
     session.exercises.length === 0
       ? `<tr><td class="session-detail__empty-cell" colspan="5">No exercises logged</td></tr>`
@@ -120,13 +135,6 @@ function renderDetail(session: SessionDetailWithPrevious): string {
           .join("");
 
   return `
-    <div class="session-detail__header">
-      <button class="session-detail__back" type="button" aria-label="Back to history">← Back</button>
-      <div class="session-detail__title-group">
-        <h1 class="session-detail__title">${escapeHtml(workoutName)}</h1>
-        <span class="session-detail__date">${escapeHtml(dateStr)}</span>
-      </div>
-    </div>
     <div class="session-detail__table-wrapper">
       <table class="session-detail__table" aria-label="Session exercises">
         <thead>

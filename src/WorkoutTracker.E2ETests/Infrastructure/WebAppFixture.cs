@@ -717,8 +717,11 @@ public class WebAppFixture : WebApplicationFactory<Program>
             var priorSession = sessionSnapshot
                 .Where(s =>
                     string.Equals(s.PlannedWorkoutId, session.PlannedWorkoutId, StringComparison.OrdinalIgnoreCase) &&
-                    !string.Equals(s.SessionId, sessionId, StringComparison.OrdinalIgnoreCase) &&
-                    s.CompletedAt <= session.CompletedAt)
+                    (
+                        s.CompletedAt < session.CompletedAt ||
+                        (s.CompletedAt == session.CompletedAt &&
+                         string.Compare(s.SessionId, session.SessionId, StringComparison.OrdinalIgnoreCase) < 0)
+                    ))
                 .OrderByDescending(s => s.CompletedAt)
                 .ThenByDescending(s => s.SessionId)
                 .FirstOrDefault();

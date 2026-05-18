@@ -223,6 +223,7 @@ public class WorkoutHistoryTests
 
             // No toggle element should be present
             await Expect(page.Locator(".history-session__toggle")).ToHaveCountAsync(0);
+            await Expect(page.Locator(".history-session__details")).ToHaveCountAsync(0);
 
             // Headers should not have aria-expanded
             var header = page.Locator(".history-session__header").First;

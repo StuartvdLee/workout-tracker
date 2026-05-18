@@ -95,7 +95,7 @@ The History page entries no longer have any expand-collapse behaviour. Each entr
 
 ### Security & Privacy Requirements
 
-- **SR-001**: The session detail page MUST enforce that users can only view sessions and prior session data that belong to them — no cross-user data access is permitted.
+- **SR-001**: The session detail page MUST maintain the existing single-user application model: no authentication or per-user scoping is introduced, and session detail data remains scoped to the single app user context.
 - **SR-002**: The session identifier used in the detail page URL MUST NOT expose predictable or sequential identifiers that would allow enumeration of other users' sessions.
 - **SR-003**: All exercise names, weights, and effort values rendered in the table MUST be properly escaped to prevent injection of malicious content.
 

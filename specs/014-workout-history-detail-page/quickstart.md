@@ -31,9 +31,9 @@ The History page entries no longer expand inline. Clicking any session entry now
 
 | Exercise | Weight | Prev. Weight | Effort | Prev. Effort |
 |----------|--------|--------------|--------|--------------|
-| Bench Press | 80 KG | 77.5 KG | 7 — Hard | 6 — Moderate |
-| Overhead Press | 50 KG | 50 KG | 8 — Very Hard | 7 — Hard |
-| Tricep Dips | — | 0 KG | 6 — Moderate | — |
+| Bench Press | 80 KG | 77.5 KG | 7 | 6 |
+| Overhead Press | 50 KG | 50 KG | 8 | 7 |
+| Tricep Dips | — | 0 KG | 6 | — |
 
 ---
 

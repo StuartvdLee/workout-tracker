@@ -61,12 +61,10 @@
   <td class="session-detail__td session-detail__td--exercise">{exerciseName}</td>
   <td class="session-detail__td session-detail__td--value">{loggedWeight ?? "—"}</td>
   <td class="session-detail__td session-detail__td--prev">{previousWeight ?? "—"}</td>
-  <td class="session-detail__td session-detail__td--value">{effortLabel ?? "—"}</td>
-  <td class="session-detail__td session-detail__td--prev">{previousEffortLabel ?? "—"}</td>
+  <td class="session-detail__td session-detail__td--value">{effort ?? "—"}</td>
+  <td class="session-detail__td session-detail__td--prev">{previousEffort ?? "—"}</td>
 </tr>
 ```
-
-Where effort labels are rendered as `"{effort} — {getEffortLabel(effort)}"` when present (e.g., `"7 — Hard"`), consistent with how effort is displayed in `history.ts`.
 
 ---
 
