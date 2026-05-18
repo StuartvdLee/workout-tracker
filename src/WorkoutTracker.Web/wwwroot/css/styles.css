@@ -1831,9 +1831,9 @@ body.is-dragging .workout-selected__drag-handle {
   font-size: var(--font-size-sm);
   color: var(--color-primary);
   cursor: pointer;
-  padding: var(--spacing-sm) 0;
+  padding: 0;
   min-height: var(--min-touch-target);
-  flex-shrink: 0;
+  align-self: flex-start;
 }
 
 .session-detail__back:hover {
