@@ -23,6 +23,7 @@ interface PreviousExerciseData {
   readonly exerciseId: string;
   readonly loggedWeight: string | null;
   readonly effort: number | null;
+  readonly sequence: number | null;
 }
 
 interface PreviousPerformance {
@@ -270,6 +271,7 @@ function renderExerciseInputs(previousData: Map<string, PreviousExerciseData> | 
       if (entry !== undefined) {
         // Build value string from non-null fields
         const parts: string[] = [];
+        if (entry.sequence !== null) parts.push(`#${entry.sequence + 1}`);
         if (entry.loggedWeight !== null) parts.push(`${entry.loggedWeight} KG`);
         if (entry.effort !== null) parts.push(`${entry.effort} — ${getEffortLabel(entry.effort)}`);
 
