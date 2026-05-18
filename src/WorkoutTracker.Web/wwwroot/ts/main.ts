@@ -6,6 +6,7 @@ import { render as renderWorkouts } from "./pages/workouts.js";
 import { render as renderExercises } from "./pages/exercises.js";
 import { render as renderHistory } from "./pages/history.js";
 import { render as renderActiveSession } from "./pages/active-session.js";
+import { render as renderSessionDetail } from "./pages/session-detail.js";
 
 function initializeApp(): void {
   registerRoute("/", renderHome);
@@ -13,6 +14,7 @@ function initializeApp(): void {
   registerRoute("/exercises", renderExercises);
   registerRoute("/history", renderHistory);
   registerRoute("/active-session", renderActiveSession);
+  registerRoute("/history/session", renderSessionDetail);
 
   initSidebar();
   initTheme();

@@ -15,6 +15,7 @@ Auto-generated from all feature plans. Last updated: 2026-05-18
 - TypeScript 5.9.3 (frontend — all changes); C# on .NET 10.0 (backend — no changes) + Vanilla TypeScript; `Intl.DateTimeFormat` Web API for locale-aware date formatting (012-history-entry-design)
 - N/A — no database or localStorage changes (012-history-entry-design)
 - PostgreSQL via EF Core — no schema changes; `Sequence` already exists on `logged_exercise` (013-show-exercise-order)
+- C# on .NET 10.0 (backend), TypeScript ~6.0.3 (frontend) + ASP.NET Core minimal API, .NET Aspire 13.1.2, Entity Framework Core with Npgsql, vanilla TypeScript (no JS frameworks) (014-workout-history-detail-page)
 
 - C# on .NET 10.0 (backend), TypeScript 5.9.3 (frontend) + ASP.NET Core minimal API, .NET Aspire 13.1.2, Entity Framework Core with Npgsql, vanilla TypeScript (no JS frameworks) (003-add-exercises)
 
@@ -34,9 +35,9 @@ npm test && npm run lint
 C# on .NET 10.0 (backend), TypeScript 5.9.3 (frontend): Follow standard conventions
 
 ## Recent Changes
+- 014-workout-history-detail-page: Added C# on .NET 10.0 (backend), TypeScript ~6.0.3 (frontend) + ASP.NET Core minimal API, .NET Aspire 13.1.2, Entity Framework Core with Npgsql, vanilla TypeScript (no JS frameworks)
 - 013-show-exercise-order: Added C# on .NET 10.0 (backend), TypeScript 5.9.3 (frontend) + ASP.NET Core minimal API, .NET Aspire 13.1.2, Entity Framework Core with Npgsql, vanilla TypeScript (no JS frameworks)
 - 012-history-entry-design: Added TypeScript 5.9.3 (frontend — all changes); C# on .NET 10.0 (backend — no changes) + Vanilla TypeScript; `Intl.DateTimeFormat` Web API for locale-aware date formatting
-- 011-randomise-exercise-order: Added C# on .NET 10.0 (backend), TypeScript 5.9.3 (frontend) + ASP.NET Core minimal API, .NET Aspire 13.1.2, Entity Framework Core with Npgsql, vanilla TypeScript (no JS frameworks)
 
 
 <!-- MANUAL ADDITIONS START -->

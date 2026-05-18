@@ -190,28 +190,21 @@ public class WorkoutHistoryTests
     }
 
     [Fact]
-    public async Task HistoryPage_SessionExpandCollapse()
+    public async Task HistoryPage_SessionEntry_NavigatesToDetailPage()
     {
         var page = await CreatePageAsync();
         try
         {
             await CreateWorkoutAndSessionViaApiAsync(page);
-
             await NavigateToHistoryAsync(page);
 
             var header = page.Locator(".history-session__header").First;
             await Expect(header).ToBeVisibleAsync();
 
-            // Expand
             await header.ClickAsync();
-            await Expect(header).ToHaveAttributeAsync("aria-expanded", "true");
 
-            var details = page.Locator(".history-session__details").First;
-            await Expect(details).ToBeVisibleAsync();
-
-            // Collapse
-            await header.ClickAsync();
-            await Expect(header).ToHaveAttributeAsync("aria-expanded", "false");
+            await Expect(page).ToHaveURLAsync(new Regex(@"/history/session\?id="));
+            await page.WaitForSelectorAsync(".session-detail");
         }
         finally
         {
@@ -220,31 +213,72 @@ public class WorkoutHistoryTests
     }
 
     [Fact]
-    public async Task HistoryPage_SessionDetails_ShowsExerciseData()
+    public async Task HistoryPage_NoExpandCollapseAffordance()
     {
         var page = await CreatePageAsync();
         try
         {
-            await CreateWorkoutAndSessionViaApiAsync(
-                page,
-                exerciseName: "Bench Press",
-                workoutName: "Push Day",
-                loggedReps: 10,
-                loggedWeight: "135 lbs",
-                notes: "Good form");
-
+            await CreateWorkoutAndSessionViaApiAsync(page);
             await NavigateToHistoryAsync(page);
 
-            // Expand the session
+            // No toggle element should be present
+            await Expect(page.Locator(".history-session__toggle")).ToHaveCountAsync(0);
+
+            // Headers should not have aria-expanded
             var header = page.Locator(".history-session__header").First;
-            await header.ClickAsync();
-            await Expect(header).ToHaveAttributeAsync("aria-expanded", "true");
+            await Expect(header).ToBeVisibleAsync();
+            await Expect(header).Not.ToHaveAttributeAsync("aria-expanded", new Regex(".+"));
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
 
-            var exerciseName = page.Locator(".history-session__exercise-name").First;
-            await Expect(exerciseName).ToContainTextAsync("Bench Press");
+    [Fact]
+    public async Task SessionDetailPage_ShowsExerciseTable()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await CreateWorkoutAndSessionViaApiAsync(page, exerciseName: "Bench Press", workoutName: "Push Day");
+            await NavigateToHistoryAsync(page);
 
-            var exerciseData = page.Locator(".history-session__exercise-data").First;
-            await Expect(exerciseData).ToBeVisibleAsync();
+            await page.Locator(".history-session__header").First.ClickAsync();
+            await page.WaitForSelectorAsync(".session-detail__table");
+
+            await Expect(page.Locator(".session-detail__title")).ToContainTextAsync("Push Day");
+            await Expect(page.Locator(".session-detail__table")).ToBeVisibleAsync();
+
+            // Column headers
+            var headers = page.Locator(".session-detail__th");
+            await Expect(headers).ToHaveCountAsync(5);
+
+            // Exercise row
+            await Expect(page.Locator(".session-detail__cell--exercise").First).ToContainTextAsync("Bench Press");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task SessionDetailPage_BackButton_NavigatesToHistory()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await CreateWorkoutAndSessionViaApiAsync(page);
+            await NavigateToHistoryAsync(page);
+
+            await page.Locator(".history-session__header").First.ClickAsync();
+            await page.WaitForSelectorAsync(".session-detail");
+
+            await page.Locator(".session-detail__back").ClickAsync();
+
+            await page.WaitForSelectorAsync(".history-page");
+            await Expect(page.Locator(".history-page")).ToBeVisibleAsync();
         }
         finally
         {
@@ -300,6 +334,67 @@ public class WorkoutHistoryTests
     // ──────────────────────────────────────────
     // Active Session Page
     // ──────────────────────────────────────────
+
+    [Fact]
+    public async Task SessionDetailPage_ShowsPreviousData_WhenPriorSessionExists()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            // Seed exercise and create workout with it
+            await SeedExerciseAsync(page, "Bench Press");
+            var exercisesResponse = await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/exercises");
+            var exercisesJson = await exercisesResponse.JsonAsync();
+            var exerciseId = exercisesJson?.EnumerateArray().First().GetProperty("exerciseId").GetString()!;
+
+            var createResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts", new()
+            {
+                DataObject = new
+                {
+                    name = "Push Day",
+                    exercises = new[] { new { exerciseId, targetReps = "8-12", targetWeight = "100 KG" } },
+                },
+            });
+            var workoutData = await createResponse.JsonAsync();
+            var workoutId = workoutData?.GetProperty("plannedWorkoutId").GetString()!;
+
+            // First session: weight 70 KG, effort 6
+            await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new
+                {
+                    loggedExercises = new[] { new { exerciseId, loggedWeight = "70 KG", effort = 6 } },
+                },
+            });
+
+            // Second session: weight 75 KG, effort 7
+            await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new
+                {
+                    loggedExercises = new[] { new { exerciseId, loggedWeight = "75 KG", effort = 7 } },
+                },
+            });
+
+            await NavigateToHistoryAsync(page);
+
+            // Click the most recent session (first in list)
+            await page.Locator(".history-session__header").First.ClickAsync();
+            await page.WaitForSelectorAsync(".session-detail__table");
+
+            var rows = page.Locator(".session-detail__row");
+            await Expect(rows).ToHaveCountAsync(1);
+
+            // Weight cells: current and previous
+            var cells = rows.First.Locator(".session-detail__cell");
+            await Expect(cells.Nth(1)).ToContainTextAsync("75 KG");
+            await Expect(cells.Nth(2)).ToContainTextAsync("70 KG");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
 
     [Fact]
     public async Task ActiveSession_StartWorkout_NavigatesToSession()

@@ -262,6 +262,22 @@ app.MapGet("/api/sessions/latest", async (ILogger<Program> logger, IHttpClientFa
     }
 });
 
+app.MapGet("/api/sessions/{sessionId:guid}", async (Guid sessionId, ILogger<Program> logger, IHttpClientFactory httpClientFactory) =>
+{
+    try
+    {
+        var client = httpClientFactory.CreateClient("api");
+        var response = await client.GetAsync($"/api/sessions/{sessionId}");
+        var content = await response.Content.ReadAsStringAsync();
+        return Results.Content(content, "application/json", statusCode: (int)response.StatusCode);
+    }
+    catch (Exception ex)
+    {
+        WebProxyLog.ProxyError(logger, $"GET /api/sessions/{sessionId}", ex);
+        return Results.Json(new { error = "API unavailable." }, statusCode: 502);
+    }
+});
+
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
