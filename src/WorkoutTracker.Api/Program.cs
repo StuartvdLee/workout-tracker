@@ -2,6 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using WorkoutTracker.Infrastructure.Data;
 using WorkoutTracker.Infrastructure.Data.Models;
 
+// Stable advisory lock key used to serialize muscle name duplicate checks + inserts in POST /api/muscles.
+const long MuscleNameAdvisoryLockId = 610871121330421911;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
@@ -52,7 +55,7 @@ app.MapPost("/api/muscles", async (HttpContext context, WorkoutTrackerDbContext 
         return Results.Json(new { error = "Muscle name must be 100 characters or fewer." }, statusCode: 400);
 
     await using var transaction = await db.Database.BeginTransactionAsync();
-    await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(610871121330421911);");
+    await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock({0});", MuscleNameAdvisoryLockId);
 
     var normalizedName = ExerciseQueryHelper.EscapeLike(name);
     var duplicate = await db.Muscles

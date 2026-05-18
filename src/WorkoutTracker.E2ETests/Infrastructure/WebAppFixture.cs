@@ -60,11 +60,6 @@ public class WebAppFixture : WebApplicationFactory<Program>
         }
     }
 
-    private static int CompareMuscleNames(MockMuscle left, MockMuscle right)
-    {
-        return StringComparer.Ordinal.Compare(left.Name, right.Name);
-    }
-
     private static readonly Lock _exercisesLock = new();
     private static readonly List<MockExercise> _exercises = [];
 
@@ -160,7 +155,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
         // Mock API endpoint for muscles
         app.MapGet("/api/muscles", () =>
         {
-            lock (_musclesLock) { return Results.Ok(_muscles.OrderBy(m => m, Comparer<MockMuscle>.Create(CompareMuscleNames)).ToList()); }
+            lock (_musclesLock) { return Results.Ok(_muscles.OrderBy(m => m.Name, StringComparer.Ordinal).ToList()); }
         });
 
         // Mock API endpoint to add a muscle
@@ -182,7 +177,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
 
                 var muscle = new MockMuscle(Guid.NewGuid().ToString(), name);
                 _muscles.Add(muscle);
-                _muscles = [.. _muscles.OrderBy(m => m, Comparer<MockMuscle>.Create(CompareMuscleNames))];
+                _muscles = [.. _muscles.OrderBy(m => m.Name, StringComparer.Ordinal)];
                 return Results.Json(new { muscleId = muscle.MuscleId, name = muscle.Name }, statusCode: 201);
             }
         });

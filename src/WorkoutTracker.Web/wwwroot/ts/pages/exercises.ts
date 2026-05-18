@@ -374,10 +374,18 @@ function renderExerciseList(): void {
   }
 }
 
-async function reloadMuscles(): Promise<void> {
+type ReloadMusclesResult =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly error: string };
+
+async function reloadMuscles(): Promise<ReloadMusclesResult> {
   const response = await fetch("/api/muscles");
-  if (!response.ok) return;
+  if (!response.ok) {
+    return { ok: false, error: `Failed to refresh muscles (HTTP ${response.status}).` };
+  }
+
   muscles = await response.json();
+  return { ok: true };
 }
 
 async function handleAddMuscle(): Promise<void> {
@@ -416,7 +424,12 @@ async function handleAddMuscle(): Promise<void> {
     });
 
     if (response.ok) {
-      await reloadMuscles();
+      const reloadResult = await reloadMuscles();
+      if (!reloadResult.ok) {
+        showValidationError(input, errorEl, `${reloadResult.error} The muscle was added. Please reload the page.`);
+        return;
+      }
+
       renderMuscleToggles();
       renderEditMuscleToggles();
       input.value = "";
@@ -472,7 +485,12 @@ async function handleEditAddMuscle(): Promise<void> {
     });
 
     if (response.ok) {
-      await reloadMuscles();
+      const reloadResult = await reloadMuscles();
+      if (!reloadResult.ok) {
+        showValidationError(input, errorEl, `${reloadResult.error} The muscle was added. Please reload the page.`);
+        return;
+      }
+
       renderMuscleToggles();
       renderEditMuscleToggles();
       input.value = "";
