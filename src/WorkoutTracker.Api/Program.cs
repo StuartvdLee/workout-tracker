@@ -2,6 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using WorkoutTracker.Infrastructure.Data;
 using WorkoutTracker.Infrastructure.Data.Models;
 
+// Stable advisory lock key used to serialize muscle name duplicate checks + inserts in POST /api/muscles.
+const long MuscleNameAdvisoryLockId = 610871121330421911;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
@@ -38,6 +41,35 @@ app.MapGet("/api/muscles", async (WorkoutTrackerDbContext db) =>
         .ToListAsync();
 
     return Results.Ok(muscles);
+});
+
+app.MapPost("/api/muscles", async (HttpContext context, WorkoutTrackerDbContext db) =>
+{
+    var body = await context.Request.ReadFromJsonAsync<MuscleCreateRequest>();
+    var name = body?.Name?.Trim() ?? "";
+
+    if (string.IsNullOrWhiteSpace(name))
+        return Results.Json(new { error = "Muscle name is required." }, statusCode: 400);
+
+    if (name.Length > 100)
+        return Results.Json(new { error = "Muscle name must be 100 characters or fewer." }, statusCode: 400);
+
+    await using var transaction = await db.Database.BeginTransactionAsync();
+    await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock({0});", MuscleNameAdvisoryLockId);
+
+    var normalizedName = ExerciseQueryHelper.EscapeLike(name);
+    var duplicate = await db.Muscles
+        .AnyAsync(m => EF.Functions.ILike(m.Name, normalizedName, "\\"));
+
+    if (duplicate)
+        return Results.Json(new { error = "A muscle with this name already exists." }, statusCode: 400);
+
+    var muscle = new Muscle { MuscleId = Guid.NewGuid(), Name = name };
+    db.Muscles.Add(muscle);
+    await db.SaveChangesAsync();
+    await transaction.CommitAsync();
+
+    return Results.Json(new { muscle.MuscleId, muscle.Name }, statusCode: 201);
 });
 
 app.MapGet("/api/exercises", async (WorkoutTrackerDbContext db) =>
@@ -727,6 +759,11 @@ internal sealed class ExerciseCreateRequest
 {
     public string? Name { get; set; }
     public Guid[] MuscleIds { get; set; } = [];
+}
+
+internal sealed class MuscleCreateRequest
+{
+    public string? Name { get; set; }
 }
 
 internal static class ExerciseQueryHelper

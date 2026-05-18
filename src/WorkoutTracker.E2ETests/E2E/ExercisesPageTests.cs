@@ -20,6 +20,7 @@ public class ExercisesPageTests
     private async Task<IPage> CreatePageAsync()
     {
         WebAppFixture.ResetExercises();
+        WebAppFixture.ResetMuscles();
         var page = await _playwright.Browser.NewPageAsync(new BrowserNewPageOptions
         {
             ViewportSize = new ViewportSize { Width = 1024, Height = 768 },
@@ -1031,6 +1032,7 @@ public class ExercisesPageTests
     private async Task<IPage> CreateMobilePageAsync()
     {
         WebAppFixture.ResetExercises();
+        WebAppFixture.ResetMuscles();
         var page = await _playwright.Browser.NewPageAsync(new BrowserNewPageOptions
         {
             ViewportSize = new ViewportSize { Width = 375, Height = 667 },
@@ -1184,6 +1186,176 @@ public class ExercisesPageTests
 
             Assert.True(stopwatch.ElapsedMilliseconds <= 200,
                 $"Submit feedback took {stopwatch.ElapsedMilliseconds}ms, exceeds 200ms budget (PR-002)");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task AddMuscle_NewMuscleAppearsInCreateFormImmediately()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.Locator("#add-muscle-name").FillAsync("Hip Flexors");
+            await page.Locator("#add-muscle-btn").ClickAsync();
+
+            await Expect(page.Locator("#exercise-muscles .muscle-toggle", new PageLocatorOptions { HasText = "Hip Flexors" })).ToBeVisibleAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task AddMuscle_IsSortedAlphabetically()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.Locator("#add-muscle-name").FillAsync("Hip Flexors");
+            await page.Locator("#add-muscle-btn").ClickAsync();
+
+            await Expect(page.Locator("#exercise-muscles .muscle-toggle", new PageLocatorOptions { HasText = "Hip Flexors" })).ToBeVisibleAsync();
+
+            var toggles = page.Locator("#exercise-muscles .muscle-toggle");
+            var count = await toggles.CountAsync();
+            var names = new List<string>();
+            for (var i = 0; i < count; i++)
+            {
+                names.Add(await toggles.Nth(i).TextContentAsync() ?? "");
+            }
+            var hipIndex = names.IndexOf("Hip Flexors");
+            var hamstringsIndex = names.IndexOf("Hamstrings");
+            var quadsIndex = names.IndexOf("Quads");
+            Assert.True(hipIndex > hamstringsIndex, $"Hip Flexors (index {hipIndex}) should come after Hamstrings (index {hamstringsIndex})");
+            Assert.True(hipIndex < quadsIndex, $"Hip Flexors (index {hipIndex}) should come before Quads (index {quadsIndex})");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task AddMuscle_CanBeSelectedAndSavedWithExercise()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.Locator("#add-muscle-name").FillAsync("Hip Flexors");
+            await page.Locator("#add-muscle-btn").ClickAsync();
+
+            var newToggle = page.Locator("#exercise-muscles .muscle-toggle", new PageLocatorOptions { HasText = "Hip Flexors" });
+            await Expect(newToggle).ToBeVisibleAsync();
+            await Expect(newToggle).Not.ToHaveClassAsync(new System.Text.RegularExpressions.Regex("muscle-toggle--active"));
+
+            await newToggle.ClickAsync();
+            await Expect(newToggle).ToHaveClassAsync(new System.Text.RegularExpressions.Regex("muscle-toggle--active"));
+
+            await page.Locator("#exercise-name").FillAsync("Squat Variation");
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
+
+            var item = page.Locator(".exercise-list__item");
+            await Expect(item).ToBeVisibleAsync();
+            await Expect(item.Locator(".exercise-list__muscle-chip")).ToHaveTextAsync(["Hip Flexors"]);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task AddMuscle_InEditModal_AppearsImmediately()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            // Create an exercise first
+            await page.Locator("#exercise-name").FillAsync("Test Exercise");
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
+            await Expect(page.Locator(".exercise-list__item")).ToBeVisibleAsync();
+
+            // Open edit modal
+            await page.Locator(".exercise-list__edit-btn").First.ClickAsync();
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeVisibleAsync();
+
+            // Add a new muscle in the edit modal
+            await page.Locator("#edit-add-muscle-name").FillAsync("Hip Flexors");
+            await page.Locator("#edit-add-muscle-btn").ClickAsync();
+
+            await Expect(page.Locator("#edit-exercise-muscles .muscle-toggle", new PageLocatorOptions { HasText = "Hip Flexors" })).ToBeVisibleAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task AddMuscle_DuplicateNameShowsError()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.Locator("#add-muscle-name").FillAsync("Chest");
+            await page.Locator("#add-muscle-btn").ClickAsync();
+
+            await Expect(page.Locator("#add-muscle-error")).ToHaveTextAsync("A muscle with this name already exists.");
+
+            var toggles = page.Locator("#exercise-muscles .muscle-toggle", new PageLocatorOptions { HasText = "Chest" });
+            await Expect(toggles).ToHaveCountAsync(1);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task AddMuscle_EmptyNameShowsError()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.Locator("#add-muscle-btn").ClickAsync();
+
+            await Expect(page.Locator("#add-muscle-error")).ToHaveTextAsync("Muscle name is required.");
+            await Expect(page.Locator("#add-muscle-name")).ToHaveAttributeAsync("aria-invalid", "true");
+            await Expect(page.Locator("#add-muscle-name")).ToHaveClassAsync(new Regex("exercise-form__input--error"));
+
+            await Expect(page.Locator("#exercise-muscles .muscle-toggle")).ToHaveCountAsync(12);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task AddMuscle_EditModalAddField_ResetsWhenReopened()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.Locator("#exercise-name").FillAsync("Modal Reset Exercise");
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
+            await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(1);
+
+            await page.Locator(".exercise-list__edit-btn").First.ClickAsync();
+            await page.Locator("#edit-add-muscle-btn").ClickAsync();
+            await Expect(page.Locator("#edit-add-muscle-error")).ToHaveTextAsync("Muscle name is required.");
+            await page.Locator("#edit-add-muscle-name").FillAsync("Residual Value");
+            await page.Locator("#edit-modal-cancel").ClickAsync();
+
+            await page.Locator(".exercise-list__edit-btn").First.ClickAsync();
+            await Expect(page.Locator("#edit-add-muscle-name")).ToHaveValueAsync("");
+            await Expect(page.Locator("#edit-add-muscle-error")).ToHaveTextAsync("");
+            await Expect(page.Locator("#edit-add-muscle-name")).Not.ToHaveAttributeAsync("aria-invalid", "true");
         }
         finally
         {

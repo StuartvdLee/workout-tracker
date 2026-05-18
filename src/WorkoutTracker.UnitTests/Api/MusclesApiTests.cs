@@ -53,5 +53,102 @@ public class MusclesApiTests : IAsyncLifetime
         Assert.Equal("Adductors", muscles[0].Name);
     }
 
+    [Fact]
+    public async Task PostMuscle_Returns201_WithValidName()
+    {
+        var response = await _client.PostAsJsonAsync("/api/muscles", new { name = "Hip Flexors" });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var data = await response.Content.ReadFromJsonAsync<MuscleDto>();
+        Assert.NotNull(data);
+        Assert.Equal("Hip Flexors", data.Name);
+        Assert.NotEqual(Guid.Empty, data.MuscleId);
+    }
+
+    [Fact]
+    public async Task PostMuscle_CreatedMuscleAppearsInGetMusclesSortedAlphabetically()
+    {
+        await _client.PostAsJsonAsync("/api/muscles", new { name = "Hip Flexors" });
+
+        var response = await _client.GetAsync("/api/muscles");
+        var muscles = await response.Content.ReadFromJsonAsync<List<MuscleDto>>();
+        Assert.NotNull(muscles);
+        var names = muscles.Select(m => m.Name).ToList();
+        Assert.Contains("Hip Flexors", names);
+        Assert.Equal(names.OrderBy(n => n).ToList(), names);
+    }
+
+    [Fact]
+    public async Task PostMuscle_NameIsTrimmedBeforePersistence()
+    {
+        var response = await _client.PostAsJsonAsync("/api/muscles", new { name = "  Hip Flexors  " });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var data = await response.Content.ReadFromJsonAsync<MuscleDto>();
+        Assert.NotNull(data);
+        Assert.Equal("Hip Flexors", data.Name);
+    }
+
+    [Fact]
+    public async Task PostMuscle_EmptyName_Returns400()
+    {
+        var response = await _client.PostAsJsonAsync("/api/muscles", new { name = "" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var data = await response.Content.ReadFromJsonAsync<ErrorDto>();
+        Assert.Equal("Muscle name is required.", data?.Error);
+    }
+
+    [Fact]
+    public async Task PostMuscle_WhitespaceName_Returns400()
+    {
+        var response = await _client.PostAsJsonAsync("/api/muscles", new { name = "   " });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var data = await response.Content.ReadFromJsonAsync<ErrorDto>();
+        Assert.Equal("Muscle name is required.", data?.Error);
+    }
+
+    [Fact]
+    public async Task PostMuscle_NullName_Returns400()
+    {
+        var response = await _client.PostAsJsonAsync("/api/muscles", new { name = (string?)null });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var data = await response.Content.ReadFromJsonAsync<ErrorDto>();
+        Assert.Equal("Muscle name is required.", data?.Error);
+    }
+
+    [Fact]
+    public async Task PostMuscle_NameTooLong_Returns400()
+    {
+        var response = await _client.PostAsJsonAsync("/api/muscles", new { name = new string('A', 101) });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var data = await response.Content.ReadFromJsonAsync<ErrorDto>();
+        Assert.Equal("Muscle name must be 100 characters or fewer.", data?.Error);
+    }
+
+    [Fact]
+    public async Task PostMuscle_DuplicateName_Returns400()
+    {
+        var response = await _client.PostAsJsonAsync("/api/muscles", new { name = "Chest" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var data = await response.Content.ReadFromJsonAsync<ErrorDto>();
+        Assert.Equal("A muscle with this name already exists.", data?.Error);
+    }
+
+    [Fact]
+    public async Task PostMuscle_DuplicateNameDifferentCase_Returns400()
+    {
+        var response = await _client.PostAsJsonAsync("/api/muscles", new { name = "biceps" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var data = await response.Content.ReadFromJsonAsync<ErrorDto>();
+        Assert.Equal("A muscle with this name already exists.", data?.Error);
+    }
+
     private sealed record MuscleDto(Guid MuscleId, string Name);
+    private sealed record ErrorDto(string Error);
 }

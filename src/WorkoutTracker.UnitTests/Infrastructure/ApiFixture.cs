@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using WorkoutTracker.Infrastructure.Data;
 using Xunit;
@@ -35,12 +36,17 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
         // so tests don't need the Aspire service bus running
         builder.ConfigureServices(services =>
         {
-            // Remove all existing WorkoutTrackerDbContext and its options registrations
+            // Remove all existing WorkoutTrackerDbContext registrations, options, and any
+            // IDbContextOptionsConfiguration<WorkoutTrackerDbContext> that Aspire may register
+            // to apply EnableRetryOnFailure — which breaks test-initiated transactions.
             var descriptors = services
                 .Where(d =>
                     d.ServiceType == typeof(WorkoutTrackerDbContext) ||
                     d.ServiceType == typeof(DbContextOptions<WorkoutTrackerDbContext>) ||
-                    d.ServiceType == typeof(DbContextOptions))
+                    d.ServiceType == typeof(DbContextOptions) ||
+                    (d.ServiceType.IsGenericType &&
+                     d.ServiceType.GetGenericTypeDefinition() == typeof(IDbContextOptionsConfiguration<>) &&
+                     d.ServiceType.GenericTypeArguments[0] == typeof(WorkoutTrackerDbContext)))
                 .ToList();
 
             foreach (var d in descriptors)
@@ -79,5 +85,22 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
         await db.Database.ExecuteSqlRawAsync("DELETE FROM workout_tracker.planned_workouts");
         await db.Database.ExecuteSqlRawAsync("DELETE FROM workout_tracker.exercise_muscles");
         await db.Database.ExecuteSqlRawAsync("DELETE FROM workout_tracker.exercises");
+        await db.Database.ExecuteSqlRawAsync(@"
+            DELETE FROM workout_tracker.muscles
+            WHERE muscle_id NOT IN (
+                'a1000000-0000-0000-0000-00000000000c',
+                'a1000000-0000-0000-0000-000000000001',
+                'a1000000-0000-0000-0000-000000000002',
+                'a1000000-0000-0000-0000-000000000003',
+                'a1000000-0000-0000-0000-000000000004',
+                'a1000000-0000-0000-0000-000000000005',
+                'a1000000-0000-0000-0000-000000000006',
+                'a1000000-0000-0000-0000-000000000007',
+                'a1000000-0000-0000-0000-000000000008',
+                'a1000000-0000-0000-0000-000000000009',
+                'a1000000-0000-0000-0000-00000000000a',
+                'a1000000-0000-0000-0000-00000000000b'
+            )
+        ");
     }
 }
