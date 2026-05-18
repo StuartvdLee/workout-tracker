@@ -28,7 +28,7 @@
 
 ## Phase 3: User Story 1 — Add a New Muscle (Priority: P1) 🎯 MVP
 
-**Goal**: A user can type a new muscle name inline on the exercises page (create form and edit modal), click Add, and see the muscle immediately appear as a selected toggle in the correct alphabetical position — without a page reload — and it is persisted across sessions.
+**Goal**: A user can type a new muscle name inline on the exercises page (create form and edit modal), click Add, and see the muscle immediately appear as an unselected toggle in the correct alphabetical position — without a page reload — and it is persisted across sessions.
 
 **Independent Test**: Open the exercises page, type "Hip Flexors" in the add-muscle input, click Add. Confirm the toggle appears between "Hamstrings" and "Quads" without a reload, unselected, and survives a page refresh.
 
@@ -54,7 +54,7 @@
 
 **Checkpoint**: User Story 1 happy-path is fully functional and independently testable. All T002, T002a, T003–T006 tests should now pass. Error handling for non-2xx API responses is completed in US2 (T018).
 
----: User Story 2 — Prevent Duplicate Muscles (Priority: P2)
+## Phase 4: User Story 2 — Prevent Duplicate Muscles (Priority: P2)
 
 **Goal**: Attempts to add a muscle whose name already exists (case-insensitive) are rejected with a clear error message. The muscle list is not mutated; the user can correct the name and try again.
 
@@ -86,7 +86,7 @@
 - [X] T020 [P] Build TypeScript via `npm run build` in `src/WorkoutTracker.Web` and resolve any type errors — confirm `strict: true`, `noUnusedLocals`, `noUnusedParameters`, `noImplicitReturns` all pass
 - [X] T021 [P] Run backend test suite (`dotnet test src/WorkoutTracker.UnitTests/WorkoutTracker.UnitTests.csproj`) and confirm all tests pass, including pre-existing `GetMuscles_Returns200WithAllMuscles` (count 12) and `GetMuscles_ReturnsMusclesInAlphabeticalOrder`
 - [X] T022 [P] Run E2E test suite (`dotnet test src/WorkoutTracker.E2ETests/WorkoutTracker.E2ETests.csproj`) and confirm all tests pass, including pre-existing `MuscleToggles_AllTwelveDisplayed`
-- [ ] T023 Run the quickstart.md manual verification checklist end-to-end (add "Hip Flexors", verify sort position, persist across reload, attempt duplicate "hip flexors", attempt empty name, verify edit modal)
+- [X] T023 Run the quickstart.md manual verification checklist end-to-end (add "Hip Flexors", verify sort position, persist across reload, attempt duplicate "hip flexors", attempt empty name, verify edit modal)
 
 ---
 
@@ -164,5 +164,5 @@ Task T009: .muscle-add__* CSS styles (styles.css)
 - `[US1]` / `[US2]` labels map tasks to specific user stories for traceability
 - `ExerciseQueryHelper.EscapeLike` is already in `Program.cs` (line 737) — reuse it, do not duplicate
 - The `muscles[]` module-level array in `exercises.ts` is shared by both create and edit toggle renders — inserting into it once refreshes both
-- `MuscleToggles_AllTwelveDisplayed` will continue to pass because `ResetDataAsync()` runs before each test
+- `MuscleToggles_AllTwelveDisplayed` will continue to pass because both `CreatePageAsync()` and `CreateMobilePageAsync()` reset mock muscles before each test
 - Commit after each phase checkpoint (T001, after Phase 3 checkpoint, after Phase 4 checkpoint)

@@ -110,6 +110,16 @@ public class MusclesApiTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task PostMuscle_NullName_Returns400()
+    {
+        var response = await _client.PostAsJsonAsync("/api/muscles", new { name = (string?)null });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var data = await response.Content.ReadFromJsonAsync<ErrorDto>();
+        Assert.Equal("Muscle name is required.", data?.Error);
+    }
+
+    [Fact]
     public async Task PostMuscle_NameTooLong_Returns400()
     {
         var response = await _client.PostAsJsonAsync("/api/muscles", new { name = new string('A', 101) });

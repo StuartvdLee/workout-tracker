@@ -35,7 +35,7 @@ Users currently cannot add muscles from within the app — the list is entirely 
 
 - **User Experience Consistency**: The add-muscle mini-form is placed inline below the muscle toggles in both the create form and the edit modal, using `exercise-form__input`, `exercise-form__submit`, and `exercise-form__api-error` CSS classes alongside new `.muscle-add__*` wrappers — matching the visual language of the surrounding form. Error states use `role="alert"` + `aria-live="polite"` consistent with existing `#exercise-error` and `#exercise-api-error` elements. Loading state: "Add" button shows "Adding..." with `aria-disabled="true"` — same pattern as "Saving..." on the exercise submit button. ✅
 
-- **Performance**: Adding a muscle is a point mutation (one INSERT) on a small table with no FK cascade. No full-table scans. Client-side insert + alphabetical sort of a list of ~20 items is O(n log n) and imperceptible. ✅
+- **Performance**: Adding a muscle is a point mutation (one INSERT) on a small table with no FK cascade. The duplicate check currently scans the small `muscles` table (`ILike`), and the endpoint serializes concurrent insert attempts via transaction-scoped advisory lock to keep behavior consistent. Client-side insert + alphabetical sort of a list of ~20 items is O(n log n) and imperceptible. ✅
 
 ## Project Structure
 
@@ -90,7 +90,7 @@ src/WorkoutTracker.E2ETests/
 *Re-evaluated after Phase 1 design artifacts are complete.*
 
 - **Code Quality** ✅ — Four existing files surgically modified. No new abstractions, no `any`, BEM naming, `ExerciseQueryHelper.EscapeLike` reused as-is.
-- **Testing** ✅ — Backend: eight new integration tests. E2E: six new Playwright tests. Existing `MuscleToggles_AllTwelveDisplayed` continues to pass due to per-test DB reset.
+- **Testing** ✅ — Backend: nine new integration tests. E2E: six new Playwright tests. Existing `MuscleToggles_AllTwelveDisplayed` continues to pass due to per-test fixture reset.
 - **Security** ✅ — Input trimming, ILike with EscapeLike, single-user auth exception documented consistently.
 - **User Experience Consistency** ✅ — BEM naming, existing CSS tokens, `role="alert"` + `aria-live="polite"`, loading state matches existing pattern.
 - **Performance** ✅ — Single INSERT, O(n log n) client-side sort on a tiny list, no N+1.

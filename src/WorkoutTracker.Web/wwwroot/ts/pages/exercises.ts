@@ -374,13 +374,10 @@ function renderExerciseList(): void {
   }
 }
 
-function insertMuscleAlphabetically(muscle: Muscle): void {
-  const index = muscles.findIndex(m => m.name.localeCompare(muscle.name, undefined, { sensitivity: "base" }) > 0);
-  if (index === -1) {
-    muscles.push(muscle);
-  } else {
-    muscles.splice(index, 0, muscle);
-  }
+async function reloadMuscles(): Promise<void> {
+  const response = await fetch("/api/muscles");
+  if (!response.ok) return;
+  muscles = await response.json();
 }
 
 async function handleAddMuscle(): Promise<void> {
@@ -392,17 +389,17 @@ async function handleAddMuscle(): Promise<void> {
 
   if (!input || !errorEl || !btn) return;
 
-  errorEl.textContent = "";
+  clearValidationError(input, errorEl);
 
   const name = input.value.trim();
 
   if (!name) {
-    errorEl.textContent = "Muscle name is required.";
+    showValidationError(input, errorEl, "Muscle name is required.");
     return;
   }
 
   if (name.length > 100) {
-    errorEl.textContent = "Muscle name must be 100 characters or fewer.";
+    showValidationError(input, errorEl, "Muscle name must be 100 characters or fewer.");
     return;
   }
 
@@ -419,20 +416,18 @@ async function handleAddMuscle(): Promise<void> {
     });
 
     if (response.ok) {
-      const data = await response.json() as { muscleId: string; name: string };
-      const newMuscle: Muscle = { muscleId: data.muscleId, name: data.name };
-      insertMuscleAlphabetically(newMuscle);
+      await reloadMuscles();
       renderMuscleToggles();
       renderEditMuscleToggles();
       input.value = "";
-      errorEl.textContent = "";
+      clearValidationError(input, errorEl);
       input.focus();
     } else {
       const data = await response.json() as { error?: string };
-      errorEl.textContent = data.error ?? "An unexpected error occurred. Please try again.";
+      showValidationError(input, errorEl, data.error ?? "An unexpected error occurred. Please try again.");
     }
   } catch {
-    errorEl.textContent = "Failed to add muscle. Please try again.";
+    showValidationError(input, errorEl, "Failed to add muscle. Please try again.");
   } finally {
     isAddingMuscle = false;
     btn.removeAttribute("aria-disabled");
@@ -450,17 +445,17 @@ async function handleEditAddMuscle(): Promise<void> {
 
   if (!input || !errorEl || !btn) return;
 
-  errorEl.textContent = "";
+  clearValidationError(input, errorEl);
 
   const name = input.value.trim();
 
   if (!name) {
-    errorEl.textContent = "Muscle name is required.";
+    showValidationError(input, errorEl, "Muscle name is required.");
     return;
   }
 
   if (name.length > 100) {
-    errorEl.textContent = "Muscle name must be 100 characters or fewer.";
+    showValidationError(input, errorEl, "Muscle name must be 100 characters or fewer.");
     return;
   }
 
@@ -477,20 +472,18 @@ async function handleEditAddMuscle(): Promise<void> {
     });
 
     if (response.ok) {
-      const data = await response.json() as { muscleId: string; name: string };
-      const newMuscle: Muscle = { muscleId: data.muscleId, name: data.name };
-      insertMuscleAlphabetically(newMuscle);
+      await reloadMuscles();
       renderMuscleToggles();
       renderEditMuscleToggles();
       input.value = "";
-      errorEl.textContent = "";
+      clearValidationError(input, errorEl);
       input.focus();
     } else {
       const data = await response.json() as { error?: string };
-      errorEl.textContent = data.error ?? "An unexpected error occurred. Please try again.";
+      showValidationError(input, errorEl, data.error ?? "An unexpected error occurred. Please try again.");
     }
   } catch {
-    errorEl.textContent = "Failed to add muscle. Please try again.";
+    showValidationError(input, errorEl, "Failed to add muscle. Please try again.");
   } finally {
     isEditAddingMuscle = false;
     btn.removeAttribute("aria-disabled");
@@ -586,6 +579,7 @@ function openEditModal(exercise: Exercise): void {
   // Set muscle toggle states
   selectedEditMuscleIds = new Set(exercise.muscles.map(m => m.muscleId));
   renderEditMuscleToggles();
+  resetEditAddMuscleForm();
 
   backdrop.style.display = "";
   nameInput.focus();
@@ -596,6 +590,24 @@ function closeEditModal(): void {
   if (backdrop) backdrop.style.display = "none";
   editingExerciseId = null;
   selectedEditMuscleIds = new Set();
+  resetEditAddMuscleForm();
+}
+
+function resetEditAddMuscleForm(): void {
+  const input = document.getElementById("edit-add-muscle-name") as HTMLInputElement | null;
+  const errorEl = document.getElementById("edit-add-muscle-error") as HTMLElement | null;
+  const btn = document.getElementById("edit-add-muscle-btn") as HTMLButtonElement | null;
+
+  if (input && errorEl) {
+    input.value = "";
+    input.disabled = false;
+    clearValidationError(input, errorEl);
+  }
+
+  if (btn) {
+    btn.textContent = "Add";
+    btn.removeAttribute("aria-disabled");
+  }
 }
 
 function renderEditMuscleToggles(): void {

@@ -8,10 +8,10 @@
 
 No schema changes. The `Muscle` table already exists.
 
-| Field      | Type   | Constraints                                     |
-|------------|--------|-------------------------------------------------|
-| MuscleId   | Guid   | Primary key                                     |
-| Name       | string | Required; max 100 chars; unique (case-insensitive) |
+| Field      | Type   | Constraints                  |
+|------------|--------|------------------------------|
+| MuscleId   | Guid   | Primary key                  |
+| Name       | string | Required (`text`, non-null)  |
 
 **Relationships**: One `Muscle` → many `ExerciseMuscle` join rows.
 
@@ -28,7 +28,7 @@ No schema changes. The `Muscle` table already exists.
 | Name must not be empty      | Backend + frontend   | "Muscle name is required."                       |
 | Name must not be whitespace | Backend (Trim check) | "Muscle name is required."                       |
 | Name ≤ 100 characters       | Backend + frontend   | "Muscle name must be 100 characters or fewer."   |
-| Name must be unique (ci)    | Backend (ILike)      | "A muscle with this name already exists."        |
+| Name must be unique (ci)    | Backend (`ILike` + transaction lock) | "A muscle with this name already exists."        |
 
 All validation is enforced on the backend. Frontend performs pre-flight checks for empty and length to avoid unnecessary round-trips.
 

@@ -51,6 +51,9 @@ app.MapPost("/api/muscles", async (HttpContext context, WorkoutTrackerDbContext 
     if (name.Length > 100)
         return Results.Json(new { error = "Muscle name must be 100 characters or fewer." }, statusCode: 400);
 
+    await using var transaction = await db.Database.BeginTransactionAsync();
+    await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(610871121330421911);");
+
     var normalizedName = ExerciseQueryHelper.EscapeLike(name);
     var duplicate = await db.Muscles
         .AnyAsync(m => EF.Functions.ILike(m.Name, normalizedName, "\\"));
@@ -61,6 +64,7 @@ app.MapPost("/api/muscles", async (HttpContext context, WorkoutTrackerDbContext 
     var muscle = new Muscle { MuscleId = Guid.NewGuid(), Name = name };
     db.Muscles.Add(muscle);
     await db.SaveChangesAsync();
+    await transaction.CommitAsync();
 
     return Results.Json(new { muscle.MuscleId, muscle.Name }, statusCode: 201);
 });

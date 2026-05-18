@@ -1032,6 +1032,7 @@ public class ExercisesPageTests
     private async Task<IPage> CreateMobilePageAsync()
     {
         WebAppFixture.ResetExercises();
+        WebAppFixture.ResetMuscles();
         var page = await _playwright.Browser.NewPageAsync(new BrowserNewPageOptions
         {
             ViewportSize = new ViewportSize { Width = 375, Height = 667 },
@@ -1324,8 +1325,37 @@ public class ExercisesPageTests
             await page.Locator("#add-muscle-btn").ClickAsync();
 
             await Expect(page.Locator("#add-muscle-error")).ToHaveTextAsync("Muscle name is required.");
+            await Expect(page.Locator("#add-muscle-name")).ToHaveAttributeAsync("aria-invalid", "true");
+            await Expect(page.Locator("#add-muscle-name")).ToHaveClassAsync(new Regex("exercise-form__input--error"));
 
             await Expect(page.Locator("#exercise-muscles .muscle-toggle")).ToHaveCountAsync(12);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task AddMuscle_EditModalAddField_ResetsWhenReopened()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.Locator("#exercise-name").FillAsync("Modal Reset Exercise");
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
+            await Expect(page.Locator(".exercise-list__item")).ToHaveCountAsync(1);
+
+            await page.Locator(".exercise-list__edit-btn").First.ClickAsync();
+            await page.Locator("#edit-add-muscle-btn").ClickAsync();
+            await Expect(page.Locator("#edit-add-muscle-error")).ToHaveTextAsync("Muscle name is required.");
+            await page.Locator("#edit-add-muscle-name").FillAsync("Residual Value");
+            await page.Locator("#edit-modal-cancel").ClickAsync();
+
+            await page.Locator(".exercise-list__edit-btn").First.ClickAsync();
+            await Expect(page.Locator("#edit-add-muscle-name")).ToHaveValueAsync("");
+            await Expect(page.Locator("#edit-add-muscle-error")).ToHaveTextAsync("");
+            await Expect(page.Locator("#edit-add-muscle-name")).Not.ToHaveAttributeAsync("aria-invalid", "true");
         }
         finally
         {
