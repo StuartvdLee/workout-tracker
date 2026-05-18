@@ -687,6 +687,67 @@ public class WebAppFixture : WebApplicationFactory<Program>
             return Results.Ok(result);
         });
 
+        // Mock API endpoint to get session detail with previous session comparison
+        app.MapGet("/api/sessions/{sessionId}", (string sessionId) =>
+        {
+            MockWorkoutSession? session;
+            lock (_sessionsLock)
+            {
+                session = _sessions.FirstOrDefault(s =>
+                    string.Equals(s.SessionId, sessionId, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (session is null)
+            {
+                return Results.Json(new { error = "Session not found." }, statusCode: 404);
+            }
+
+            List<MockExercise> exerciseSnapshot;
+            lock (_exercisesLock)
+            {
+                exerciseSnapshot = [.. _exercises];
+            }
+
+            List<MockWorkoutSession> sessionSnapshot;
+            lock (_sessionsLock)
+            {
+                sessionSnapshot = [.. _sessions];
+            }
+
+            var priorSession = sessionSnapshot
+                .Where(s =>
+                    string.Equals(s.PlannedWorkoutId, session.PlannedWorkoutId, StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(s.SessionId, sessionId, StringComparison.OrdinalIgnoreCase) &&
+                    s.CompletedAt <= session.CompletedAt)
+                .OrderByDescending(s => s.CompletedAt)
+                .ThenByDescending(s => s.SessionId)
+                .FirstOrDefault();
+
+            return Results.Ok(new
+            {
+                WorkoutSessionId = session.SessionId,
+                session.PlannedWorkoutId,
+                session.WorkoutName,
+                session.CompletedAt,
+                Exercises = session.LoggedExercises.Select(le =>
+                {
+                    var ex = exerciseSnapshot.FirstOrDefault(e =>
+                        string.Equals(e.ExerciseId, le.ExerciseId, StringComparison.OrdinalIgnoreCase));
+                    var prior = priorSession?.LoggedExercises.FirstOrDefault(p =>
+                        string.Equals(p.ExerciseId, le.ExerciseId, StringComparison.OrdinalIgnoreCase));
+                    return new
+                    {
+                        le.LoggedExerciseId,
+                        ExerciseName = ex?.Name ?? "",
+                        le.LoggedWeight,
+                        le.Effort,
+                        PreviousWeight = prior?.LoggedWeight,
+                        PreviousEffort = prior?.Effort,
+                    };
+                }).ToList(),
+            });
+        });
+
         app.UseDefaultFiles();
         app.UseStaticFiles();
         app.MapFallbackToFile("index.html");
