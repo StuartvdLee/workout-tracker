@@ -279,6 +279,7 @@ app.MapGet("/api/workouts/{workoutId:guid}/previous-performance", async (Guid wo
                 le.ExerciseId,
                 le.LoggedWeight,
                 le.Effort,
+                le.Sequence,
             }).ToList(),
         })
         .FirstOrDefaultAsync();
