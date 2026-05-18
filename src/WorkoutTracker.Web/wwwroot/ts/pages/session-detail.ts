@@ -132,8 +132,8 @@ function renderDetail(session: SessionDetailWithPrevious): string {
         <thead>
           <tr class="session-detail__head-row">
             <th class="session-detail__th" scope="col">Exercise</th>
-            <th class="session-detail__th" scope="col">Weight</th>
-            <th class="session-detail__th session-detail__th--prev" scope="col">Prev. Weight</th>
+            <th class="session-detail__th" scope="col">Weight (kg)</th>
+            <th class="session-detail__th session-detail__th--prev" scope="col">Prev. Weight (kg)</th>
             <th class="session-detail__th" scope="col">Effort</th>
             <th class="session-detail__th session-detail__th--prev" scope="col">Prev. Effort</th>
           </tr>
