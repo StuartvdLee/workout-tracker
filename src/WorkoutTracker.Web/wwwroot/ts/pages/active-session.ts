@@ -276,7 +276,7 @@ function renderExerciseInputs(previousData: Map<string, PreviousExerciseData> | 
         if (entry.effort !== null) parts.push(`${entry.effort} — ${getEffortLabel(entry.effort)}`);
 
         if (parts.length > 0) {
-          // State 2/3/4: weight, effort, or both available
+          // State 2/3/4/5: sequence, weight, effort, or any combination available
           const labelSpan = document.createElement("span");
           labelSpan.className = "active-session__previous-label";
           labelSpan.textContent = "Last time:";
@@ -288,7 +288,7 @@ function renderExerciseInputs(previousData: Map<string, PreviousExerciseData> | 
           previousDiv.appendChild(labelSpan);
           previousDiv.appendChild(valueSpan);
         } else {
-          // State 5: entry exists but both fields null — treat same as first-session
+          // All fields null (sequence, weight, and effort) — treat same as first-session
           const emptySpan = document.createElement("span");
           emptySpan.className = "active-session__previous-empty";
           emptySpan.textContent = "First session — no previous data";

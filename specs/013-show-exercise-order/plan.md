@@ -9,7 +9,7 @@ When a user is in an active workout session, display the position (`#1`, `#2`, `
 
 ## Technical Context
 
-**Language/Version**: C# on .NET 10.0 (backend), TypeScript 5.9.3 (frontend)  
+**Language/Version**: C# on .NET 10.0 (backend), TypeScript ~6.0.3 (frontend)  
 **Primary Dependencies**: ASP.NET Core minimal API, .NET Aspire 13.1.2, Entity Framework Core with Npgsql, vanilla TypeScript (no JS frameworks)  
 **Storage**: PostgreSQL via EF Core — no schema changes; `Sequence` already exists on `logged_exercise`  
 **Testing**: xUnit 3.2.2 + WebApplicationFactory integration tests (real PostgreSQL via `TEST_DB_CONNECTION`); Vitest frontend unit tests  
