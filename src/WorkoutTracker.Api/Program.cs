@@ -621,6 +621,76 @@ app.MapGet("/api/sessions/latest", async (WorkoutTrackerDbContext db) =>
     });
 });
 
+app.MapGet("/api/sessions/{sessionId:guid}", async (Guid sessionId, WorkoutTrackerDbContext db) =>
+{
+    var session = await db.WorkoutSessions
+        .Where(ws => ws.WorkoutSessionId == sessionId)
+        .Select(ws => new
+        {
+            ws.WorkoutSessionId,
+            ws.PlannedWorkoutId,
+            WorkoutName = ws.WorkoutName ?? (ws.PlannedWorkout != null ? ws.PlannedWorkout.Name : null),
+            CompletedAt = EF.Property<DateTime>(ws, "CompletedAt"),
+            Exercises = ws.LoggedExercises
+                .OrderBy(le => le.Sequence)
+                .Select(le => new
+                {
+                    le.LoggedExerciseId,
+                    le.ExerciseId,
+                    ExerciseName = le.Exercise.Name,
+                    le.LoggedWeight,
+                    le.Effort,
+                }).ToList(),
+        })
+        .FirstOrDefaultAsync();
+
+    if (session is null)
+    {
+        return Results.Json(new { error = "Session not found." }, statusCode: 404);
+    }
+
+    // Find the most recent prior session for the same planned workout (per research.md R-003)
+    var priorExercises = session.PlannedWorkoutId is null
+        ? null
+        : await db.WorkoutSessions
+            .Where(ws =>
+                ws.PlannedWorkoutId == session.PlannedWorkoutId &&
+                (
+                    EF.Property<DateTime>(ws, "CompletedAt") < session.CompletedAt ||
+                    (EF.Property<DateTime>(ws, "CompletedAt") == session.CompletedAt &&
+                     ws.WorkoutSessionId.CompareTo(sessionId) < 0)
+                ))
+            .OrderByDescending(ws => EF.Property<DateTime>(ws, "CompletedAt"))
+            .ThenByDescending(ws => ws.WorkoutSessionId)
+            .Select(ws => ws.LoggedExercises
+                .Select(le => new { le.ExerciseId, le.LoggedWeight, le.Effort })
+                .ToList())
+            .FirstOrDefaultAsync();
+
+    return Results.Ok(new
+    {
+        session.WorkoutSessionId,
+        session.PlannedWorkoutId,
+        session.WorkoutName,
+        session.CompletedAt,
+        Exercises = session.Exercises.Select(le =>
+        {
+            // First-match by ExerciseId — accepted strategy per research.md R-007
+            // Single-user app: no cross-user access control needed (consistent with features 008 and 013)
+            var prior = priorExercises?.FirstOrDefault(p => p.ExerciseId == le.ExerciseId);
+            return new
+            {
+                le.LoggedExerciseId,
+                le.ExerciseName,
+                le.LoggedWeight,
+                le.Effort,
+                PreviousWeight = prior?.LoggedWeight,
+                PreviousEffort = prior?.Effort,
+            };
+        }).ToList(),
+    });
+});
+
 app.Run();
 
 // Expose Program class for WebApplicationFactory in tests

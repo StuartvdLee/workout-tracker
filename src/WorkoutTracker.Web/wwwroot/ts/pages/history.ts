@@ -1,20 +1,11 @@
-import { getEffortLabel } from "../utils.js";
-
-interface LoggedExercise {
-  readonly loggedExerciseId: string;
-  readonly exerciseId: string;
-  readonly exerciseName: string;
-  readonly loggedWeight: string | null;
-  readonly notes: string | null;
-  readonly effort: number | null;
-}
+import { navigate } from "../router.js";
 
 interface WorkoutSession {
   readonly workoutSessionId: string;
   readonly plannedWorkoutId: string | null;
   readonly workoutName: string;
   readonly completedAt: string;
-  readonly loggedExercises: LoggedExercise[];
+  readonly loggedExercises: { exerciseId: string }[];
 }
 
 const historyDateFormatter = new Intl.DateTimeFormat("en-GB", {
@@ -84,7 +75,10 @@ function formatTime(isoDate: string): string {
 function renderSessions(sessions: WorkoutSession[], container: HTMLElement): void {
   container.innerHTML = sessions.map((s) => renderSession(s)).join("");
   container.querySelectorAll<HTMLButtonElement>(".history-session__header").forEach((btn) => {
-    btn.addEventListener("click", () => { toggleSession(btn); });
+    const sessionId = btn.closest<HTMLElement>(".history-session")?.dataset.sessionId;
+    if (sessionId) {
+      btn.addEventListener("click", () => { navigate(`/history/session?id=${encodeURIComponent(sessionId)}`); });
+    }
   });
 }
 
@@ -92,60 +86,16 @@ function renderSession(session: WorkoutSession): string {
   const exerciseCount = session.loggedExercises.length;
   const exerciseLabel = exerciseCount === 1 ? "1 exercise" : `${exerciseCount} exercises`;
 
-  const exercisesHtml =
-    exerciseCount === 0
-      ? `<div class="history-session__exercise"><span class="history-session__exercise-name">No exercises logged</span></div>`
-      : session.loggedExercises
-          .map((ex) => {
-            const parts: string[] = [];
-            if (ex.loggedWeight !== null) parts.push(`${escapeHtml(ex.loggedWeight)} KG`);
-            if (ex.effort !== null) parts.push(`${ex.effort} — ${getEffortLabel(ex.effort)}`);
-            if (ex.notes !== null) parts.push(`— ${escapeHtml(ex.notes)}`);
-            const dataStr = parts.join(" · ");
-
-            return `
-            <div class="history-session__exercise">
-              <span class="history-session__exercise-name">${escapeHtml(ex.exerciseName)}</span>
-              <span class="history-session__exercise-data">${dataStr}</span>
-            </div>`;
-          })
-          .join("");
-
   return `
     <div class="history-session" data-session-id="${escapeHtml(session.workoutSessionId)}">
-      <button class="history-session__header" type="button" aria-expanded="false" aria-controls="session-details-${escapeHtml(session.workoutSessionId)}">
+      <button class="history-session__header" type="button">
         <div class="history-session__info">
           <span class="history-session__workout-name">${escapeHtml(session.workoutName)}</span>
           <span class="history-session__date">${escapeHtml(formatDate(session.completedAt))}</span>
         </div>
         <span class="history-session__exercise-count">${exerciseLabel}</span>
-        <span class="history-session__toggle">▸</span>
       </button>
-      <div class="history-session__details" id="session-details-${escapeHtml(session.workoutSessionId)}" style="display:none;">
-        ${exercisesHtml}
-      </div>
     </div>`;
-}
-
-function toggleSession(btn: HTMLButtonElement): void {
-  const expanded = btn.getAttribute("aria-expanded") === "true";
-  const controlsId = btn.getAttribute("aria-controls");
-  if (!controlsId) return;
-
-  const details = document.getElementById(controlsId) as HTMLElement | null;
-  if (!details) return;
-
-  const sessionEl = btn.closest(".history-session") as HTMLElement | null;
-
-  if (expanded) {
-    btn.setAttribute("aria-expanded", "false");
-    details.style.display = "none";
-    sessionEl?.classList.remove("history-session--expanded");
-  } else {
-    btn.setAttribute("aria-expanded", "true");
-    details.style.display = "";
-    sessionEl?.classList.add("history-session--expanded");
-  }
 }
 
 function escapeHtml(text: string): string {

@@ -742,6 +742,149 @@ public class SessionApiTests : IAsyncLifetime
         Assert.False(root.TryGetProperty("completedAt", out _));
     }
 
+    // --- GET /api/sessions/{sessionId} ---
+
+    [Fact]
+    public async Task GetSessionDetail_Returns404_WhenSessionNotFound()
+    {
+        var response = await _client.GetAsync($"/api/sessions/{Guid.NewGuid()}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        var error = await response.Content.ReadFromJsonAsync<ErrorDto>();
+        Assert.NotNull(error);
+        Assert.Equal("Session not found.", error.Error);
+    }
+
+    [Fact]
+    public async Task GetSessionDetail_ReturnsSessionData_WithExercises()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Push Day", "Bench Press");
+        var session = await CreateSessionAsync(workoutId, exerciseId, "80 KG", 7);
+
+        var response = await _client.GetAsync($"/api/sessions/{session.WorkoutSessionId}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var detail = await response.Content.ReadFromJsonAsync<SessionDetailWithPreviousDto>();
+        Assert.NotNull(detail);
+        Assert.Equal("Push Day", detail.WorkoutName);
+        Assert.NotEqual(default, detail.CompletedAt);
+        Assert.Single(detail.Exercises);
+        Assert.Equal("Bench Press", detail.Exercises[0].ExerciseName);
+        Assert.Equal("80 KG", detail.Exercises[0].LoggedWeight);
+        Assert.Equal(7, detail.Exercises[0].Effort);
+    }
+
+    [Fact]
+    public async Task GetSessionDetail_ReturnsEmptyExercises_WhenNoneLogged()
+    {
+        var (workoutId, _) = await CreateWorkoutWithExerciseAsync("Rest Day", "Stretch");
+        var response = await _client.PostAsJsonAsync(
+            $"/api/workouts/{workoutId}/sessions",
+            new { LoggedExercises = Array.Empty<object>() });
+        response.EnsureSuccessStatusCode();
+        var session = (await response.Content.ReadFromJsonAsync<SessionDetailDto>())!;
+
+        var detailResponse = await _client.GetAsync($"/api/sessions/{session.WorkoutSessionId}");
+
+        Assert.Equal(HttpStatusCode.OK, detailResponse.StatusCode);
+        var detail = await detailResponse.Content.ReadFromJsonAsync<SessionDetailWithPreviousDto>();
+        Assert.NotNull(detail);
+        Assert.Empty(detail.Exercises);
+    }
+
+    [Fact]
+    public async Task GetSessionDetail_ReturnsPreviousData_WhenPriorSessionExists()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Push Day", "Bench Press");
+        await CreateSessionAsync(workoutId, exerciseId, "70 KG", 6);
+        var secondSession = await CreateSessionAsync(workoutId, exerciseId, "75 KG", 7);
+
+        var response = await _client.GetAsync($"/api/sessions/{secondSession.WorkoutSessionId}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var detail = await response.Content.ReadFromJsonAsync<SessionDetailWithPreviousDto>();
+        Assert.NotNull(detail);
+        Assert.Single(detail.Exercises);
+        Assert.Equal("75 KG", detail.Exercises[0].LoggedWeight);
+        Assert.Equal(7, detail.Exercises[0].Effort);
+        Assert.Equal("70 KG", detail.Exercises[0].PreviousWeight);
+        Assert.Equal(6, detail.Exercises[0].PreviousEffort);
+    }
+
+    [Fact]
+    public async Task GetSessionDetail_ReturnsNullPreviousData_WhenNoPriorSession()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Push Day", "Bench Press");
+        var session = await CreateSessionAsync(workoutId, exerciseId, "80 KG", 7);
+
+        var response = await _client.GetAsync($"/api/sessions/{session.WorkoutSessionId}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var detail = await response.Content.ReadFromJsonAsync<SessionDetailWithPreviousDto>();
+        Assert.NotNull(detail);
+        Assert.Single(detail.Exercises);
+        Assert.Null(detail.Exercises[0].PreviousWeight);
+        Assert.Null(detail.Exercises[0].PreviousEffort);
+    }
+
+    [Fact]
+    public async Task GetSessionDetail_ReturnsNullPreviousFields_WhenExerciseMissingFromPriorSession()
+    {
+        // Create both exercises first
+        var exRespA = await _client.PostAsJsonAsync("/api/exercises", new { Name = "Bench Press" });
+        exRespA.EnsureSuccessStatusCode();
+        var exerciseIdA = (await exRespA.Content.ReadFromJsonAsync<ExerciseDto>())!.ExerciseId;
+
+        var exRespB = await _client.PostAsJsonAsync("/api/exercises", new { Name = "Overhead Press" });
+        exRespB.EnsureSuccessStatusCode();
+        var exerciseIdB = (await exRespB.Content.ReadFromJsonAsync<ExerciseDto>())!.ExerciseId;
+
+        // Create workout with both exercises
+        var workoutResp = await _client.PostAsJsonAsync("/api/workouts", new
+        {
+            Name = "Push Day",
+            Exercises = new[]
+            {
+                new { ExerciseId = exerciseIdA },
+                new { ExerciseId = exerciseIdB },
+            }
+        });
+        workoutResp.EnsureSuccessStatusCode();
+        var workoutId = (await workoutResp.Content.ReadFromJsonAsync<WorkoutDto>())!.PlannedWorkoutId;
+
+        // First session: only log exercise A
+        await CreateSessionAsync(workoutId, exerciseIdA, "80 KG", 7);
+
+        // Second session: log both exercises A and B
+        var secondResp = await _client.PostAsJsonAsync(
+            $"/api/workouts/{workoutId}/sessions",
+            new
+            {
+                LoggedExercises = new[]
+                {
+                    new { ExerciseId = exerciseIdA, LoggedWeight = "85 KG", Notes = (string?)null, Effort = (int?)8 },
+                    new { ExerciseId = exerciseIdB, LoggedWeight = "60 KG", Notes = (string?)null, Effort = (int?)6 },
+                }
+            });
+        secondResp.EnsureSuccessStatusCode();
+        var secondSession = (await secondResp.Content.ReadFromJsonAsync<SessionDetailDto>())!;
+
+        var response = await _client.GetAsync($"/api/sessions/{secondSession.WorkoutSessionId}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var detail = await response.Content.ReadFromJsonAsync<SessionDetailWithPreviousDto>();
+        Assert.NotNull(detail);
+        Assert.Equal(2, detail.Exercises.Count);
+
+        var benchPress = detail.Exercises.First(e => e.ExerciseName == "Bench Press");
+        Assert.Equal("80 KG", benchPress.PreviousWeight);
+        Assert.Equal(7, benchPress.PreviousEffort);
+
+        var overheadPress = detail.Exercises.First(e => e.ExerciseName == "Overhead Press");
+        Assert.Null(overheadPress.PreviousWeight);
+        Assert.Null(overheadPress.PreviousEffort);
+    }
+
     // --- Helpers ---
 
     private async Task<(Guid WorkoutId, Guid ExerciseId)> CreateWorkoutWithExerciseAsync(
@@ -762,7 +905,11 @@ public class SessionApiTests : IAsyncLifetime
         return (workout.PlannedWorkoutId, exercise.ExerciseId);
     }
 
-    private async Task<SessionDetailDto> CreateSessionAsync(Guid workoutId, Guid exerciseId)
+    private async Task<SessionDetailDto> CreateSessionAsync(Guid workoutId, Guid exerciseId) =>
+        await CreateSessionAsync(workoutId, exerciseId, null, null);
+
+    private async Task<SessionDetailDto> CreateSessionAsync(
+        Guid workoutId, Guid exerciseId, string? loggedWeight, int? effort)
     {
         var response = await _client.PostAsJsonAsync(
             $"/api/workouts/{workoutId}/sessions",
@@ -770,7 +917,7 @@ public class SessionApiTests : IAsyncLifetime
             {
                 LoggedExercises = new[]
                 {
-                    new { ExerciseId = exerciseId, LoggedWeight = (string?)null, Notes = (string?)null, Effort = (int?)null }
+                    new { ExerciseId = exerciseId, LoggedWeight = loggedWeight, Notes = (string?)null, Effort = effort }
                 }
             });
         response.EnsureSuccessStatusCode();
@@ -789,4 +936,17 @@ public class SessionApiTests : IAsyncLifetime
     private sealed record PreviousExerciseDataDto(Guid ExerciseId, string? LoggedWeight, int? Effort, int? Sequence);
     private sealed record LatestSessionDto(bool HasSession, string? WorkoutName, DateTime? CompletedAt);
     private sealed record ErrorDto(string Error);
+    private sealed record SessionDetailWithPreviousDto(
+        Guid WorkoutSessionId,
+        Guid? PlannedWorkoutId,
+        string? WorkoutName,
+        DateTime CompletedAt,
+        List<SessionExerciseWithPreviousDto> Exercises);
+    private sealed record SessionExerciseWithPreviousDto(
+        Guid LoggedExerciseId,
+        string ExerciseName,
+        string? LoggedWeight,
+        int? Effort,
+        string? PreviousWeight,
+        int? PreviousEffort);
 }
