@@ -18,11 +18,13 @@ let exercises: Exercise[] = [];
 let muscles: Muscle[] = [];
 let selectedMuscleIds: Set<string> = new Set();
 let isSubmitting = false;
+let isAddingMuscle = false;
 
 // Edit modal state
 let editingExerciseId: string | null = null;
 let selectedEditMuscleIds: Set<string> = new Set();
 let isEditSubmitting = false;
+let isEditAddingMuscle = false;
 
 // Delete confirmation state
 let deletingExerciseId: string | null = null;
@@ -49,6 +51,20 @@ export async function render(container: HTMLElement): Promise<void> {
           <label class="exercise-form__label">Targeted muscles (optional)</label>
           <div class="exercise-form__muscles" id="exercise-muscles" role="group" aria-label="Targeted muscles">
           </div>
+          <div class="muscle-add" id="add-muscle-form">
+            <input
+              class="muscle-add__input exercise-form__input"
+              type="text"
+              id="add-muscle-name"
+              placeholder="New muscle name"
+              maxlength="100"
+              autocomplete="off"
+              aria-label="New muscle name"
+              aria-describedby="add-muscle-error"
+            />
+            <button class="muscle-add__btn" type="button" id="add-muscle-btn">Add</button>
+            <div class="muscle-add__error" id="add-muscle-error" role="alert" aria-live="polite"></div>
+          </div>
         </div>
         <div class="exercise-form__error" id="exercise-error" role="alert" aria-live="polite"></div>
         <div class="exercise-form__actions">
@@ -74,6 +90,20 @@ export async function render(container: HTMLElement): Promise<void> {
             <div class="exercise-form__group">
               <label class="exercise-form__label">Targeted muscles (optional)</label>
               <div class="exercise-form__muscles" id="edit-exercise-muscles" role="group" aria-label="Targeted muscles"></div>
+              <div class="muscle-add" id="edit-add-muscle-form">
+                <input
+                  class="muscle-add__input exercise-form__input"
+                  type="text"
+                  id="edit-add-muscle-name"
+                  placeholder="New muscle name"
+                  maxlength="100"
+                  autocomplete="off"
+                  aria-label="New muscle name"
+                  aria-describedby="edit-add-muscle-error"
+                />
+                <button class="muscle-add__btn" type="button" id="edit-add-muscle-btn">Add</button>
+                <div class="muscle-add__error" id="edit-add-muscle-error" role="alert" aria-live="polite"></div>
+              </div>
             </div>
             <div class="exercise-form__error" id="edit-exercise-error" role="alert" aria-live="polite"></div>
             <div class="edit-modal__actions">
@@ -102,7 +132,9 @@ export async function render(container: HTMLElement): Promise<void> {
   selectedMuscleIds = new Set();
   selectedEditMuscleIds = new Set();
   isSubmitting = false;
+  isAddingMuscle = false;
   isEditSubmitting = false;
+  isEditAddingMuscle = false;
   deletingExerciseId = null;
   isDeleting = false;
 
@@ -119,6 +151,20 @@ function initForm(): void {
   form.addEventListener("submit", (event: Event) => {
     event.preventDefault();
     void handleSubmit();
+  });
+
+  const addMuscleBtn = document.getElementById("add-muscle-btn") as HTMLButtonElement | null;
+  const addMuscleInput = document.getElementById("add-muscle-name") as HTMLInputElement | null;
+
+  addMuscleBtn?.addEventListener("click", () => {
+    void handleAddMuscle();
+  });
+
+  addMuscleInput?.addEventListener("keydown", (event: KeyboardEvent) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      void handleAddMuscle();
+    }
   });
 }
 
@@ -176,6 +222,20 @@ function initEditModal(): void {
       }
     }
   });
+
+  const editAddMuscleBtn = document.getElementById("edit-add-muscle-btn") as HTMLButtonElement | null;
+  const editAddMuscleInput = document.getElementById("edit-add-muscle-name") as HTMLInputElement | null;
+
+  editAddMuscleBtn?.addEventListener("click", () => {
+    void handleEditAddMuscle();
+  });
+
+  editAddMuscleInput?.addEventListener("keydown", (event: KeyboardEvent) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      void handleEditAddMuscle();
+    }
+  });
 }
 
 async function loadData(): Promise<void> {
@@ -212,8 +272,14 @@ function renderMuscleToggles(): void {
     btn.className = "muscle-toggle";
     btn.textContent = muscle.name;
     btn.setAttribute("role", "checkbox");
-    btn.setAttribute("aria-checked", "false");
     btn.setAttribute("data-muscle-id", muscle.muscleId);
+
+    if (selectedMuscleIds.has(muscle.muscleId)) {
+      btn.classList.add("muscle-toggle--active");
+      btn.setAttribute("aria-checked", "true");
+    } else {
+      btn.setAttribute("aria-checked", "false");
+    }
 
     btn.addEventListener("click", () => {
       toggleMuscle(muscle.muscleId, btn);
@@ -305,6 +371,133 @@ function renderExerciseList(): void {
     actionsDiv.appendChild(deleteBtn);
     li.appendChild(actionsDiv);
     listEl.appendChild(li);
+  }
+}
+
+function insertMuscleAlphabetically(muscle: Muscle): void {
+  const index = muscles.findIndex(m => m.name.localeCompare(muscle.name, undefined, { sensitivity: "base" }) > 0);
+  if (index === -1) {
+    muscles.push(muscle);
+  } else {
+    muscles.splice(index, 0, muscle);
+  }
+}
+
+async function handleAddMuscle(): Promise<void> {
+  if (isAddingMuscle) return;
+
+  const input = document.getElementById("add-muscle-name") as HTMLInputElement | null;
+  const errorEl = document.getElementById("add-muscle-error") as HTMLElement | null;
+  const btn = document.getElementById("add-muscle-btn") as HTMLButtonElement | null;
+
+  if (!input || !errorEl || !btn) return;
+
+  errorEl.textContent = "";
+
+  const name = input.value.trim();
+
+  if (!name) {
+    errorEl.textContent = "Muscle name is required.";
+    return;
+  }
+
+  if (name.length > 100) {
+    errorEl.textContent = "Muscle name must be 100 characters or fewer.";
+    return;
+  }
+
+  isAddingMuscle = true;
+  btn.setAttribute("aria-disabled", "true");
+  btn.textContent = "Adding...";
+  input.disabled = true;
+
+  try {
+    const response = await fetch("/api/muscles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+
+    if (response.ok) {
+      const data = await response.json() as { muscleId: string; name: string };
+      const newMuscle: Muscle = { muscleId: data.muscleId, name: data.name };
+      insertMuscleAlphabetically(newMuscle);
+      selectedMuscleIds.add(newMuscle.muscleId);
+      renderMuscleToggles();
+      renderEditMuscleToggles();
+      input.value = "";
+      errorEl.textContent = "";
+      input.focus();
+    } else {
+      const data = await response.json() as { error?: string };
+      errorEl.textContent = data.error ?? "An unexpected error occurred. Please try again.";
+    }
+  } catch {
+    errorEl.textContent = "Failed to add muscle. Please try again.";
+  } finally {
+    isAddingMuscle = false;
+    btn.removeAttribute("aria-disabled");
+    btn.textContent = "Add";
+    input.disabled = false;
+  }
+}
+
+async function handleEditAddMuscle(): Promise<void> {
+  if (isEditAddingMuscle) return;
+
+  const input = document.getElementById("edit-add-muscle-name") as HTMLInputElement | null;
+  const errorEl = document.getElementById("edit-add-muscle-error") as HTMLElement | null;
+  const btn = document.getElementById("edit-add-muscle-btn") as HTMLButtonElement | null;
+
+  if (!input || !errorEl || !btn) return;
+
+  errorEl.textContent = "";
+
+  const name = input.value.trim();
+
+  if (!name) {
+    errorEl.textContent = "Muscle name is required.";
+    return;
+  }
+
+  if (name.length > 100) {
+    errorEl.textContent = "Muscle name must be 100 characters or fewer.";
+    return;
+  }
+
+  isEditAddingMuscle = true;
+  btn.setAttribute("aria-disabled", "true");
+  btn.textContent = "Adding...";
+  input.disabled = true;
+
+  try {
+    const response = await fetch("/api/muscles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+
+    if (response.ok) {
+      const data = await response.json() as { muscleId: string; name: string };
+      const newMuscle: Muscle = { muscleId: data.muscleId, name: data.name };
+      insertMuscleAlphabetically(newMuscle);
+      selectedEditMuscleIds.add(newMuscle.muscleId);
+      renderMuscleToggles();
+      renderEditMuscleToggles();
+      input.value = "";
+      errorEl.textContent = "";
+      input.focus();
+    } else {
+      const data = await response.json() as { error?: string };
+      errorEl.textContent = data.error ?? "An unexpected error occurred. Please try again.";
+    }
+  } catch {
+    errorEl.textContent = "Failed to add muscle. Please try again.";
+  } finally {
+    isEditAddingMuscle = false;
+    btn.removeAttribute("aria-disabled");
+    btn.textContent = "Add";
+    input.disabled = false;
   }
 }
 

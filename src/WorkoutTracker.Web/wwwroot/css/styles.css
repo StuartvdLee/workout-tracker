@@ -2212,3 +2212,52 @@ html[data-theme-pref="system"] .topbar__theme-icon--system {
 .workout-form__randomise-btn[aria-checked="true"]::after {
   transform: translateX(1.25rem);
 }
+
+/* Add-muscle inline form */
+.muscle-add {
+  display: flex;
+  gap: var(--spacing-xs);
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: var(--spacing-xs);
+}
+
+.muscle-add__input {
+  flex: 1;
+  min-width: 10rem;
+}
+
+.muscle-add__btn {
+  min-height: var(--min-touch-target);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  font-family: var(--font-family);
+  color: var(--color-white);
+  background-color: var(--color-primary);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.muscle-add__btn:hover {
+  background-color: var(--color-primary-hover);
+}
+
+.muscle-add__btn:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+.muscle-add__btn[aria-disabled="true"] {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.muscle-add__error {
+  width: 100%;
+  font-size: var(--font-size-sm);
+  color: var(--color-error);
+}

@@ -25,11 +25,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
         new("b2c3d4e5-f6a7-8b9c-0d1e-2f3a4b5c6d7e", "Push"),
     ];
 
-    /// <summary>
-    /// Mock muscles served by the test server at /api/muscles.
-    /// Pre-sorted alphabetically by name to match DbContext seed data.
-    /// </summary>
-    public static readonly IReadOnlyList<MockMuscle> Muscles =
+    private static readonly MockMuscle[] _seedMuscles =
     [
         new("a1000000-0000-0000-0000-00000000000c", "Adductors"),
         new("a1000000-0000-0000-0000-000000000001", "Back"),
@@ -44,6 +40,25 @@ public class WebAppFixture : WebApplicationFactory<Program>
         new("a1000000-0000-0000-0000-00000000000a", "Shoulders"),
         new("a1000000-0000-0000-0000-00000000000b", "Triceps"),
     ];
+
+    private static readonly Lock _musclesLock = new();
+    private static List<MockMuscle> _muscles = [.. _seedMuscles];
+
+    /// <summary>
+    /// Pre-sorted alphabetically by name. Thread-safe snapshot.
+    /// </summary>
+    public static IReadOnlyList<MockMuscle> Muscles
+    {
+        get { lock (_musclesLock) { return [.. _muscles]; } }
+    }
+
+    public static void ResetMuscles()
+    {
+        lock (_musclesLock)
+        {
+            _muscles = [.. _seedMuscles];
+        }
+    }
 
     private static readonly Lock _exercisesLock = new();
     private static readonly List<MockExercise> _exercises = [];
@@ -138,7 +153,34 @@ public class WebAppFixture : WebApplicationFactory<Program>
         app.MapGet("/api/workout-types", () => Results.Ok(WorkoutTypes));
 
         // Mock API endpoint for muscles
-        app.MapGet("/api/muscles", () => Results.Ok(Muscles));
+        app.MapGet("/api/muscles", () =>
+        {
+            lock (_musclesLock) { return Results.Ok(_muscles.ToList()); }
+        });
+
+        // Mock API endpoint to add a muscle
+        app.MapPost("/api/muscles", async (HttpRequest request) =>
+        {
+            var body = await request.ReadFromJsonAsync<MuscleRequest>();
+            var name = body?.Name?.Trim() ?? "";
+
+            if (string.IsNullOrWhiteSpace(name))
+                return Results.Json(new { error = "Muscle name is required." }, statusCode: 400);
+
+            if (name.Length > 100)
+                return Results.Json(new { error = "Muscle name must be 100 characters or fewer." }, statusCode: 400);
+
+            lock (_musclesLock)
+            {
+                if (_muscles.Any(m => string.Equals(m.Name, name, StringComparison.OrdinalIgnoreCase)))
+                    return Results.Json(new { error = "A muscle with this name already exists." }, statusCode: 400);
+
+                var muscle = new MockMuscle(Guid.NewGuid().ToString(), name);
+                _muscles.Add(muscle);
+                _muscles = [.. _muscles.OrderBy(m => m.Name, StringComparer.OrdinalIgnoreCase)];
+                return Results.Json(new { muscleId = muscle.MuscleId, name = muscle.Name }, statusCode: 201);
+            }
+        });
 
         // Mock API endpoint to list exercises
         app.MapGet("/api/exercises", () =>
@@ -797,6 +839,11 @@ public class WebAppFixture : WebApplicationFactory<Program>
     {
         public string Name { get; set; } = "";
         public string[]? MuscleIds { get; set; }
+    }
+
+    private sealed class MuscleRequest
+    {
+        public string Name { get; set; } = "";
     }
 
     private sealed class WorkoutRequest
