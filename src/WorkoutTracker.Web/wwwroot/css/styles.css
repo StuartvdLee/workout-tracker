@@ -1832,7 +1832,6 @@ body.is-dragging .workout-selected__drag-handle {
   color: var(--color-primary);
   cursor: pointer;
   padding: 0;
-  min-height: var(--min-touch-target);
   align-self: flex-start;
 }
 
