@@ -85,7 +85,10 @@ app.MapPost("/api/muscles", async (HttpContext context, WorkoutTrackerDbContext 
                 return true;
             }
 
-            return duplicate;
+            if (duplicate)
+                return true;
+
+            return false;
         });
 
     if (duplicate)
