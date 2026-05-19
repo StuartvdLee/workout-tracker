@@ -38,6 +38,8 @@ let isSaving = false;
 let hasChanges = false;
 let exerciseOrder: string[] | null = null;
 let pendingOverallEffort: number | null = null;
+const MODAL_FOCUSABLE_SELECTOR =
+  'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [contenteditable="true"], [tabindex]:not([tabindex="-1"])';
 
 export async function render(container: HTMLElement): Promise<void> {
   const params = new URLSearchParams(window.location.search);
@@ -161,9 +163,7 @@ function initDiscardModal(): void {
       const modal = backdrop.querySelector(".discard-modal") as HTMLElement | null;
       if (!modal) return;
 
-      const focusable = modal.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), [tabindex]:not([tabindex="-1"])'
-      );
+      const focusable = modal.querySelectorAll<HTMLElement>(MODAL_FOCUSABLE_SELECTOR);
       if (focusable.length === 0) return;
 
       const first = focusable[0];
@@ -220,9 +220,7 @@ function initEffortModal(): void {
       const modal = backdrop.querySelector(".effort-modal") as HTMLElement | null;
       if (!modal) return;
 
-      const focusable = modal.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
-      );
+      const focusable = modal.querySelectorAll<HTMLElement>(MODAL_FOCUSABLE_SELECTOR);
       if (focusable.length === 0) return;
 
       const first = focusable[0];
