@@ -154,17 +154,19 @@ function initEventListeners(): void {
   });
 
   deleteConfirmBackdrop?.addEventListener("keydown", (event: KeyboardEvent) => {
+    if (!deleteConfirmModal && event.key !== "Escape") {
+      return;
+    }
+
     if (event.key === "Escape") {
       if (!isDeleteSubmitting) {
         closeDeleteConfirmModal();
       }
     }
 
-    if (!deleteConfirmModal) {
-      return;
+    if (deleteConfirmModal) {
+      trapModalTabKey(event, deleteConfirmModal);
     }
-
-    trapModalTabKey(event, deleteConfirmModal);
   });
 }
 
