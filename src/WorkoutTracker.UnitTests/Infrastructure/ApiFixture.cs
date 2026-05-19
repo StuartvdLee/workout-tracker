@@ -85,22 +85,22 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
         await db.Database.ExecuteSqlRawAsync("DELETE FROM workout_tracker.planned_workouts");
         await db.Database.ExecuteSqlRawAsync("DELETE FROM workout_tracker.exercise_muscles");
         await db.Database.ExecuteSqlRawAsync("DELETE FROM workout_tracker.exercises");
+        await db.Database.ExecuteSqlRawAsync("DELETE FROM workout_tracker.muscles");
         await db.Database.ExecuteSqlRawAsync(@"
-            DELETE FROM workout_tracker.muscles
-            WHERE muscle_id NOT IN (
-                'a1000000-0000-0000-0000-00000000000c',
-                'a1000000-0000-0000-0000-000000000001',
-                'a1000000-0000-0000-0000-000000000002',
-                'a1000000-0000-0000-0000-000000000003',
-                'a1000000-0000-0000-0000-000000000004',
-                'a1000000-0000-0000-0000-000000000005',
-                'a1000000-0000-0000-0000-000000000006',
-                'a1000000-0000-0000-0000-000000000007',
-                'a1000000-0000-0000-0000-000000000008',
-                'a1000000-0000-0000-0000-000000000009',
-                'a1000000-0000-0000-0000-00000000000a',
-                'a1000000-0000-0000-0000-00000000000b'
-            )
+            INSERT INTO workout_tracker.muscles (muscle_id, name)
+            VALUES
+                ('a1000000-0000-0000-0000-00000000000c', 'Adductors'),
+                ('a1000000-0000-0000-0000-000000000001', 'Back'),
+                ('a1000000-0000-0000-0000-000000000002', 'Biceps'),
+                ('a1000000-0000-0000-0000-000000000003', 'Calves'),
+                ('a1000000-0000-0000-0000-000000000004', 'Chest'),
+                ('a1000000-0000-0000-0000-000000000005', 'Core'),
+                ('a1000000-0000-0000-0000-000000000006', 'Forearms'),
+                ('a1000000-0000-0000-0000-000000000007', 'Glutes'),
+                ('a1000000-0000-0000-0000-000000000008', 'Hamstrings'),
+                ('a1000000-0000-0000-0000-000000000009', 'Quads'),
+                ('a1000000-0000-0000-0000-00000000000a', 'Shoulders'),
+                ('a1000000-0000-0000-0000-00000000000b', 'Triceps')
         ");
     }
 }

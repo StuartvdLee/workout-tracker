@@ -182,6 +182,55 @@ public class WebAppFixture : WebApplicationFactory<Program>
             }
         });
 
+        // Mock API endpoint to update (rename) a muscle
+        app.MapPatch("/api/muscles/{muscleId}", async (string muscleId, HttpRequest request) =>
+        {
+            var body = await request.ReadFromJsonAsync<MuscleRequest>();
+            var name = body?.Name?.Trim() ?? "";
+
+            if (string.IsNullOrWhiteSpace(name))
+                return Results.Json(new { error = "Muscle name is required." }, statusCode: 400);
+
+            if (name.Length > 100)
+                return Results.Json(new { error = "Muscle name must be 100 characters or fewer." }, statusCode: 400);
+
+            lock (_musclesLock)
+            {
+                var muscle = _muscles.FirstOrDefault(m =>
+                    string.Equals(m.MuscleId, muscleId, StringComparison.OrdinalIgnoreCase));
+
+                if (muscle is null)
+                    return Results.Json(new { error = "Muscle not found." }, statusCode: 404);
+
+                if (_muscles.Any(m =>
+                    !string.Equals(m.MuscleId, muscleId, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(m.Name, name, StringComparison.OrdinalIgnoreCase)))
+                    return Results.Json(new { error = "A muscle with this name already exists." }, statusCode: 400);
+
+                var updated = muscle with { Name = name };
+                var idx = _muscles.IndexOf(muscle);
+                _muscles[idx] = updated;
+                _muscles = [.. _muscles.OrderBy(m => m.Name, StringComparer.Ordinal)];
+                return Results.Ok(new { muscleId = updated.MuscleId, name = updated.Name });
+            }
+        });
+
+        // Mock API endpoint to delete a muscle
+        app.MapDelete("/api/muscles/{muscleId}", (string muscleId) =>
+        {
+            lock (_musclesLock)
+            {
+                var muscle = _muscles.FirstOrDefault(m =>
+                    string.Equals(m.MuscleId, muscleId, StringComparison.OrdinalIgnoreCase));
+
+                if (muscle is null)
+                    return Results.Json(new { error = "Muscle not found." }, statusCode: 404);
+
+                _muscles.Remove(muscle);
+                return Results.NoContent();
+            }
+        });
+
         // Mock API endpoint to list exercises
         app.MapGet("/api/exercises", () =>
         {

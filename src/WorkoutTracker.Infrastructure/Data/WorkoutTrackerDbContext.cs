@@ -50,7 +50,10 @@ public class WorkoutTrackerDbContext(DbContextOptions<WorkoutTrackerDbContext> o
         modelBuilder.Entity<Muscle>(entity =>
         {
             entity.HasKey(e => e.MuscleId);
-            entity.Property(e => e.Name).IsRequired();
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.HasIndex(e => e.Name)
+                .IsUnique();
+            entity.ToTable(t => t.HasCheckConstraint("ck_muscles_name_length", "length(name) <= 100"));
 
             entity.HasData(
                 new Muscle { MuscleId = Guid.Parse("a1000000-0000-0000-0000-00000000000c"), Name = "Adductors" },
