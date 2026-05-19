@@ -54,6 +54,7 @@ app.MapPost("/api/muscles", async (HttpContext context, WorkoutTrackerDbContext 
     if (name.Length > 100)
         return Results.Json(new { error = "Muscle name must be 100 characters or fewer." }, statusCode: 400);
 
+    // Escape LIKE wildcards so ILike performs literal case-insensitive equality matching.
     var normalizedName = ExerciseQueryHelper.EscapeLike(name);
     var muscleId = Guid.NewGuid();
     Muscle? muscle = null;
@@ -109,6 +110,7 @@ app.MapPut("/api/muscles/{muscleId:guid}", async (Guid muscleId, HttpContext con
     if (name.Length > 100)
         return Results.Json(new { error = "Muscle name must be 100 characters or fewer." }, statusCode: 400);
 
+    // Escape LIKE wildcards so ILike performs literal case-insensitive equality matching.
     var normalizedName = ExerciseQueryHelper.EscapeLike(name);
     var strategy = db.Database.CreateExecutionStrategy();
 

@@ -1194,7 +1194,7 @@ public class ExercisesPageTests
     }
 
     [Fact]
-    public async Task AddMuscle_InlineFormsAreNotRenderedOnExercisesPage()
+    public async Task ExercisesPage_DoesNotRenderInlineMuscleForms()
     {
         var page = await CreatePageAsync();
         try

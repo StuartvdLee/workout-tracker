@@ -199,13 +199,9 @@ async function handleAddMuscle(): Promise<void> {
   apiErrorEl.textContent = "";
 
   const name = input.value.trim();
-  if (!name) {
-    showValidationError(input, errorEl, "Muscle name is required.");
-    return;
-  }
-
-  if (name.length > 100) {
-    showValidationError(input, errorEl, "Muscle name must be 100 characters or fewer.");
+  const validationError = validateMuscleName(name);
+  if (validationError) {
+    showValidationError(input, errorEl, validationError);
     return;
   }
 
@@ -274,13 +270,9 @@ async function handleEditSave(): Promise<void> {
   apiErrorEl.textContent = "";
 
   const name = input.value.trim();
-  if (!name) {
-    showValidationError(input, errorEl, "Muscle name is required.");
-    return;
-  }
-
-  if (name.length > 100) {
-    showValidationError(input, errorEl, "Muscle name must be 100 characters or fewer.");
+  const validationError = validateMuscleName(name);
+  if (validationError) {
+    showValidationError(input, errorEl, validationError);
     return;
   }
 
@@ -375,6 +367,18 @@ function showValidationError(input: HTMLInputElement, errorEl: HTMLElement, mess
   errorEl.textContent = message;
   input.classList.add("exercise-form__input--error");
   input.setAttribute("aria-invalid", "true");
+}
+
+function validateMuscleName(name: string): string | null {
+  if (!name) {
+    return "Muscle name is required.";
+  }
+
+  if (name.length > 100) {
+    return "Muscle name must be 100 characters or fewer.";
+  }
+
+  return null;
 }
 
 function clearValidationError(input: HTMLInputElement, errorEl: HTMLElement): void {
