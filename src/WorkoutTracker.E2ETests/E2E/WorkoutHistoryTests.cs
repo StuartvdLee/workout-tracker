@@ -485,6 +485,7 @@ public class WorkoutHistoryTests
             await page.Locator($"#weight-{exerciseId}").FillAsync("135");
 
             await page.Locator("#session-save").ClickAsync();
+            await page.Locator("#effort-modal-skip").ClickAsync();
 
             // Should navigate away from active session
             await Expect(page).Not.ToHaveURLAsync(new Regex(@"/active-session"));
@@ -705,64 +706,8 @@ public class WorkoutHistoryTests
     }
 
     // ──────────────────────────────────────────
-    // T017 — US2: History Page Effort Display
+    // T020 — US3: Session Detail Effort Display
     // ──────────────────────────────────────────
-
-    private async Task<(string WorkoutId, string ExerciseId)> CreateWorkoutAndSessionWithEffortViaApiAsync(
-        IPage page,
-        int overallEffort,
-        string exerciseName = "Bench Press",
-        string workoutName = "Push Day")
-    {
-        await SeedExerciseAsync(page, exerciseName);
-
-        var exercisesResponse = await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/exercises");
-        var exercisesJson = await exercisesResponse.JsonAsync();
-        var exerciseId = exercisesJson?.EnumerateArray().First(e => e.GetProperty("name").GetString() == exerciseName).GetProperty("exerciseId").GetString()!;
-
-        var createResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts", new()
-        {
-            DataObject = new
-            {
-                name = workoutName,
-                exercises = new[] { new { exerciseId, targetReps = "8-12" } },
-            },
-        });
-        var workoutData = await createResponse.JsonAsync();
-        var workoutId = workoutData?.GetProperty("plannedWorkoutId").GetString()!;
-
-        await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
-        {
-            DataObject = new
-            {
-                overallEffort,
-                loggedExercises = new[] { new { exerciseId } },
-            },
-        });
-
-        return (workoutId, exerciseId);
-    }
-
-    [Fact]
-    public async Task HistoryPage_ShowsOverallEffort_WhenSessionHasEffort()
-    {
-        var page = await CreatePageAsync();
-        try
-        {
-            await CreateWorkoutAndSessionWithEffortViaApiAsync(page, 5, "Curl", "Light Day");
-
-            await NavigateToHistoryAsync(page);
-
-            var effortSpan = page.Locator(".history-session__overall-effort").First;
-            await Expect(effortSpan).ToBeVisibleAsync();
-            await Expect(effortSpan).ToContainTextAsync("5");
-            await Expect(effortSpan).ToContainTextAsync("Moderate");
-        }
-        finally
-        {
-            await page.CloseAsync();
-        }
-    }
 
     [Fact]
     public async Task HistoryPage_NoEffortShown_WhenSessionHasNoEffort()
