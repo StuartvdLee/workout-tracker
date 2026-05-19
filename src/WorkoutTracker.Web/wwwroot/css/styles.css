@@ -1697,6 +1697,129 @@ body.is-dragging .workout-selected__drag-handle {
   display: none;
 }
 
+/* === Overall Effort Modal === */
+.effort-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-md);
+}
+
+.effort-modal {
+  background-color: var(--color-white);
+  border-radius: var(--radius);
+  padding: var(--spacing-xl);
+  width: 100%;
+  max-width: 24rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.effort-modal__title {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: var(--spacing-md);
+}
+
+.effort-modal__desc {
+  font-size: var(--font-size-base);
+  color: var(--color-text-light);
+  line-height: 1.5;
+  margin-bottom: var(--spacing-lg);
+}
+
+.effort-modal__slider-group {
+  margin-bottom: var(--spacing-lg);
+}
+
+.effort-modal__label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: var(--spacing-xs);
+}
+
+.effort-modal__label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.effort-modal__value {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-light);
+}
+
+.effort-modal__band {
+  display: block;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-light);
+  margin-top: var(--spacing-xs);
+  min-height: 1.25rem;
+}
+
+.effort-modal__slider {
+  width: 100%;
+  cursor: pointer;
+}
+
+.effort-modal__actions {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.effort-modal__save {
+  flex: 1;
+  min-height: var(--min-touch-target);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  font-family: var(--font-family);
+  color: var(--color-white);
+  background-color: var(--color-primary);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.effort-modal__save:hover {
+  background-color: var(--color-primary-dark, #1d4ed8);
+}
+
+.effort-modal__save:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.effort-modal__skip {
+  flex: 1;
+  min-height: var(--min-touch-target);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  font-family: var(--font-family);
+  color: var(--color-primary);
+  background-color: var(--color-white);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.effort-modal__skip:hover {
+  background-color: var(--color-primary-light);
+}
+
+.effort-modal__skip:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 /* === History Page === */
 .history-page {
   width: 100%;
@@ -1917,6 +2040,36 @@ body.is-dragging .workout-selected__drag-handle {
 }
 
 .session-detail__no-data {
+  color: var(--color-text-light);
+}
+
+.session-detail__overall-effort-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-sm);
+  border-top: 1px solid var(--color-border);
+  gap: var(--spacing-lg);
+}
+
+.session-detail__overall-effort-label {
+  font-weight: 600;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+}
+
+.session-detail__overall-effort-value {
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+.session-detail__overall-effort-prev-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-light);
+}
+
+.session-detail__overall-effort-prev-value {
+  font-size: var(--font-size-sm);
   color: var(--color-text-light);
 }
 

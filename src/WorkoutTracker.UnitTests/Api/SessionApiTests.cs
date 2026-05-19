@@ -885,6 +885,162 @@ public class SessionApiTests : IAsyncLifetime
         Assert.Null(overheadPress.PreviousEffort);
     }
 
+    // --- Overall effort tests ---
+
+    [Fact]
+    public async Task CreateSession_StoresOverallEffort_WhenProvided()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Effort Test", "Bench Press");
+
+        var response = await _client.PostAsJsonAsync(
+            $"/api/workouts/{workoutId}/sessions",
+            new
+            {
+                OverallEffort = 7,
+                LoggedExercises = new[]
+                {
+                    new { ExerciseId = exerciseId, LoggedWeight = (string?)null, Notes = (string?)null, Effort = (int?)null }
+                }
+            });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var session = await response.Content.ReadFromJsonAsync<SessionDetailDto>();
+        Assert.NotNull(session);
+        // Verify OverallEffort round-trips via GET
+        var getResp = await _client.GetAsync($"/api/sessions/{session.WorkoutSessionId}");
+        getResp.EnsureSuccessStatusCode();
+        using var doc = await getResp.Content.ReadFromJsonAsync<System.Text.Json.JsonDocument>();
+        Assert.Equal(7, doc!.RootElement.GetProperty("overallEffort").GetInt32());
+    }
+
+    [Fact]
+    public async Task CreateSession_StoresNullOverallEffort_WhenNotProvided()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("No Effort Test", "Squat");
+
+        var response = await _client.PostAsJsonAsync(
+            $"/api/workouts/{workoutId}/sessions",
+            new
+            {
+                OverallEffort = (int?)null,
+                LoggedExercises = new[]
+                {
+                    new { ExerciseId = exerciseId, LoggedWeight = (string?)null, Notes = (string?)null, Effort = (int?)null }
+                }
+            });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var session = await response.Content.ReadFromJsonAsync<SessionDetailDto>();
+        Assert.NotNull(session);
+        var getResp = await _client.GetAsync($"/api/sessions/{session.WorkoutSessionId}");
+        getResp.EnsureSuccessStatusCode();
+        using var doc = await getResp.Content.ReadFromJsonAsync<System.Text.Json.JsonDocument>();
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, doc!.RootElement.GetProperty("overallEffort").ValueKind);
+    }
+
+    [Fact]
+    public async Task CreateSession_StoresNullOverallEffort_WhenOverallEffortOmitted()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Omit Effort Test", "Deadlift");
+
+        var response = await _client.PostAsJsonAsync(
+            $"/api/workouts/{workoutId}/sessions",
+            new
+            {
+                LoggedExercises = new[]
+                {
+                    new { ExerciseId = exerciseId, LoggedWeight = (string?)null, Notes = (string?)null, Effort = (int?)null }
+                }
+            });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var session = await response.Content.ReadFromJsonAsync<SessionDetailDto>();
+        Assert.NotNull(session);
+        var getResp = await _client.GetAsync($"/api/sessions/{session.WorkoutSessionId}");
+        getResp.EnsureSuccessStatusCode();
+        using var doc = await getResp.Content.ReadFromJsonAsync<System.Text.Json.JsonDocument>();
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, doc!.RootElement.GetProperty("overallEffort").ValueKind);
+    }
+
+    [Fact]
+    public async Task CreateSession_Returns400_WhenOverallEffortOutOfRange()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Bad Overall Effort", "Row");
+
+        // Too low
+        var responseLow = await _client.PostAsJsonAsync(
+            $"/api/workouts/{workoutId}/sessions",
+            new { OverallEffort = 0, LoggedExercises = new[] { new { ExerciseId = exerciseId } } });
+        Assert.Equal(HttpStatusCode.BadRequest, responseLow.StatusCode);
+
+        // Too high
+        var responseHigh = await _client.PostAsJsonAsync(
+            $"/api/workouts/{workoutId}/sessions",
+            new { OverallEffort = 11, LoggedExercises = new[] { new { ExerciseId = exerciseId } } });
+        Assert.Equal(HttpStatusCode.BadRequest, responseHigh.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetSessions_ReturnsOverallEffort()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Get Sessions Effort", "Curl");
+
+        var postResp = await _client.PostAsJsonAsync(
+            $"/api/workouts/{workoutId}/sessions",
+            new { OverallEffort = 5, LoggedExercises = new[] { new { ExerciseId = exerciseId } } });
+        postResp.EnsureSuccessStatusCode();
+
+        var response = await _client.GetAsync("/api/sessions");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var doc = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonDocument>();
+        Assert.NotNull(doc);
+        var sessions = doc.RootElement.EnumerateArray().ToList();
+        var session = sessions.FirstOrDefault(s => s.GetProperty("plannedWorkoutId").GetString() == workoutId.ToString());
+        Assert.Equal(5, session.GetProperty("overallEffort").GetInt32());
+    }
+
+    [Fact]
+    public async Task GetSessionDetail_ReturnsOverallEffort()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Detail Effort", "Bench Press");
+        var session = await CreateSessionWithOverallEffortAsync(workoutId, exerciseId, "80 KG", 7, 8);
+
+        var response = await _client.GetAsync($"/api/sessions/{session.WorkoutSessionId}");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var detail = await response.Content.ReadFromJsonAsync<SessionDetailWithPreviousDto>();
+        Assert.NotNull(detail);
+        Assert.Equal(8, detail.OverallEffort);
+    }
+
+    [Fact]
+    public async Task GetSessionDetail_ReturnsPreviousOverallEffort_WhenPriorSessionExists()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Two Sessions Effort", "Squat");
+        await CreateSessionWithOverallEffortAsync(workoutId, exerciseId, "70 KG", 6, 6);
+        var secondSession = await CreateSessionWithOverallEffortAsync(workoutId, exerciseId, "75 KG", 7, 8);
+
+        var response = await _client.GetAsync($"/api/sessions/{secondSession.WorkoutSessionId}");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var detail = await response.Content.ReadFromJsonAsync<SessionDetailWithPreviousDto>();
+        Assert.NotNull(detail);
+        Assert.Equal(8, detail.OverallEffort);
+        Assert.Equal(6, detail.PreviousOverallEffort);
+    }
+
+    [Fact]
+    public async Task GetSessionDetail_ReturnsNullPreviousOverallEffort_WhenNoPriorSession()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("First Session Effort", "Deadlift");
+        var session = await CreateSessionWithOverallEffortAsync(workoutId, exerciseId, "100 KG", 9, 9);
+
+        var response = await _client.GetAsync($"/api/sessions/{session.WorkoutSessionId}");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var detail = await response.Content.ReadFromJsonAsync<SessionDetailWithPreviousDto>();
+        Assert.NotNull(detail);
+        Assert.Equal(9, detail.OverallEffort);
+        Assert.Null(detail.PreviousOverallEffort);
+    }
+
     // --- Helpers ---
 
     private async Task<(Guid WorkoutId, Guid ExerciseId)> CreateWorkoutWithExerciseAsync(
@@ -924,6 +1080,23 @@ public class SessionApiTests : IAsyncLifetime
         return (await response.Content.ReadFromJsonAsync<SessionDetailDto>())!;
     }
 
+    private async Task<SessionDetailDto> CreateSessionWithOverallEffortAsync(
+        Guid workoutId, Guid exerciseId, string? loggedWeight, int? effort, int? overallEffort)
+    {
+        var response = await _client.PostAsJsonAsync(
+            $"/api/workouts/{workoutId}/sessions",
+            new
+            {
+                OverallEffort = overallEffort,
+                LoggedExercises = new[]
+                {
+                    new { ExerciseId = exerciseId, LoggedWeight = loggedWeight, Notes = (string?)null, Effort = effort }
+                }
+            });
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<SessionDetailDto>())!;
+    }
+
     private sealed record ExerciseDto(Guid ExerciseId, string Name, List<object> Muscles);
     private sealed record WorkoutDto(Guid PlannedWorkoutId, string Name, int ExerciseCount);
     private sealed record WorkoutDetailDto(Guid PlannedWorkoutId, string Name, int ExerciseCount, List<WorkoutExerciseDto> Exercises);
@@ -941,6 +1114,8 @@ public class SessionApiTests : IAsyncLifetime
         Guid? PlannedWorkoutId,
         string? WorkoutName,
         DateTime CompletedAt,
+        int? OverallEffort,
+        int? PreviousOverallEffort,
         List<SessionExerciseWithPreviousDto> Exercises);
     private sealed record SessionExerciseWithPreviousDto(
         Guid LoggedExerciseId,

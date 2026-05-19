@@ -543,6 +543,9 @@ app.MapPost("/api/workouts/{workoutId:guid}/sessions", async (Guid workoutId, Ht
             return Results.Json(new { error = "Effort must be between 1 and 10." }, statusCode: 400);
     }
 
+    if (body?.OverallEffort is not null && (body.OverallEffort < 1 || body.OverallEffort > 10))
+        return Results.Json(new { error = "Overall effort must be between 1 and 10." }, statusCode: 400);
+
     if (loggedExercises.Length > 0)
     {
         var loggedExerciseIds = loggedExercises.Select(le => le.ExerciseId).Distinct().ToArray();
@@ -563,6 +566,7 @@ app.MapPost("/api/workouts/{workoutId:guid}/sessions", async (Guid workoutId, Ht
         WorkoutSessionId = Guid.NewGuid(),
         PlannedWorkoutId = workoutId,
         WorkoutName = workout.Name,
+        OverallEffort = body?.OverallEffort,
     };
 
     foreach (var item in loggedExercises)
@@ -587,6 +591,7 @@ app.MapPost("/api/workouts/{workoutId:guid}/sessions", async (Guid workoutId, Ht
         session.WorkoutSessionId,
         session.PlannedWorkoutId,
         session.WorkoutName,
+        session.OverallEffort,
         LoggedExercises = session.LoggedExercises.Select(le => new
         {
             le.LoggedExerciseId,
@@ -612,6 +617,7 @@ app.MapGet("/api/sessions", async (WorkoutTrackerDbContext db) =>
             ws.PlannedWorkoutId,
             WorkoutName = ws.WorkoutName ?? (ws.PlannedWorkout != null ? ws.PlannedWorkout.Name : null),
             CompletedAt = EF.Property<DateTime>(ws, "CompletedAt"),
+            OverallEffort = ws.OverallEffort,
             LoggedExercises = ws.LoggedExercises.Select(le => new
             {
                 le.LoggedExerciseId,
@@ -663,6 +669,7 @@ app.MapGet("/api/sessions/{sessionId:guid}", async (Guid sessionId, WorkoutTrack
             ws.PlannedWorkoutId,
             WorkoutName = ws.WorkoutName ?? (ws.PlannedWorkout != null ? ws.PlannedWorkout.Name : null),
             CompletedAt = EF.Property<DateTime>(ws, "CompletedAt"),
+            ws.OverallEffort,
             Exercises = ws.LoggedExercises
                 .OrderBy(le => le.Sequence)
                 .Select(le => new
@@ -681,8 +688,7 @@ app.MapGet("/api/sessions/{sessionId:guid}", async (Guid sessionId, WorkoutTrack
         return Results.Json(new { error = "Session not found." }, statusCode: 404);
     }
 
-    // Find the most recent prior session for the same planned workout (per research.md R-003)
-    var priorExercises = session.PlannedWorkoutId is null
+    var priorSession = session.PlannedWorkoutId is null
         ? null
         : await db.WorkoutSessions
             .Where(ws =>
@@ -694,9 +700,9 @@ app.MapGet("/api/sessions/{sessionId:guid}", async (Guid sessionId, WorkoutTrack
                 ))
             .OrderByDescending(ws => EF.Property<DateTime>(ws, "CompletedAt"))
             .ThenByDescending(ws => ws.WorkoutSessionId)
-            .Select(ws => ws.LoggedExercises
+            .Select(ws => new { ws.OverallEffort, LoggedExercises = ws.LoggedExercises
                 .Select(le => new { le.ExerciseId, le.LoggedWeight, le.Effort })
-                .ToList())
+                .ToList() })
             .FirstOrDefaultAsync();
 
     return Results.Ok(new
@@ -705,11 +711,13 @@ app.MapGet("/api/sessions/{sessionId:guid}", async (Guid sessionId, WorkoutTrack
         session.PlannedWorkoutId,
         session.WorkoutName,
         session.CompletedAt,
+        session.OverallEffort,
+        PreviousOverallEffort = priorSession?.OverallEffort,
         Exercises = session.Exercises.Select(le =>
         {
             // First-match by ExerciseId — accepted strategy per research.md R-007
             // Single-user app: no cross-user access control needed (consistent with features 008 and 013)
-            var prior = priorExercises?.FirstOrDefault(p => p.ExerciseId == le.ExerciseId);
+            var prior = priorSession?.LoggedExercises?.FirstOrDefault(p => p.ExerciseId == le.ExerciseId);
             return new
             {
                 le.LoggedExerciseId,
@@ -743,6 +751,7 @@ internal sealed class WorkoutExerciseItem
 
 internal sealed class SessionCreateRequest
 {
+    public int? OverallEffort { get; set; }
     public SessionLoggedExerciseItem[] LoggedExercises { get; set; } = [];
 }
 

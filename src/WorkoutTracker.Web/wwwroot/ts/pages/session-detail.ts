@@ -1,4 +1,5 @@
 import { navigate } from "../router.js";
+import { getEffortLabel } from "../utils.js";
 
 interface SessionExerciseWithPrevious {
   readonly loggedExerciseId: string;
@@ -14,6 +15,8 @@ interface SessionDetailWithPrevious {
   readonly plannedWorkoutId: string | null;
   readonly workoutName: string | null;
   readonly completedAt: string;
+  readonly overallEffort: number | null;
+  readonly previousOverallEffort: number | null;
   readonly exercises: SessionExerciseWithPrevious[];
 }
 
@@ -150,6 +153,24 @@ function renderDetailTable(session: SessionDetailWithPrevious): string {
           ${rows}
         </tbody>
       </table>
+    </div>
+    ${buildOverallEffortRow(session)}`;
+}
+
+function buildOverallEffortRow(session: SessionDetailWithPrevious): string {
+  const overallEffortValue = session.overallEffort != null
+    ? `${session.overallEffort} · ${escapeHtml(getEffortLabel(session.overallEffort))}`
+    : `<span class="session-detail__no-data">—</span>`;
+  const previousOverallEffortValue = session.previousOverallEffort != null
+    ? `${session.previousOverallEffort} · ${escapeHtml(getEffortLabel(session.previousOverallEffort))}`
+    : `<span class="session-detail__no-data">—</span>`;
+
+  return `
+    <div class="session-detail__overall-effort-row">
+      <span class="session-detail__overall-effort-label">Overall Effort</span>
+      <span class="session-detail__overall-effort-value">${overallEffortValue}</span>
+      <span class="session-detail__overall-effort-prev-label">Previous</span>
+      <span class="session-detail__overall-effort-prev-value">${previousOverallEffortValue}</span>
     </div>`;
 }
 

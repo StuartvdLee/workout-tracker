@@ -485,6 +485,7 @@ public class WorkoutHistoryTests
             await page.Locator($"#weight-{exerciseId}").FillAsync("135");
 
             await page.Locator("#session-save").ClickAsync();
+            await page.Locator("#effort-modal-skip").ClickAsync();
 
             // Should navigate away from active session
             await Expect(page).Not.ToHaveURLAsync(new Regex(@"/active-session"));
@@ -611,6 +612,279 @@ public class WorkoutHistoryTests
             // Should still be on active session page
             await Expect(page).ToHaveURLAsync(new Regex(@"/active-session\?id="));
             await Expect(page.Locator("#discard-backdrop")).ToBeHiddenAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    // ──────────────────────────────────────────
+    // T012 — US1: Effort Modal E2E Tests
+    // ──────────────────────────────────────────
+
+    [Fact]
+    public async Task SaveWorkout_EffortModal_AppearsOnSave()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var (workoutId, _) = await CreateWorkoutAndSessionViaApiAsync(page);
+            // Navigate to the active session page (start a new session)
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}");
+            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+            var saveBtn = page.Locator("#session-save");
+            await saveBtn.ClickAsync();
+
+            var backdrop = page.Locator("#effort-backdrop");
+            await Expect(backdrop).ToBeVisibleAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task SaveWorkout_EffortModal_SkipSavesWithoutEffort()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var (workoutId, _) = await CreateWorkoutAndSessionViaApiAsync(page);
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}");
+            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+            await page.Locator("#session-save").ClickAsync();
+            await page.Locator("#effort-modal-skip").ClickAsync();
+
+            // Should navigate to history
+            await page.WaitForURLAsync(new Regex(".*/history.*"));
+
+            // Check most recent session has null overallEffort
+            var sessionsResp = await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/sessions");
+            var sessionsJson = await sessionsResp.JsonAsync();
+            var latestSession = sessionsJson?.EnumerateArray().First();
+            Assert.NotNull(latestSession);
+            Assert.Equal(System.Text.Json.JsonValueKind.Null, latestSession.Value.GetProperty("overallEffort").ValueKind);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task SaveWorkout_EffortModal_TrapsKeyboardFocus()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var (workoutId, _) = await CreateWorkoutAndSessionViaApiAsync(page);
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}");
+            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+            await page.Locator("#session-save").ClickAsync();
+
+            await Expect(page.Locator("#effort-modal-save")).ToBeFocusedAsync();
+            await page.Keyboard.PressAsync("Tab");
+            await Expect(page.Locator("#effort-modal-skip")).ToBeFocusedAsync();
+            await page.Keyboard.PressAsync("Tab");
+            await Expect(page.Locator("#overall-effort-slider")).ToBeFocusedAsync();
+            await page.Keyboard.PressAsync("Tab");
+            await Expect(page.Locator("#effort-modal-save")).ToBeFocusedAsync();
+            await page.Keyboard.PressAsync("Shift+Tab");
+            await Expect(page.Locator("#overall-effort-slider")).ToBeFocusedAsync();
+
+            await page.Keyboard.PressAsync("Shift+Tab");
+            await Expect(page.Locator("#effort-modal-skip")).ToBeFocusedAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task SaveWorkout_EffortModal_ConfirmSavesWithEffort()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var (workoutId, _) = await CreateWorkoutAndSessionViaApiAsync(page);
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}");
+            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+            await page.Locator("#session-save").ClickAsync();
+            // Move the slider to 7
+            await page.Locator("#overall-effort-slider").FillAsync("7");
+            await page.Locator("#overall-effort-slider").DispatchEventAsync("input");
+            await page.Locator("#effort-modal-save").ClickAsync();
+
+            await page.WaitForURLAsync(new Regex(".*/history.*"));
+
+            var sessionsResp = await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/sessions");
+            var sessionsJson = await sessionsResp.JsonAsync();
+            var latestSession = sessionsJson?.EnumerateArray().First();
+            Assert.NotNull(latestSession);
+            Assert.Equal(7, latestSession.Value.GetProperty("overallEffort").GetInt32());
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    // ──────────────────────────────────────────
+    // T020 — US3: Session Detail Effort Display
+    // ──────────────────────────────────────────
+
+    [Fact]
+    public async Task HistoryPage_NoEffortShown_WhenSessionHasNoEffort()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await CreateWorkoutAndSessionViaApiAsync(page);
+
+            await NavigateToHistoryAsync(page);
+
+            var effortSpan = page.Locator(".history-session__overall-effort");
+            await Expect(effortSpan).ToHaveCountAsync(0);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    // ──────────────────────────────────────────
+    // T022 — US3: Session Detail Effort Row
+    // ──────────────────────────────────────────
+
+    [Fact]
+    public async Task SessionDetailPage_ShowsOverallEffortSummaryRow()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await SeedExerciseAsync(page, "Leg Press");
+            var exercisesResponse = await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/exercises");
+            var exercisesJson = await exercisesResponse.JsonAsync();
+            var exerciseId = exercisesJson?.EnumerateArray().First(e => e.GetProperty("name").GetString() == "Leg Press").GetProperty("exerciseId").GetString()!;
+
+            var createResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts", new()
+            {
+                DataObject = new { name = "Leg Day", exercises = new[] { new { exerciseId } } },
+            });
+            var workoutData = await createResponse.JsonAsync();
+            var workoutId = workoutData?.GetProperty("plannedWorkoutId").GetString()!;
+
+            var sessionResp = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new { overallEffort = 8, loggedExercises = new[] { new { exerciseId } } },
+            });
+            var sessionData = await sessionResp.JsonAsync();
+            Assert.Equal(8, sessionData?.GetProperty("overallEffort").GetInt32());
+            var sessionId = sessionData?.GetProperty("workoutSessionId").GetString()!;
+
+            await page.GotoAsync($"{_webApp.BaseUrl}/history/session?id={sessionId}");
+            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+            var row = page.Locator(".session-detail__overall-effort-row");
+            await Expect(row).ToBeVisibleAsync();
+            await Expect(row).ToContainTextAsync("8");
+            await Expect(row).ToContainTextAsync("Hard");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task SessionDetailPage_ShowsPreviousOverallEffort_WhenPriorSessionExists()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await SeedExerciseAsync(page, "Cable Row");
+            var exercisesResponse = await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/exercises");
+            var exercisesJson = await exercisesResponse.JsonAsync();
+            var exerciseId = exercisesJson?.EnumerateArray().First(e => e.GetProperty("name").GetString() == "Cable Row").GetProperty("exerciseId").GetString()!;
+
+            var createResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts", new()
+            {
+                DataObject = new { name = "Back Day", exercises = new[] { new { exerciseId } } },
+            });
+            var workoutData = await createResponse.JsonAsync();
+            var workoutId = workoutData?.GetProperty("plannedWorkoutId").GetString()!;
+
+            // First session: effort 6
+            await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new { overallEffort = 6, loggedExercises = new[] { new { exerciseId } } },
+            });
+
+            // Second session: effort 8
+            var secondSessionResp = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new { overallEffort = 8, loggedExercises = new[] { new { exerciseId } } },
+            });
+            var secondSessionData = await secondSessionResp.JsonAsync();
+            var secondSessionId = secondSessionData?.GetProperty("workoutSessionId").GetString()!;
+
+            await page.GotoAsync($"{_webApp.BaseUrl}/history/session?id={secondSessionId}");
+            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+            var row = page.Locator(".session-detail__overall-effort-row");
+            await Expect(row).ToBeVisibleAsync();
+            await Expect(row).ToContainTextAsync("8");
+            await Expect(row).ToContainTextAsync("6");
+            await Expect(row).ToContainTextAsync("Moderate");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task SessionDetailPage_ShowsNoPreviousComparison_ForAdHocSession()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            // Create a session that is the first (and only) for its workout → no previous
+            await SeedExerciseAsync(page, "Machine Fly");
+            var exercisesResponse = await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/exercises");
+            var exercisesJson = await exercisesResponse.JsonAsync();
+            var exerciseId = exercisesJson?.EnumerateArray().First(e => e.GetProperty("name").GetString() == "Machine Fly").GetProperty("exerciseId").GetString()!;
+
+            var createResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts", new()
+            {
+                DataObject = new { name = "Chest Isolation", exercises = new[] { new { exerciseId } } },
+            });
+            var workoutData = await createResponse.JsonAsync();
+            var workoutId = workoutData?.GetProperty("plannedWorkoutId").GetString()!;
+
+            var sessionResp = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new { overallEffort = 5, loggedExercises = new[] { new { exerciseId } } },
+            });
+            var sessionData = await sessionResp.JsonAsync();
+            var sessionId = sessionData?.GetProperty("workoutSessionId").GetString()!;
+
+            await page.GotoAsync($"{_webApp.BaseUrl}/history/session?id={sessionId}");
+            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+            var row = page.Locator(".session-detail__overall-effort-row");
+            await Expect(row).ToBeVisibleAsync();
+            // Current effort is shown
+            await Expect(row).ToContainTextAsync("5");
+            // Previous effort is — (no prior session)
+            await Expect(row).ToContainTextAsync("—");
         }
         finally
         {
