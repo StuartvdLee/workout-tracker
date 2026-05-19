@@ -99,3 +99,8 @@ C# on .NET 10 (backend), vanilla TypeScript (frontend): Follow standard conventi
 ## Recent Changes
 
 - 001-home-landing-page: Added C# on .NET 10 (backend), vanilla TypeScript (frontend) + .NET Aspire (latest), ASP.NET Core minimal API
+
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+<!-- SPECKIT END -->
