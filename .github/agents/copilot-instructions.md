@@ -1,6 +1,6 @@
 # stark-ray Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-05-18
+Auto-generated from all feature plans. Last updated: 2026-05-19
 
 ## Active Technologies
 - PostgreSQL via EF Core — adding one nullable integer column (`effort`) to the existing `logged_exercise` table (005-active-workout-effort)
@@ -17,6 +17,8 @@ Auto-generated from all feature plans. Last updated: 2026-05-18
 - PostgreSQL via EF Core — no schema changes; `Sequence` already exists on `logged_exercise` (013-show-exercise-order)
 - C# on .NET 10.0 (backend), TypeScript ~6.0.3 (frontend) + ASP.NET Core minimal API, .NET Aspire 13.1.2, Entity Framework Core with Npgsql, vanilla TypeScript (no JS frameworks) (014-workout-history-detail-page)
 - PostgreSQL via EF Core — no schema changes; `Muscle` table already exists with seeded rows (015-manage-targeted-muscles)
+- C# on .NET 10.0 (backend), TypeScript ~6.0.3 (frontend) + ASP.NET Core minimal API, .NET Aspire, Entity Framework Core with Npgsql, vanilla TypeScript (no JS frameworks) (016-workout-overall-effort)
+- PostgreSQL via EF Core — adding one nullable integer column (`overall_effort`) to the existing `workout_session` table (016-workout-overall-effort)
 
 - C# on .NET 10.0 (backend), TypeScript 5.9.3 (frontend) + ASP.NET Core minimal API, .NET Aspire 13.1.2, Entity Framework Core with Npgsql, vanilla TypeScript (no JS frameworks) (003-add-exercises)
 
@@ -36,9 +38,9 @@ npm test && npm run lint
 C# on .NET 10.0 (backend), TypeScript 5.9.3 (frontend): Follow standard conventions
 
 ## Recent Changes
+- 016-workout-overall-effort: Added C# on .NET 10.0 (backend), TypeScript ~6.0.3 (frontend) + ASP.NET Core minimal API, .NET Aspire, Entity Framework Core with Npgsql, vanilla TypeScript (no JS frameworks)
 - 015-manage-targeted-muscles: Added C# on .NET 10.0 (backend), TypeScript ~6.0.3 (frontend) + ASP.NET Core minimal API, .NET Aspire 13.1.2, Entity Framework Core with Npgsql, vanilla TypeScript (no JS frameworks)
 - 014-workout-history-detail-page: Added C# on .NET 10.0 (backend), TypeScript ~6.0.3 (frontend) + ASP.NET Core minimal API, .NET Aspire 13.1.2, Entity Framework Core with Npgsql, vanilla TypeScript (no JS frameworks)
-- 013-show-exercise-order: Added C# on .NET 10.0 (backend), TypeScript 5.9.3 (frontend) + ASP.NET Core minimal API, .NET Aspire 13.1.2, Entity Framework Core with Npgsql, vanilla TypeScript (no JS frameworks)
 
 
 <!-- MANUAL ADDITIONS START -->

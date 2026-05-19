@@ -37,6 +37,7 @@ let logEntries: Map<string, LogEntry> = new Map();
 let isSaving = false;
 let hasChanges = false;
 let exerciseOrder: string[] | null = null;
+let pendingOverallEffort: number | null = null;
 
 export async function render(container: HTMLElement): Promise<void> {
   const params = new URLSearchParams(window.location.search);
@@ -57,6 +58,7 @@ export async function render(container: HTMLElement): Promise<void> {
   isSaving = false;
   hasChanges = false;
   exerciseOrder = null;
+  pendingOverallEffort = null;
 
   const orderParam = params.get("order");
   exerciseOrder = orderParam ? orderParam.split(",").map(id => id.trim()).filter(id => id.length > 0) : null;
@@ -83,11 +85,34 @@ export async function render(container: HTMLElement): Promise<void> {
           </div>
         </div>
       </div>
+      <div class="effort-modal-backdrop" id="effort-backdrop" style="display:none;">
+        <div class="effort-modal" role="alertdialog" aria-modal="true" aria-labelledby="effort-modal-title" aria-describedby="effort-modal-desc">
+          <h2 class="effort-modal__title" id="effort-modal-title">Overall Workout Effort</h2>
+          <p class="effort-modal__desc" id="effort-modal-desc">How hard was this workout overall?</p>
+          <div class="effort-modal__slider-group">
+            <div class="effort-modal__label-row">
+              <label class="effort-modal__label" for="overall-effort-slider">Effort</label>
+              <span class="effort-modal__value" id="overall-effort-value">Not rated</span>
+            </div>
+            <input class="effort-modal__slider" type="range" id="overall-effort-slider"
+              min="1" max="10" step="1" value="1"
+              data-touched="false"
+              aria-label="Overall workout effort"
+              aria-valuemin="1" aria-valuemax="10" aria-valuetext="Not rated" />
+            <span class="effort-modal__band" id="overall-effort-band"></span>
+          </div>
+          <div class="effort-modal__actions">
+            <button class="effort-modal__save" type="button" id="effort-modal-save">Save</button>
+            <button class="effort-modal__skip" type="button" id="effort-modal-skip">Skip</button>
+          </div>
+        </div>
+      </div>
     </div>
   `;
 
   initEventListeners();
   initDiscardModal();
+  initEffortModal();
   await loadWorkout(workoutId);
 }
 
@@ -96,7 +121,7 @@ function initEventListeners(): void {
   const cancelBtn = document.getElementById("session-cancel") as HTMLButtonElement | null;
 
   saveBtn?.addEventListener("click", () => {
-    void handleSave();
+    openEffortModal();
   });
 
   cancelBtn?.addEventListener("click", () => {
@@ -157,6 +182,99 @@ function initDiscardModal(): void {
       }
     }
   });
+}
+
+function initEffortModal(): void {
+  const backdrop = document.getElementById("effort-backdrop") as HTMLElement | null;
+  const saveBtn = document.getElementById("effort-modal-save") as HTMLButtonElement | null;
+  const skipBtn = document.getElementById("effort-modal-skip") as HTMLButtonElement | null;
+  const slider = document.getElementById("overall-effort-slider") as HTMLInputElement | null;
+
+  if (!backdrop) return;
+
+  saveBtn?.addEventListener("click", () => {
+    handleEffortSave();
+  });
+
+  skipBtn?.addEventListener("click", () => {
+    handleEffortSkip();
+  });
+
+  slider?.addEventListener("input", () => {
+    handleEffortSliderInput();
+  });
+
+  backdrop.addEventListener("click", (event: Event) => {
+    if (event.target === backdrop) {
+      handleEffortSkip();
+    }
+  });
+
+  backdrop.addEventListener("keydown", (event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      handleEffortSkip();
+    }
+  });
+}
+
+function openEffortModal(): void {
+  const backdrop = document.getElementById("effort-backdrop") as HTMLElement | null;
+  const slider = document.getElementById("overall-effort-slider") as HTMLInputElement | null;
+  const valueEl = document.getElementById("overall-effort-value") as HTMLElement | null;
+  const bandEl = document.getElementById("overall-effort-band") as HTMLElement | null;
+  const saveBtn = document.getElementById("effort-modal-save") as HTMLButtonElement | null;
+
+  if (!backdrop) return;
+
+  // Reset slider state
+  pendingOverallEffort = null;
+  if (slider) {
+    slider.setAttribute("data-touched", "false");
+    slider.value = "1";
+    slider.removeAttribute("aria-valuenow");
+    slider.setAttribute("aria-valuetext", "Not rated");
+  }
+  if (valueEl) valueEl.textContent = "Not rated";
+  if (bandEl) bandEl.textContent = "";
+
+  backdrop.style.display = "";
+  saveBtn?.focus();
+}
+
+function closeEffortModal(): void {
+  const backdrop = document.getElementById("effort-backdrop") as HTMLElement | null;
+  if (backdrop) backdrop.style.display = "none";
+}
+
+function handleEffortSliderInput(): void {
+  const slider = document.getElementById("overall-effort-slider") as HTMLInputElement | null;
+  const valueEl = document.getElementById("overall-effort-value") as HTMLElement | null;
+  const bandEl = document.getElementById("overall-effort-band") as HTMLElement | null;
+
+  if (!slider) return;
+
+  const value = parseInt(slider.value, 10);
+  pendingOverallEffort = value;
+
+  slider.setAttribute("data-touched", "true");
+  slider.setAttribute("aria-valuenow", String(value));
+  const label = getEffortLabel(value);
+  slider.setAttribute("aria-valuetext", `${value}, ${label}`);
+
+  if (valueEl) valueEl.textContent = String(value);
+  if (bandEl) bandEl.textContent = label;
+}
+
+function handleEffortSave(): void {
+  const slider = document.getElementById("overall-effort-slider") as HTMLInputElement | null;
+  const effort = slider?.getAttribute("data-touched") === "true" ? pendingOverallEffort : null;
+  closeEffortModal();
+  void handleSave(effort);
+}
+
+function handleEffortSkip(): void {
+  closeEffortModal();
+  void handleSave(null);
 }
 
 function openDiscardModal(): void {
@@ -396,7 +514,7 @@ function renderExerciseInputs(previousData: Map<string, PreviousExerciseData> | 
   }
 }
 
-async function handleSave(): Promise<void> {
+async function handleSave(overallEffort: number | null): Promise<void> {
   if (isSaving || !workout) return;
 
   const saveBtn = document.getElementById("session-save") as HTMLButtonElement | null;
@@ -442,7 +560,7 @@ async function handleSave(): Promise<void> {
     const response = await fetch(`/api/workouts/${workout.plannedWorkoutId}/sessions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ loggedExercises }),
+      body: JSON.stringify({ loggedExercises, overallEffort }),
     });
 
     if (response.ok) {
