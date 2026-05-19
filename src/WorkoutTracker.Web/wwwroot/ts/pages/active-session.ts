@@ -213,6 +213,32 @@ function initEffortModal(): void {
   backdrop.addEventListener("keydown", (event: KeyboardEvent) => {
     if (event.key === "Escape") {
       handleEffortSkip();
+      return;
+    }
+
+    if (event.key === "Tab") {
+      const modal = backdrop.querySelector(".effort-modal") as HTMLElement | null;
+      if (!modal) return;
+
+      const focusable = modal.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (event.shiftKey) {
+        if (document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
     }
   });
 }

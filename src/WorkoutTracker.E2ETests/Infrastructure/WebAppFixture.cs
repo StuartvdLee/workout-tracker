@@ -648,7 +648,14 @@ public class WebAppFixture : WebApplicationFactory<Program>
             }
 
             return Results.Json(
-                new { WorkoutSessionId = session.SessionId, session.PlannedWorkoutId, session.WorkoutName, session.CompletedAt },
+                new
+                {
+                    WorkoutSessionId = session.SessionId,
+                    session.PlannedWorkoutId,
+                    session.WorkoutName,
+                    session.CompletedAt,
+                    session.OverallEffort,
+                },
                 statusCode: 201);
         });
 

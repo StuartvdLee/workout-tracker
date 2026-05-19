@@ -676,6 +676,33 @@ public class WorkoutHistoryTests
     }
 
     [Fact]
+    public async Task SaveWorkout_EffortModal_TrapsKeyboardFocus()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var (workoutId, _) = await CreateWorkoutAndSessionViaApiAsync(page);
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}");
+            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+            await page.Locator("#session-save").ClickAsync();
+
+            await Expect(page.Locator("#effort-modal-save")).ToBeFocusedAsync();
+            await page.Keyboard.PressAsync("Tab"); // Save -> Skip
+            await Expect(page.Locator("#effort-modal-skip")).ToBeFocusedAsync();
+            await page.Keyboard.PressAsync("Tab"); // Skip -> Slider (wrap)
+            await Expect(page.Locator("#overall-effort-slider")).ToBeFocusedAsync();
+
+            await page.Keyboard.PressAsync("Shift+Tab"); // Slider -> Skip (wrap)
+            await Expect(page.Locator("#effort-modal-skip")).ToBeFocusedAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
     public async Task SaveWorkout_EffortModal_ConfirmSavesWithEffort()
     {
         var page = await CreatePageAsync();
@@ -755,6 +782,7 @@ public class WorkoutHistoryTests
                 DataObject = new { overallEffort = 8, loggedExercises = new[] { new { exerciseId } } },
             });
             var sessionData = await sessionResp.JsonAsync();
+            Assert.Equal(8, sessionData?.GetProperty("overallEffort").GetInt32());
             var sessionId = sessionData?.GetProperty("workoutSessionId").GetString()!;
 
             await page.GotoAsync($"{_webApp.BaseUrl}/history/session?id={sessionId}");
