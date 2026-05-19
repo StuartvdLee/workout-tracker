@@ -70,7 +70,7 @@ public class SidebarNavigationTests
         Assert.EndsWith("/exercises", page.Url);
 
         await page.Locator(".sidebar__link[data-page='muscles']").ClickAsync();
-        await Expect(page.Locator(".muscles-page__title")).ToHaveTextAsync("Targeted Muscles");
+        await Expect(page.Locator(".exercises-page__title")).ToHaveTextAsync("Targeted Muscles");
         Assert.EndsWith("/muscles", page.Url);
 
         await page.Locator(".sidebar__link[data-page='home']").ClickAsync();

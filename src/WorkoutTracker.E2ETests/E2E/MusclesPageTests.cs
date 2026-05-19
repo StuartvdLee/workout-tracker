@@ -36,7 +36,7 @@ public class MusclesPageTests
         var page = await CreatePageAsync();
         try
         {
-            await Expect(page.Locator(".muscles-page__title")).ToHaveTextAsync("Targeted Muscles");
+            await Expect(page.Locator(".exercises-page__title")).ToHaveTextAsync("Targeted Muscles");
             await Expect(page.Locator(".muscle-toggle")).ToHaveCountAsync(12);
         }
         finally
