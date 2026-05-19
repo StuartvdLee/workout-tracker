@@ -143,10 +143,6 @@ namespace WorkoutTracker.Infrastructure.Data.Migrations
                     b.HasKey("MuscleId")
                         .HasName("pk_muscles");
 
-                    b.HasIndex("Name")
-                        .IsUnique()
-                        .HasDatabaseName("ix_muscles_name");
-
                     b.ToTable("muscles", "workout_tracker", t =>
                         {
                             t.HasCheckConstraint("ck_muscles_name_length", "length(name) <= 100");

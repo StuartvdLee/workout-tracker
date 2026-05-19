@@ -51,8 +51,6 @@ public class WorkoutTrackerDbContext(DbContextOptions<WorkoutTrackerDbContext> o
         {
             entity.HasKey(e => e.MuscleId);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
-            entity.HasIndex(e => e.Name)
-                .IsUnique();
             entity.ToTable(t => t.HasCheckConstraint("ck_muscles_name_length", "length(name) <= 100"));
 
             entity.HasData(

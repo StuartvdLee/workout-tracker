@@ -14,6 +14,7 @@ let isSubmitting = false;
 let editingMuscleId: string | null = null;
 let isEditSubmitting = false;
 let deletingMuscleId: string | null = null;
+let isDeleteSubmitting = false;
 
 export async function render(container: HTMLElement): Promise<void> {
   container.innerHTML = `
@@ -87,6 +88,7 @@ export async function render(container: HTMLElement): Promise<void> {
   editingMuscleId = null;
   isEditSubmitting = false;
   deletingMuscleId = null;
+  isDeleteSubmitting = false;
 
   initEventListeners();
   await loadMuscles();
@@ -101,6 +103,7 @@ function initEventListeners(): void {
   const deleteConfirmBackdrop = document.getElementById("delete-confirm-backdrop") as HTMLElement | null;
   const deleteConfirmBtn = document.getElementById("delete-confirm-btn") as HTMLButtonElement | null;
   const deleteConfirmCancel = document.getElementById("delete-confirm-cancel") as HTMLButtonElement | null;
+  const deleteConfirmModal = deleteConfirmBackdrop?.querySelector(".delete-modal") as HTMLElement | null;
 
   form?.addEventListener("submit", (event: SubmitEvent) => {
     void handleAddMuscle(event);
@@ -152,8 +155,17 @@ function initEventListeners(): void {
 
   deleteConfirmBackdrop?.addEventListener("keydown", (event: KeyboardEvent) => {
     if (event.key === "Escape") {
-      closeDeleteConfirmModal();
+      if (!isDeleteSubmitting) {
+        closeDeleteConfirmModal();
+      }
+      return;
     }
+
+    if (!deleteConfirmModal) {
+      return;
+    }
+
+    trapModalTabKey(event, deleteConfirmModal);
   });
 }
 
@@ -415,10 +427,12 @@ function openDeleteConfirmModal(muscle: Muscle): void {
   }
 
   deletingMuscleId = muscle.muscleId;
+  isDeleteSubmitting = false;
   descEl.textContent = `Are you sure you want to delete "${muscle.name}"? This action cannot be undone.`;
 
   if (confirmBtn) {
     confirmBtn.textContent = "Delete";
+    confirmBtn.disabled = false;
     confirmBtn.removeAttribute("aria-disabled");
     confirmBtn.classList.remove("delete-modal__delete--loading");
   }
@@ -436,15 +450,21 @@ function openDeleteConfirmModal(muscle: Muscle): void {
 }
 
 function closeDeleteConfirmModal(): void {
+  if (isDeleteSubmitting) {
+    return;
+  }
+
   const backdrop = document.getElementById("delete-confirm-backdrop") as HTMLElement | null;
   if (backdrop) {
     backdrop.style.display = "none";
   }
+
   deletingMuscleId = null;
+  isDeleteSubmitting = false;
 }
 
 async function handleConfirmDelete(): Promise<void> {
-  if (deletingMuscleId === null) {
+  if (isDeleteSubmitting || deletingMuscleId === null) {
     return;
   }
 
@@ -453,11 +473,14 @@ async function handleConfirmDelete(): Promise<void> {
   const cancelBtn = document.getElementById("delete-confirm-cancel") as HTMLButtonElement | null;
   const errorEl = document.getElementById("delete-confirm-error") as HTMLElement | null;
 
+  isDeleteSubmitting = true;
+
   if (errorEl) {
     errorEl.textContent = "";
   }
 
   if (confirmBtn) {
+    confirmBtn.disabled = true;
     confirmBtn.setAttribute("aria-disabled", "true");
     confirmBtn.textContent = "Deleting...";
     confirmBtn.classList.add("delete-modal__delete--loading");
@@ -476,7 +499,9 @@ async function handleConfirmDelete(): Promise<void> {
       if (errorEl) {
         errorEl.textContent = await getErrorMessage(response, "Failed to delete muscle. Please try again.");
       }
+      isDeleteSubmitting = false;
       if (confirmBtn) {
+        confirmBtn.disabled = false;
         confirmBtn.removeAttribute("aria-disabled");
         confirmBtn.textContent = "Delete";
         confirmBtn.classList.remove("delete-modal__delete--loading");
@@ -488,13 +513,16 @@ async function handleConfirmDelete(): Promise<void> {
     }
 
     muscles = muscles.filter((muscle) => muscle.muscleId !== muscleId);
+    isDeleteSubmitting = false;
     closeDeleteConfirmModal();
     renderMuscleGrid();
   } catch {
     if (errorEl) {
       errorEl.textContent = "Failed to delete muscle. Please try again.";
     }
+    isDeleteSubmitting = false;
     if (confirmBtn) {
+      confirmBtn.disabled = false;
       confirmBtn.removeAttribute("aria-disabled");
       confirmBtn.textContent = "Delete";
       confirmBtn.classList.remove("delete-modal__delete--loading");
