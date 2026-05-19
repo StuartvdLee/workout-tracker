@@ -34,6 +34,7 @@ The Aspire dashboard will print URLs for the API and Web projects.
 11. Open the **Edit** modal for any exercise.
 12. Confirm "Hip Flexors" appears in the edit modal's muscle toggle list at the correct alphabetical position.
 13. Add a new muscle from the edit modal (e.g., "Neck") — confirm it appears immediately, unselected, at the correct alphabetical position.
+14. Cancel out of the edit modal, then re-open it — confirm the add-muscle input is blank and no error is shown.
 
 ---
 

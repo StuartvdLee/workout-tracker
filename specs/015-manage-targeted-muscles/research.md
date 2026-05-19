@@ -95,3 +95,30 @@ if (duplicate)
 
 **Alternatives considered**:
 - Updating the assert to `>=12`: Unnecessary given per-test reset.
+
+---
+
+## R-007: Client-Side Update Strategy After Successful Add
+
+**Question**: After `POST /api/muscles` returns 201, should the client insert the new muscle directly into the `muscles[]` array client-side, or re-fetch the full list from `GET /api/muscles`?
+
+**Decision**: Re-fetch via `reloadMuscles()` — a thin async helper that calls `GET /api/muscles` and replaces `muscles[]` with the response — then call `renderMuscleToggles()` and `renderEditMuscleToggles()`.
+
+**Rationale**: Re-fetching is the authoritative approach: the backend is the single source of truth for the persisted, sorted list. The plan originally called for a client-side `insertMuscleAlphabetically()` helper, but re-fetching is simpler (no sort logic to replicate), eliminates edge cases (e.g. backend trims or normalises the name), and has negligible performance cost on a small table. A `ReloadMusclesResult` discriminated union type propagates fetch errors without exceptions.
+
+**Alternatives considered**:
+- `insertMuscleAlphabetically(muscle)`: Fewer round-trips but duplicates sort logic and can drift from the server's ordering.
+
+---
+
+## R-008: NpgsqlRetryingExecutionStrategy and User-Initiated Transactions
+
+**Question**: Can `POST /api/muscles` call `db.Database.BeginTransactionAsync()` directly when Npgsql is configured with a retrying execution strategy?
+
+**Decision**: No. Wrap the entire transactional block in `db.Database.CreateExecutionStrategy().ExecuteAsync(...)`.
+
+**Rationale**: The Aspire Npgsql integration registers `NpgsqlRetryingExecutionStrategy`, which does not allow user-initiated transactions opened outside its own execution scope. Calling `BeginTransactionAsync()` directly throws `InvalidOperationException: The configured execution strategy 'NpgsqlRetryingExecutionStrategy' does not support user-initiated transactions.` The fix is to wrap the advisory lock + duplicate check + insert + commit inside `CreateExecutionStrategy().ExecuteAsync()`. The duplicate/result flags are captured via outer variables since the lambda cannot return early from the endpoint.
+
+**Alternatives considered**:
+- Disabling the retrying strategy: Would remove transient-failure resilience; rejected.
+- Removing the advisory lock: Would allow duplicate muscles under concurrent requests; rejected.

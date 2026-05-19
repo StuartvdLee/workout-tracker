@@ -17,7 +17,7 @@ Users currently cannot add muscles from within the app — the list is entirely 
 **Project Type**: Web application (SPA with Aspire orchestration)
 **Performance Goals**: New muscle appears in the sorted toggle list within 1 second of a successful save under normal network conditions
 **Constraints**: No external JS/CSS frameworks; vanilla TypeScript only; existing tests must continue to pass; BEM CSS naming; strict TypeScript (`strict: true`, `noUnusedLocals`, `noUnusedParameters`)
-**Scale/Scope**: Changes touch 4 files (`Program.cs` API, `Program.cs` Web, `exercises.ts`, `styles.css`) + `MusclesApiTests.cs` + `ExercisesPageTests.cs`; no migrations
+**Scale/Scope**: Changes touch 4 files (`Program.cs` API, `Program.cs` Web, `exercises.ts`, `styles.css`) + `MusclesApiTests.cs` + `ExercisesPageTests.cs`; no migrations. Post-implementation: a bug was discovered where `BeginTransactionAsync()` is incompatible with `NpgsqlRetryingExecutionStrategy` — fixed by wrapping the transactional block in `CreateExecutionStrategy().ExecuteAsync()` (see R-008).
 
 ## Constitution Check
 
@@ -26,8 +26,8 @@ Users currently cannot add muscles from within the app — the list is entirely 
 - **Code Quality**: TypeScript strict mode enforced — no `any`, all new state variables explicitly typed. CSS follows BEM: new elements use `.muscle-add__*` block. C# follows existing inline anonymous-type pattern and `EF.Functions.ILike` + `ExerciseQueryHelper.EscapeLike` for case-insensitive duplicate checks — no new helper classes. No speculative abstractions or dead code. ✅
 
 - **Testing**:
-  - **Backend integration tests** (`MusclesApiTests.cs`): New tests for `POST /api/muscles` — (a) 201 with valid name; (b) created muscle appears in subsequent `GET /api/muscles` in alphabetical order; (c) 400 empty name; (d) 400 whitespace-only name; (e) 400 name exceeds 100 characters; (f) 400 exact-case duplicate; (g) 400 case-insensitive duplicate (e.g., "biceps" when "Biceps" exists); (h) name is trimmed before persistence.
-  - **E2E (Playwright / `ExercisesPageTests.cs`)**: New tests — `AddMuscle_NewMuscleAppearsInCreateFormImmediately`, `AddMuscle_IsSortedAlphabetically`, `AddMuscle_DuplicateNameShowsError`, `AddMuscle_EmptyNameShowsError`, `AddMuscle_CanBeSelectedAndSavedWithExercise`, `AddMuscle_InEditModal_AppearsImmediately`.
+  - **Backend integration tests** (`MusclesApiTests.cs`): New tests for `POST /api/muscles` — (a) 201 with valid name; (b) created muscle appears in subsequent `GET /api/muscles` in alphabetical order; (c) 400 empty name; (d) 400 whitespace-only name; (e) 400 null name; (f) 400 name exceeds 100 characters; (g) 400 exact-case duplicate; (h) 400 case-insensitive duplicate (e.g., "biceps" when "Biceps" exists); (i) name is trimmed before persistence.
+  - **E2E (Playwright / `ExercisesPageTests.cs`)**: New tests — `AddMuscle_NewMuscleAppearsInCreateFormImmediately`, `AddMuscle_IsSortedAlphabetically`, `AddMuscle_DuplicateNameShowsError`, `AddMuscle_EmptyNameShowsError`, `AddMuscle_CanBeSelectedAndSavedWithExercise`, `AddMuscle_InEditModal_AppearsImmediately`, `AddMuscle_EditModalAddField_ResetsWhenReopened`.
   - **Regression**: `MuscleToggles_AllTwelveDisplayed` asserts count 12 — passes because test database is reset between tests via `ResetDataAsync()`; custom muscles added in one test do not survive into others.
   - Tests treated as mandatory. ✅
 
