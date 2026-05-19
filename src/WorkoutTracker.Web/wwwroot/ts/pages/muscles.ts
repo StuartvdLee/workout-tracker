@@ -12,41 +12,38 @@ let isDeleting = false;
 
 export async function render(container: HTMLElement): Promise<void> {
   container.innerHTML = `
-    <div class="muscles-page">
-      <h1 class="muscles-page__title">Targeted Muscles</h1>
-      <form class="muscle-form" id="muscle-form" novalidate>
-        <div class="muscle-form__group">
+    <div class="exercises-page">
+      <h1 class="exercises-page__title">Targeted Muscles</h1>
+      <form class="exercise-form" id="muscle-form" novalidate>
+        <div class="exercise-form__group">
           <label class="exercise-form__label" for="muscle-name">Muscle name</label>
-          <input class="exercise-form__input muscle-form__input" type="text" id="muscle-name" maxlength="100" autocomplete="off" aria-describedby="muscle-error" />
+          <input class="exercise-form__input" type="text" id="muscle-name" maxlength="100" autocomplete="off" aria-describedby="muscle-error" />
         </div>
-        <div class="exercise-form__error muscle-form__error" id="muscle-error" role="alert" aria-live="polite"></div>
+        <div class="exercise-form__error" id="muscle-error" role="alert" aria-live="polite"></div>
         <div class="exercise-form__actions">
           <button class="exercise-form__submit" type="submit">Add Muscle</button>
         </div>
         <div class="exercise-form__api-error" id="muscle-api-error" role="alert" aria-live="polite"></div>
       </form>
 
-      <section class="muscles-page__list">
-        <h2 class="muscles-page__heading">Your Muscles</h2>
-        <div class="muscle-grid" id="muscle-grid"></div>
+      <section class="exercise-list">
+        <h2 class="exercise-list__heading">Your Muscles</h2>
+        <div class="exercise-form__muscles" id="muscle-grid"></div>
+        <p class="exercise-list__empty" id="muscles-empty" style="display:none;">No muscles yet. Add your first muscle above!</p>
       </section>
-      <div class="muscles-page__empty" id="muscles-empty" style="display:none;">
-        No muscles yet. Add your first muscle above!
-      </div>
 
       <div class="edit-modal-backdrop" id="muscle-edit-backdrop" style="display:none;">
         <div class="edit-modal muscle-edit-modal" role="dialog" aria-modal="true" aria-labelledby="muscle-edit-title">
           <h2 class="edit-modal__title" id="muscle-edit-title">Edit Muscle</h2>
           <form class="edit-modal__form" id="muscle-edit-form" novalidate>
-            <div class="muscle-form__group">
+            <div class="exercise-form__group">
               <label class="exercise-form__label" for="edit-muscle-name">Muscle name</label>
-              <input class="exercise-form__input muscle-form__input" type="text" id="edit-muscle-name" maxlength="100" autocomplete="off" aria-describedby="edit-muscle-error" />
+              <input class="exercise-form__input" type="text" id="edit-muscle-name" maxlength="100" autocomplete="off" aria-describedby="edit-muscle-error" />
             </div>
-            <div class="exercise-form__error muscle-form__error" id="edit-muscle-error" role="alert" aria-live="polite"></div>
-            <div class="muscle-edit-modal__actions">
+            <div class="exercise-form__error" id="edit-muscle-error" role="alert" aria-live="polite"></div>
+            <div class="edit-modal__actions">
               <button class="exercise-form__submit" type="submit">Save Changes</button>
               <button class="muscle-edit-modal__delete" type="button" id="muscle-edit-delete">Delete</button>
-              <button class="exercise-form__cancel" type="button" id="muscle-edit-cancel">Cancel</button>
             </div>
             <div class="exercise-form__api-error" id="edit-muscle-api-error" role="alert" aria-live="polite"></div>
           </form>
@@ -92,7 +89,6 @@ function initForm(): void {
 function initEditModal(): void {
   const form = document.getElementById("muscle-edit-form") as HTMLFormElement | null;
   const backdrop = document.getElementById("muscle-edit-backdrop") as HTMLElement | null;
-  const cancelBtn = document.getElementById("muscle-edit-cancel") as HTMLButtonElement | null;
   const deleteBtn = document.getElementById("muscle-edit-delete") as HTMLButtonElement | null;
 
   if (!form || !backdrop) return;
@@ -102,7 +98,6 @@ function initEditModal(): void {
     void handleEditSave();
   });
 
-  cancelBtn?.addEventListener("click", closeEditModal);
   deleteBtn?.addEventListener("click", () => {
     if (editingMuscleId) {
       openDeleteModal(editingMuscleId);
@@ -167,21 +162,11 @@ function renderMuscleGrid(): void {
   empty.style.display = "none";
 
   for (const muscle of muscles) {
-    const tile = document.createElement("article");
-    tile.className = "muscle-tile";
-
-    const name = document.createElement("h3");
-    name.className = "muscle-tile__name";
-    name.textContent = muscle.name;
-
-    const editBtn = document.createElement("button");
-    editBtn.className = "muscle-tile__edit-btn";
-    editBtn.type = "button";
-    editBtn.textContent = "Edit";
-    editBtn.addEventListener("click", () => openEditModal(muscle));
-
-    tile.appendChild(name);
-    tile.appendChild(editBtn);
+    const tile = document.createElement("button");
+    tile.className = "muscle-toggle";
+    tile.type = "button";
+    tile.textContent = muscle.name;
+    tile.addEventListener("click", () => openEditModal(muscle));
     grid.appendChild(tile);
   }
 }

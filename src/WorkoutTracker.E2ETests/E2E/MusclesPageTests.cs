@@ -37,7 +37,7 @@ public class MusclesPageTests
         try
         {
             await Expect(page.Locator(".muscles-page__title")).ToHaveTextAsync("Targeted Muscles");
-            await Expect(page.Locator(".muscle-tile")).ToHaveCountAsync(12);
+            await Expect(page.Locator(".muscle-toggle")).ToHaveCountAsync(12);
         }
         finally
         {
@@ -54,7 +54,7 @@ public class MusclesPageTests
             await page.Locator("#muscle-name").FillAsync("Hip Flexors");
             await page.Locator("#muscle-form .exercise-form__submit").ClickAsync();
 
-            await Expect(page.Locator(".muscle-tile__name", new PageLocatorOptions { HasText = "Hip Flexors" })).ToBeVisibleAsync();
+            await Expect(page.Locator(".muscle-toggle", new PageLocatorOptions { HasText = "Hip Flexors" })).ToBeVisibleAsync();
         }
         finally
         {
@@ -68,15 +68,13 @@ public class MusclesPageTests
         var page = await CreatePageAsync();
         try
         {
-            await page.Locator(".muscle-tile", new PageLocatorOptions { HasText = "Chest" })
-                .Locator(".muscle-tile__edit-btn")
-                .ClickAsync();
+            await page.Locator(".muscle-toggle", new PageLocatorOptions { HasText = "Chest" }).ClickAsync();
 
             await page.Locator("#edit-muscle-name").FillAsync("Pectorals");
             await page.Locator("#muscle-edit-form .exercise-form__submit").ClickAsync();
 
-            await Expect(page.Locator(".muscle-tile__name", new PageLocatorOptions { HasText = "Pectorals" })).ToBeVisibleAsync();
-            await Expect(page.Locator(".muscle-tile__name", new PageLocatorOptions { HasText = "Chest" })).ToHaveCountAsync(0);
+            await Expect(page.Locator(".muscle-toggle", new PageLocatorOptions { HasText = "Pectorals" })).ToBeVisibleAsync();
+            await Expect(page.Locator(".muscle-toggle", new PageLocatorOptions { HasText = "Chest" })).ToHaveCountAsync(0);
         }
         finally
         {
@@ -90,14 +88,12 @@ public class MusclesPageTests
         var page = await CreatePageAsync();
         try
         {
-            await page.Locator(".muscle-tile", new PageLocatorOptions { HasText = "Chest" })
-                .Locator(".muscle-tile__edit-btn")
-                .ClickAsync();
+            await page.Locator(".muscle-toggle", new PageLocatorOptions { HasText = "Chest" }).ClickAsync();
 
             await page.Locator("#muscle-edit-delete").ClickAsync();
             await page.Locator("#muscle-delete-confirm").ClickAsync();
 
-            await Expect(page.Locator(".muscle-tile__name", new PageLocatorOptions { HasText = "Chest" })).ToHaveCountAsync(0);
+            await Expect(page.Locator(".muscle-toggle", new PageLocatorOptions { HasText = "Chest" })).ToHaveCountAsync(0);
         }
         finally
         {
