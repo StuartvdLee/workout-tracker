@@ -37,7 +37,7 @@
 > **Write these tests FIRST — they MUST fail before implementation starts.**
 
 - [X] T002 [P] [US1] Add backend integration tests `PostMuscle_Returns201_WithValidName`, `PostMuscle_CreatedMuscleAppearsInGetMusclesSortedAlphabetically`, and `PostMuscle_NameIsTrimmedBeforePersistence` to `src/WorkoutTracker.UnitTests/Api/MusclesApiTests.cs`
-- [X] T002a [P] [US1] Add backend integration tests `PostMuscle_EmptyName_Returns400`, `PostMuscle_WhitespaceName_Returns400`, and `PostMuscle_NameTooLong_Returns400` to `src/WorkoutTracker.UnitTests/Api/MusclesApiTests.cs` — these validate input rejection logic implemented in T007 and MUST fail before T007 is complete
+- [X] T002a [P] [US1] Add backend integration tests `PostMuscle_EmptyName_Returns400`, `PostMuscle_WhitespaceName_Returns400`, `PostMuscle_NullName_Returns400`, and `PostMuscle_NameTooLong_Returns400` to `src/WorkoutTracker.UnitTests/Api/MusclesApiTests.cs` — these validate input rejection logic implemented in T007 and MUST fail before T007 is complete
 - [X] T003 [P] [US1] Add E2E test `AddMuscle_NewMuscleAppearsInCreateFormImmediately` (type name → click Add → assert toggle present without reload) in `src/WorkoutTracker.E2ETests/E2E/ExercisesPageTests.cs`
 - [X] T004 [P] [US1] Add E2E test `AddMuscle_IsSortedAlphabetically` (add "Hip Flexors" → assert it appears between "Hamstrings" and "Quads" toggles) in `src/WorkoutTracker.E2ETests/E2E/ExercisesPageTests.cs`
 - [X] T005 [P] [US1] Add E2E test `AddMuscle_CanBeSelectedAndSavedWithExercise` (add muscle → assert unselected → click to select → save exercise → verify muscle chip shown) in `src/WorkoutTracker.E2ETests/E2E/ExercisesPageTests.cs`
@@ -45,11 +45,11 @@
 
 ### Implementation for User Story 1
 
-- [X] T007 [US1] Implement `POST /api/muscles` endpoint in `src/WorkoutTracker.Api/Program.cs`: read `MuscleCreateRequest`, trim name, reject empty/whitespace (400 `"Muscle name is required."`), reject > 100 chars (400 `"Muscle name must be 100 characters or fewer."`), create `Muscle { MuscleId = Guid.NewGuid(), Name = name }`, save, return 201 `{ muscleId, name }`
+- [X] T007 [US1] Implement `POST /api/muscles` endpoint in `src/WorkoutTracker.Api/Program.cs`: read `MuscleCreateRequest`, trim name, reject empty/whitespace (400 `"Muscle name is required."`), reject > 100 chars (400 `"Muscle name must be 100 characters or fewer."`), create `Muscle { MuscleId = Guid.NewGuid(), Name = name }`, save, return 201 `{ muscleId, name }`. Wrap the advisory-lock + duplicate-check + insert + commit block in `db.Database.CreateExecutionStrategy().ExecuteAsync()` (required by `NpgsqlRetryingExecutionStrategy` — see R-008).
 - [X] T008 [P] [US1] Add `POST /api/muscles` proxy route in `src/WorkoutTracker.Web/Program.cs` following the exact `POST /api/exercises` proxy pattern (lines 55–72)
 - [X] T009 [P] [US1] Add `.muscle-add`, `.muscle-add__input`, `.muscle-add__btn`, and `.muscle-add__error` CSS rules in `src/WorkoutTracker.Web/wwwroot/css/styles.css` using existing CSS custom properties (`--spacing-xs`, `--color-error`, `--font-size-sm`, etc.)
 - [X] T010 [US1] Add add-muscle form HTML to the create form and edit modal scaffolds in `src/WorkoutTracker.Web/wwwroot/ts/pages/exercises.ts`: `#add-muscle-name` input + `#add-muscle-btn` button + `#add-muscle-error` div (with `role="alert"` and `aria-live="polite"`) below `#exercise-muscles`; same with `edit-` prefix IDs below `#edit-exercise-muscles`
-- [X] T011 [US1] Implement `insertMuscleAlphabetically(muscle: Muscle): void` helper and `handleAddMuscle()` / `handleEditAddMuscle()` async functions in `src/WorkoutTracker.Web/wwwroot/ts/pages/exercises.ts`: call `POST /api/muscles`, show "Adding..." + `aria-disabled` during fetch, on 201 insert into `muscles[]` in sorted order, call `renderMuscleToggles()` and `renderEditMuscleToggles()` (new muscle left unselected), clear input, return focus to input
+- [X] T011 [US1] Implement `reloadMuscles(): Promise<ReloadMusclesResult>` helper and `handleAddMuscle()` / `handleEditAddMuscle()` async functions in `src/WorkoutTracker.Web/wwwroot/ts/pages/exercises.ts`: call `POST /api/muscles`, show "Adding..." + `aria-disabled` during fetch, on 201 call `reloadMuscles()` to re-fetch the authoritative sorted list from `GET /api/muscles`, then call `renderMuscleToggles()` and `renderEditMuscleToggles()` (new muscle left unselected), clear input + focus input. Use `showValidationError()` / `clearValidationError()` helpers (which set `aria-invalid` + `exercise-form__input--error` on the input) for all validation and API error display.
 - [X] T012 [US1] Wire click event on `#add-muscle-btn` / `#edit-add-muscle-btn` and `keydown` Enter on the name inputs to call `handleAddMuscle()` / `handleEditAddMuscle()` in `src/WorkoutTracker.Web/wwwroot/ts/pages/exercises.ts`; add `isAddingMuscle` and `isEditAddingMuscle` guard flags
 
 **Checkpoint**: User Story 1 happy-path is fully functional and independently testable. All T002, T002a, T003–T006 tests should now pass. Error handling for non-2xx API responses is completed in US2 (T018).
@@ -66,11 +66,11 @@
 
 - [X] T013 [P] [US2] Add backend integration tests `PostMuscle_DuplicateName_Returns400` (exact case) and `PostMuscle_DuplicateNameDifferentCase_Returns400` (e.g. "biceps" when "Biceps" exists) to `src/WorkoutTracker.UnitTests/Api/MusclesApiTests.cs` — these MUST fail before T016 is complete
 - [X] T014 [P] [US2] Add E2E test `AddMuscle_DuplicateNameShowsError` (type "Chest" → click Add → assert error message shown, no new toggle created) in `src/WorkoutTracker.E2ETests/E2E/ExercisesPageTests.cs`
-- [X] T015 [P] [US2] Add E2E test `AddMuscle_EmptyNameShowsError` (click Add with empty input → assert client-side validation error shown, no API call made) in `src/WorkoutTracker.E2ETests/E2E/ExercisesPageTests.cs`
+- [X] T015 [P] [US2] Add E2E test `AddMuscle_EmptyNameShowsError` (click Add with empty input → assert client-side validation error shown including `aria-invalid="true"` and `exercise-form__input--error` class on input, no API call made) in `src/WorkoutTracker.E2ETests/E2E/ExercisesPageTests.cs`
 
 ### Implementation for User Story 2
 
-- [X] T016 [US2] Add case-insensitive duplicate check to `POST /api/muscles` in `src/WorkoutTracker.Api/Program.cs`: `var normalizedName = ExerciseQueryHelper.EscapeLike(name); var duplicate = await db.Muscles.AnyAsync(m => EF.Functions.ILike(m.Name, normalizedName, "\\"));` — return 400 `"A muscle with this name already exists."` if true
+- [X] T016 [US2] Add case-insensitive duplicate check to `POST /api/muscles` in `src/WorkoutTracker.Api/Program.cs`: `var normalizedName = ExerciseQueryHelper.EscapeLike(name); var duplicate = await db.Muscles.AnyAsync(m => EF.Functions.ILike(m.Name, normalizedName, "\\"));` — return 400 `"A muscle with this name already exists."` if true. The duplicate check runs inside the `CreateExecutionStrategy().ExecuteAsync()` block (see T007 / R-008).
 - [X] T017 [US2] Add client-side pre-flight validation to `handleAddMuscle()` and `handleEditAddMuscle()` in `src/WorkoutTracker.Web/wwwroot/ts/pages/exercises.ts`: show `"Muscle name is required."` for empty/whitespace input; show `"Muscle name must be 100 characters or fewer."` for input > 100 chars — abort before calling API
 - [X] T018 [US2] Handle API 400 response in `handleAddMuscle()` and `handleEditAddMuscle()` in `src/WorkoutTracker.Web/wwwroot/ts/pages/exercises.ts`: display `data.error` (or generic fallback) in the add-muscle error container; retain the input value so the user can correct it without retyping
 
@@ -83,6 +83,8 @@
 **Purpose**: Accessibility verification, build validation, and full test suite confirmation.
 
 - [X] T019 [P] Confirm all three add-muscle error containers in `src/WorkoutTracker.Web/wwwroot/ts/pages/exercises.ts` carry `role="alert"` + `aria-live="polite"` and that both add-muscle inputs carry `aria-describedby` pointing to their error container — consistent with `#exercise-error` / `#exercise-api-error` pattern
+- [X] T019a [P] Implement `resetEditAddMuscleForm()` in `src/WorkoutTracker.Web/wwwroot/ts/pages/exercises.ts`: clears `#edit-add-muscle-name` value, removes `aria-invalid` + `exercise-form__input--error`, clears error container text, re-enables input and button. Called on edit modal open and close to guarantee a clean idle state.
+- [X] T019b [P] Add E2E test `AddMuscle_EditModalAddField_ResetsWhenReopened` in `src/WorkoutTracker.E2ETests/E2E/ExercisesPageTests.cs`: trigger a validation error in the edit modal add-muscle form, type a partial name, cancel, re-open → assert input is empty and error is cleared and `aria-invalid` is absent.
 - [X] T020 [P] Build TypeScript via `npm run build` in `src/WorkoutTracker.Web` and resolve any type errors — confirm `strict: true`, `noUnusedLocals`, `noUnusedParameters`, `noImplicitReturns` all pass
 - [X] T021 [P] Run backend test suite (`dotnet test src/WorkoutTracker.UnitTests/WorkoutTracker.UnitTests.csproj`) and confirm all tests pass, including pre-existing `GetMuscles_Returns200WithAllMuscles` (count 12) and `GetMuscles_ReturnsMusclesInAlphabeticalOrder`
 - [X] T022 [P] Run E2E test suite (`dotnet test src/WorkoutTracker.E2ETests/WorkoutTracker.E2ETests.csproj`) and confirm all tests pass, including pre-existing `MuscleToggles_AllTwelveDisplayed`
@@ -163,6 +165,9 @@ Task T009: .muscle-add__* CSS styles (styles.css)
 - `[P]` tasks operate on different files or have no intra-phase dependencies
 - `[US1]` / `[US2]` labels map tasks to specific user stories for traceability
 - `ExerciseQueryHelper.EscapeLike` is already in `Program.cs` (line 737) — reuse it, do not duplicate
-- The `muscles[]` module-level array in `exercises.ts` is shared by both create and edit toggle renders — inserting into it once refreshes both
+- Client-side update uses `reloadMuscles()` (re-fetch `GET /api/muscles`) rather than a client-side insert — see R-007
+- `showValidationError()` / `clearValidationError()` helpers set `aria-invalid` + `exercise-form__input--error` on the input in addition to populating the error container
+- `resetEditAddMuscleForm()` is called on edit modal open and close to reset the add-muscle mini-form to idle state
 - `MuscleToggles_AllTwelveDisplayed` will continue to pass because both `CreatePageAsync()` and `CreateMobilePageAsync()` reset mock muscles before each test
+- `POST /api/muscles` uses `CreateExecutionStrategy().ExecuteAsync()` — required by `NpgsqlRetryingExecutionStrategy`; see R-008
 - Commit after each phase checkpoint (T001, after Phase 3 checkpoint, after Phase 4 checkpoint)

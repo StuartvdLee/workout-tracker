@@ -51,12 +51,12 @@ Same structure with IDs prefixed `edit-`:
 
 ## Interaction States
 
-| State    | Input             | Button                            | Error container      |
-|----------|-------------------|-----------------------------------|----------------------|
-| Idle     | Empty, enabled    | "Add", enabled                    | Empty                |
-| Loading  | Disabled          | "Adding...", `aria-disabled=true` | Empty                |
-| Success  | Cleared, enabled  | "Add", re-enabled                 | Empty                |
-| Error    | Retains value     | "Add", re-enabled                 | Error message shown  |
+| State    | Input                                                   | Button                            | Error container      |
+|----------|---------------------------------------------------------|-----------------------------------|----------------------|
+| Idle     | Empty, enabled                                          | "Add", enabled                    | Empty                |
+| Loading  | Disabled                                                | "Adding...", `aria-disabled=true` | Empty                |
+| Success  | Cleared, enabled                                        | "Add", re-enabled                 | Empty                |
+| Error    | Retains value, `aria-invalid="true"`, `exercise-form__input--error` class added | "Add", re-enabled | Error message shown  |
 
 ---
 
@@ -75,20 +75,24 @@ Same structure with IDs prefixed `edit-`:
 
 1. User types a name and clicks "Add" (or presses Enter in the input).
 2. Frontend trims input:
-   - If empty → show "Muscle name is required." in error container; do not call API.
-   - If > 100 chars → show "Muscle name must be 100 characters or fewer."; do not call API.
+   - If empty → `showValidationError()`: set `aria-invalid="true"`, add `exercise-form__input--error` class on input, show "Muscle name is required." in error container; do not call API.
+   - If > 100 chars → same validation helper with "Muscle name must be 100 characters or fewer."; do not call API.
 3. Button shows "Adding..." and is `aria-disabled="true"`. Input is disabled.
 4. `POST /api/muscles` called with `{ name }`.
 5. On 201:
-   - New muscle inserted into `muscles[]` at correct alphabetical position.
+   - `reloadMuscles()` re-fetches `GET /api/muscles` and replaces the `muscles[]` module-level array.
    - `renderMuscleToggles()` and `renderEditMuscleToggles()` called.
-   - New muscle appears unselected; user toggles it manually if desired.
-   - Input cleared.
-   - Error container cleared.
+   - New muscle appears unselected at its sorted alphabetical position; user toggles it manually if desired.
+   - Input cleared; `clearValidationError()` removes `aria-invalid` and error class.
+   - Focus returned to input.
 6. On 400 or network error:
-   - Error message shown in error container.
+   - `showValidationError()` sets `aria-invalid="true"`, adds `exercise-form__input--error` class, displays `data.error` (or generic fallback) in error container.
    - Input value retained.
 7. Input and button re-enabled after API response (success or failure).
+
+### Edit Modal Reset
+
+When the edit modal is closed (cancel, save, or backdrop click) and when it is re-opened, `resetEditAddMuscleForm()` clears the `#edit-add-muscle-name` input value, clears the error container, removes `aria-invalid` and `exercise-form__input--error`, and re-enables the input and button. This ensures the add-muscle mini-form starts in a clean idle state every time the edit modal opens.
 
 ---
 

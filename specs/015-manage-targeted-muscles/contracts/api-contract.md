@@ -77,3 +77,4 @@ Pattern mirrors existing `POST /api/exercises` proxy (lines 55–72 of `WorkoutT
 - The `name` field is stored as trimmed. "  Hip Flexors  " is stored as "Hip Flexors".
 - Duplicate check is case-insensitive: "biceps" is rejected when "Biceps" exists.
 - The new muscle will appear in subsequent `GET /api/muscles` responses sorted alphabetically.
+- The endpoint wraps the advisory-lock + duplicate-check + insert + commit inside `db.Database.CreateExecutionStrategy().ExecuteAsync()` to be compatible with `NpgsqlRetryingExecutionStrategy` (registered by the Aspire Npgsql integration). Calling `BeginTransactionAsync()` directly outside the strategy's scope throws `InvalidOperationException`.
