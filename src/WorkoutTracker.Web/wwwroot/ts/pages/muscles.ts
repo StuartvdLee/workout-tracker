@@ -158,7 +158,6 @@ function initEventListeners(): void {
       if (!isDeleteSubmitting) {
         closeDeleteConfirmModal();
       }
-      return;
     }
 
     if (!deleteConfirmModal) {
@@ -464,7 +463,7 @@ function closeDeleteConfirmModal(): void {
 }
 
 async function handleConfirmDelete(): Promise<void> {
-  if (isDeleteSubmitting || deletingMuscleId === null) {
+  if (deletingMuscleId === null || isDeleteSubmitting) {
     return;
   }
 
