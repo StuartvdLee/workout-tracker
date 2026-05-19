@@ -88,6 +88,45 @@ app.MapPost("/api/muscles", async (ILogger<Program> logger, HttpRequest request,
     }
 });
 
+app.MapPut("/api/muscles/{muscleId:guid}", async (Guid muscleId, ILogger<Program> logger, HttpRequest request, IHttpClientFactory httpClientFactory) =>
+{
+    try
+    {
+        var client = httpClientFactory.CreateClient("api");
+        var body = await new StreamReader(request.Body).ReadToEndAsync();
+        var content = new StringContent(body, System.Text.Encoding.UTF8, "application/json");
+        var response = await client.PutAsync($"/api/muscles/{muscleId}", content);
+        var responseContent = await response.Content.ReadAsStringAsync();
+        return Results.Content(responseContent, "application/json", statusCode: (int)response.StatusCode);
+    }
+    catch (Exception ex)
+    {
+        WebProxyLog.ProxyError(logger, $"PUT /api/muscles/{muscleId}", ex);
+        return Results.Json(new { error = "API unavailable." }, statusCode: 502);
+    }
+});
+
+app.MapDelete("/api/muscles/{muscleId:guid}", async (Guid muscleId, ILogger<Program> logger, IHttpClientFactory httpClientFactory) =>
+{
+    try
+    {
+        var client = httpClientFactory.CreateClient("api");
+        var response = await client.DeleteAsync($"/api/muscles/{muscleId}");
+        if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+        {
+            return Results.NoContent();
+        }
+
+        var responseContent = await response.Content.ReadAsStringAsync();
+        return Results.Content(responseContent, "application/json", statusCode: (int)response.StatusCode);
+    }
+    catch (Exception ex)
+    {
+        WebProxyLog.ProxyError(logger, $"DELETE /api/muscles/{muscleId}", ex);
+        return Results.Json(new { error = "API unavailable." }, statusCode: 502);
+    }
+});
+
 app.MapPut("/api/exercises/{exerciseId:guid}", async (Guid exerciseId, ILogger<Program> logger, HttpRequest request, IHttpClientFactory httpClientFactory) =>
 {
     try

@@ -182,6 +182,59 @@ public class WebAppFixture : WebApplicationFactory<Program>
             }
         });
 
+        app.MapPut("/api/muscles/{muscleId}", async (string muscleId, HttpRequest request) =>
+        {
+            var body = await request.ReadFromJsonAsync<MuscleRequest>();
+            var name = body?.Name?.Trim() ?? "";
+
+            if (string.IsNullOrWhiteSpace(name))
+                return Results.Json(new { error = "Muscle name is required." }, statusCode: 400);
+
+            if (name.Length > 100)
+                return Results.Json(new { error = "Muscle name must be 100 characters or fewer." }, statusCode: 400);
+
+            lock (_musclesLock)
+            {
+                var index = _muscles.FindIndex(m => string.Equals(m.MuscleId, muscleId, StringComparison.OrdinalIgnoreCase));
+                if (index < 0)
+                    return Results.Json(new { error = "Muscle not found." }, statusCode: 404);
+
+                if (_muscles.Any(m =>
+                    !string.Equals(m.MuscleId, muscleId, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(m.Name, name, StringComparison.OrdinalIgnoreCase)))
+                {
+                    return Results.Json(new { error = "A muscle with this name already exists." }, statusCode: 400);
+                }
+
+                var updated = _muscles[index] with { Name = name };
+                _muscles[index] = updated;
+                _muscles = [.. _muscles.OrderBy(m => m.Name, StringComparer.Ordinal)];
+                return Results.Ok(new { muscleId = updated.MuscleId, name = updated.Name });
+            }
+        });
+
+        app.MapDelete("/api/muscles/{muscleId}", (string muscleId) =>
+        {
+            lock (_musclesLock)
+            {
+                var exists = _muscles.Any(m => string.Equals(m.MuscleId, muscleId, StringComparison.OrdinalIgnoreCase));
+                if (!exists)
+                    return Results.Json(new { error = "Muscle not found." }, statusCode: 404);
+
+                _muscles.RemoveAll(m => string.Equals(m.MuscleId, muscleId, StringComparison.OrdinalIgnoreCase));
+            }
+
+            lock (_exercisesLock)
+            {
+                foreach (var exercise in _exercises)
+                {
+                    exercise.MuscleIds.RemoveAll(mid => string.Equals(mid, muscleId, StringComparison.OrdinalIgnoreCase));
+                }
+            }
+
+            return Results.NoContent();
+        });
+
         // Mock API endpoint to list exercises
         app.MapGet("/api/exercises", () =>
         {

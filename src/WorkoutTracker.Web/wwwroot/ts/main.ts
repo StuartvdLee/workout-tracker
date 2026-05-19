@@ -4,6 +4,7 @@ import { initTheme } from "./theme.js";
 import { render as renderHome } from "./pages/home.js";
 import { render as renderWorkouts } from "./pages/workouts.js";
 import { render as renderExercises } from "./pages/exercises.js";
+import { render as renderMuscles } from "./pages/muscles.js";
 import { render as renderHistory } from "./pages/history.js";
 import { render as renderActiveSession } from "./pages/active-session.js";
 import { render as renderSessionDetail } from "./pages/session-detail.js";
@@ -12,6 +13,7 @@ function initializeApp(): void {
   registerRoute("/", renderHome);
   registerRoute("/workouts", renderWorkouts);
   registerRoute("/exercises", renderExercises);
+  registerRoute("/muscles", renderMuscles);
   registerRoute("/history", renderHistory);
   registerRoute("/active-session", renderActiveSession);
   registerRoute("/history/session", renderSessionDetail);

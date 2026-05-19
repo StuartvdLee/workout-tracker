@@ -28,7 +28,7 @@ public class SidebarNavigationTests
     }
 
     [Fact]
-    public async Task Sidebar_IsVisible_WithFourMenuItems()
+    public async Task Sidebar_IsVisible_WithFiveMenuItems()
     {
         var page = await CreatePageAsync();
 
@@ -36,7 +36,7 @@ public class SidebarNavigationTests
         await Expect(sidebar).ToBeVisibleAsync();
 
         var links = page.Locator(".sidebar__link");
-        await Expect(links).ToHaveCountAsync(4);
+        await Expect(links).ToHaveCountAsync(5);
 
         await page.CloseAsync();
     }
@@ -48,10 +48,10 @@ public class SidebarNavigationTests
 
         var labels = page.Locator(".sidebar__label");
         var texts = await labels.AllTextContentsAsync();
-        Assert.Equal(["Home", "Workouts", "Exercises", "History"], texts);
+        Assert.Equal(["Home", "Workouts", "Exercises", "Muscles", "History"], texts);
 
         var icons = page.Locator(".sidebar__icon");
-        await Expect(icons).ToHaveCountAsync(4);
+        await Expect(icons).ToHaveCountAsync(5);
 
         await page.CloseAsync();
     }
@@ -68,6 +68,10 @@ public class SidebarNavigationTests
         await page.Locator(".sidebar__link[data-page='exercises']").ClickAsync();
         await Expect(page.Locator(".exercises-page__title")).ToHaveTextAsync("Exercises");
         Assert.EndsWith("/exercises", page.Url);
+
+        await page.Locator(".sidebar__link[data-page='muscles']").ClickAsync();
+        await Expect(page.Locator(".muscles-page__title")).ToHaveTextAsync("Targeted Muscles");
+        Assert.EndsWith("/muscles", page.Url);
 
         await page.Locator(".sidebar__link[data-page='home']").ClickAsync();
         await Expect(page.Locator("#workout-form")).ToBeVisibleAsync();

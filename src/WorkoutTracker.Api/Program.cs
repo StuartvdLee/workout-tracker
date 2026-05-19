@@ -98,6 +98,71 @@ app.MapPost("/api/muscles", async (HttpContext context, WorkoutTrackerDbContext 
     return Results.Json(new { createdMuscle.MuscleId, createdMuscle.Name }, statusCode: 201);
 });
 
+app.MapPut("/api/muscles/{muscleId:guid}", async (Guid muscleId, HttpContext context, WorkoutTrackerDbContext db) =>
+{
+    var body = await context.Request.ReadFromJsonAsync<MuscleUpdateRequest>();
+    var name = body?.Name?.Trim() ?? "";
+
+    if (string.IsNullOrWhiteSpace(name))
+        return Results.Json(new { error = "Muscle name is required." }, statusCode: 400);
+
+    if (name.Length > 100)
+        return Results.Json(new { error = "Muscle name must be 100 characters or fewer." }, statusCode: 400);
+
+    var normalizedName = ExerciseQueryHelper.EscapeLike(name);
+    var strategy = db.Database.CreateExecutionStrategy();
+
+    var result = await strategy.ExecuteAsync(async () =>
+    {
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock({0});", MuscleNameAdvisoryLockId);
+
+        var existingMuscle = await db.Muscles.FirstOrDefaultAsync(m => m.MuscleId == muscleId);
+        if (existingMuscle is null)
+        {
+            await transaction.RollbackAsync();
+            return (NotFound: true, Duplicate: false, Updated: (Muscle?)null);
+        }
+
+        var duplicate = await db.Muscles
+            .AnyAsync(m => m.MuscleId != muscleId && EF.Functions.ILike(m.Name, normalizedName, "\\"));
+
+        if (duplicate)
+        {
+            await transaction.RollbackAsync();
+            return (NotFound: false, Duplicate: true, Updated: (Muscle?)null);
+        }
+
+        existingMuscle.Name = name;
+        await db.SaveChangesAsync();
+        await transaction.CommitAsync();
+
+        return (NotFound: false, Duplicate: false, Updated: existingMuscle);
+    });
+
+    if (result.NotFound)
+        return Results.Json(new { error = "Muscle not found." }, statusCode: 404);
+
+    if (result.Duplicate)
+        return Results.Json(new { error = "A muscle with this name already exists." }, statusCode: 400);
+
+    var updatedMuscle = result.Updated!;
+    return Results.Ok(new { updatedMuscle.MuscleId, updatedMuscle.Name });
+});
+
+app.MapDelete("/api/muscles/{muscleId:guid}", async (Guid muscleId, WorkoutTrackerDbContext db) =>
+{
+    var muscle = await db.Muscles.FirstOrDefaultAsync(m => m.MuscleId == muscleId);
+
+    if (muscle is null)
+        return Results.Json(new { error = "Muscle not found." }, statusCode: 404);
+
+    db.Muscles.Remove(muscle);
+    await db.SaveChangesAsync();
+
+    return Results.NoContent();
+});
+
 app.MapGet("/api/exercises", async (WorkoutTrackerDbContext db) =>
 {
     var exercises = await db.Exercises
@@ -797,6 +862,11 @@ internal sealed class ExerciseCreateRequest
 }
 
 internal sealed class MuscleCreateRequest
+{
+    public string? Name { get; set; }
+}
+
+internal sealed class MuscleUpdateRequest
 {
     public string? Name { get; set; }
 }

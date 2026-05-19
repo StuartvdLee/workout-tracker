@@ -44,6 +44,10 @@ public class SidebarAccessibilityTests
         var exercisesLink = page.Locator(".sidebar__link[data-page='exercises']");
         await Expect(exercisesLink).ToBeFocusedAsync();
 
+        await page.Keyboard.PressAsync("Tab");
+        var musclesLink = page.Locator(".sidebar__link[data-page='muscles']");
+        await Expect(musclesLink).ToBeFocusedAsync();
+
         await page.CloseAsync();
     }
 
@@ -87,6 +91,9 @@ public class SidebarAccessibilityTests
 
         var exercisesLink = page.Locator(".sidebar__link[data-page='exercises']");
         Assert.Null(await exercisesLink.GetAttributeAsync("aria-current"));
+
+        var musclesLink = page.Locator(".sidebar__link[data-page='muscles']");
+        Assert.Null(await musclesLink.GetAttributeAsync("aria-current"));
 
         await page.CloseAsync();
     }
