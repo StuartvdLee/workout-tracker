@@ -54,22 +54,37 @@ app.MapPost("/api/muscles", async (HttpContext context, WorkoutTrackerDbContext 
     if (name.Length > 100)
         return Results.Json(new { error = "Muscle name must be 100 characters or fewer." }, statusCode: 400);
 
-    await using var transaction = await db.Database.BeginTransactionAsync();
-    await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock({0});", MuscleNameAdvisoryLockId);
-
     var normalizedName = ExerciseQueryHelper.EscapeLike(name);
-    var duplicate = await db.Muscles
-        .AnyAsync(m => EF.Functions.ILike(m.Name, normalizedName, "\\"));
+    Muscle? muscle = null;
+
+    var strategy = db.Database.CreateExecutionStrategy();
+    var duplicate = false;
+
+    await strategy.ExecuteAsync(async () =>
+    {
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock({0});", MuscleNameAdvisoryLockId);
+
+        duplicate = await db.Muscles
+            .AnyAsync(m => EF.Functions.ILike(m.Name, normalizedName, "\\"));
+
+        if (!duplicate)
+        {
+            muscle = new Muscle { MuscleId = Guid.NewGuid(), Name = name };
+            db.Muscles.Add(muscle);
+            await db.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+        else
+        {
+            await transaction.RollbackAsync();
+        }
+    });
 
     if (duplicate)
         return Results.Json(new { error = "A muscle with this name already exists." }, statusCode: 400);
 
-    var muscle = new Muscle { MuscleId = Guid.NewGuid(), Name = name };
-    db.Muscles.Add(muscle);
-    await db.SaveChangesAsync();
-    await transaction.CommitAsync();
-
-    return Results.Json(new { muscle.MuscleId, muscle.Name }, statusCode: 201);
+    return Results.Json(new { muscle!.MuscleId, muscle.Name }, statusCode: 201);
 });
 
 app.MapGet("/api/exercises", async (WorkoutTrackerDbContext db) =>
