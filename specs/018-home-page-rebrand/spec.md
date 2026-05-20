@@ -26,7 +26,7 @@ When a user navigates to the home page (or the app loads to the home page), they
 
 - The flame icon must render correctly in both light and dark mode
 - The page title "Let's go!" must display correctly including the apostrophe and exclamation mark (special characters)
-- If the icon fails to load or render, a meaningful fallback must be in place
+- The icon is inline SVG in the HTML, so no separate icon asset load path or runtime fallback is required
 
 ## Requirements *(mandatory)*
 

@@ -26,7 +26,7 @@
 
 **Decision**: Both the sidebar label and the page `<h1>` use the exact string `Let's go!` (with apostrophe and exclamation mark, as specified).
 
-**Rationale**: The spec is explicit about the exact string. The apostrophe is a standard Unicode character (`'`, U+2019 or the ASCII `'`) — no HTML entity encoding needed in UTF-8 HTML.
+**Rationale**: The spec is explicit about the exact string. The UI uses the ASCII apostrophe (`'`, U+0027), not the right single quotation mark (`’`, U+2019), and no HTML entity encoding is needed in UTF-8 HTML.
 
 **Alternatives considered**: None — spec is unambiguous.
 
