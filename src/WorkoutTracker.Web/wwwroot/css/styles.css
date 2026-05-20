@@ -1514,13 +1514,18 @@ body.is-dragging .workout-selected__drag-handle {
 
 .active-session__header {
   margin-bottom: var(--spacing-lg);
-  text-align: center;
 }
 
 .active-session__title {
   font-size: var(--font-size-xl);
   font-weight: 700;
   color: var(--color-text);
+}
+
+@media (min-width: 768px) {
+  .active-session__title {
+    font-size: 2.25rem;
+  }
 }
 
 .active-session__back-btn {
