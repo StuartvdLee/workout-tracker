@@ -691,6 +691,10 @@ public class ExercisesPageTests
             await page.Locator("#exercise-name").FocusAsync();
             await Expect(page.Locator("#exercise-name")).ToBeFocusedAsync();
 
+            // Tab to Manage link (now sits between name input and muscle toggles)
+            await page.Keyboard.PressAsync("Tab");
+            await Expect(page.Locator("#exercise-form a.exercise-form__manage-link")).ToBeFocusedAsync();
+
             // Tab to first muscle toggle
             await page.Keyboard.PressAsync("Tab");
             var firstToggle = page.Locator("#exercise-muscles .muscle-toggle").First;
@@ -1206,6 +1210,63 @@ public class ExercisesPageTests
             await page.Locator(".exercise-list__item .exercise-list__edit-btn").First.ClickAsync();
 
             await Expect(page.Locator("#edit-add-muscle-form")).ToHaveCountAsync(0);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    // === Manage Muscles Link ===
+
+    [Fact]
+    public async Task MusclesLink_IsVisibleInAddForm()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var link = page.Locator("#exercise-form a.exercise-form__manage-link");
+            await Expect(link).ToBeVisibleAsync();
+            await Expect(link).ToHaveTextAsync("Manage");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task MusclesLink_IsVisibleInEditModal()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.Locator("#exercise-name").FillAsync("Bench Press");
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
+            var editButton = page.Locator(".exercise-list__edit-btn").First;
+            await Expect(editButton).ToBeVisibleAsync();
+            await editButton.ClickAsync();
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeVisibleAsync();
+
+            var link = page.Locator("#edit-modal-form a.exercise-form__manage-link");
+            await Expect(link).ToBeVisibleAsync();
+            await Expect(link).ToHaveTextAsync("Manage");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task MusclesLink_NavigatesToMusclesPage()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var link = page.Locator("#exercise-form a.exercise-form__manage-link");
+            await link.ClickAsync();
+            Assert.EndsWith("/muscles", page.Url);
         }
         finally
         {

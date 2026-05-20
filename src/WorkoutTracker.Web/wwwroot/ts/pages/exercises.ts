@@ -1,3 +1,5 @@
+import { navigate } from "../router.js";
+
 interface ExerciseMuscle {
   readonly muscleId: string;
   readonly name: string;
@@ -46,7 +48,7 @@ export async function render(container: HTMLElement): Promise<void> {
           />
         </div>
         <div class="exercise-form__group">
-          <label class="exercise-form__label">Targeted muscles (optional)</label>
+          <label class="exercise-form__label">Targeted muscles (optional) – <a class="exercise-form__manage-link" href="/muscles">Manage</a></label>
           <div class="exercise-form__muscles" id="exercise-muscles" role="group" aria-label="Targeted muscles">
           </div>
         </div>
@@ -72,7 +74,7 @@ export async function render(container: HTMLElement): Promise<void> {
               <input class="exercise-form__input" type="text" id="edit-exercise-name" maxlength="150" autocomplete="off" aria-describedby="edit-exercise-error" />
             </div>
             <div class="exercise-form__group">
-              <label class="exercise-form__label">Targeted muscles (optional)</label>
+              <label class="exercise-form__label">Targeted muscles (optional) – <a class="exercise-form__manage-link" href="/muscles">Manage</a></label>
               <div class="exercise-form__muscles" id="edit-exercise-muscles" role="group" aria-label="Targeted muscles"></div>
             </div>
             <div class="exercise-form__error" id="edit-exercise-error" role="alert" aria-live="polite"></div>
@@ -107,6 +109,7 @@ export async function render(container: HTMLElement): Promise<void> {
   isDeleting = false;
 
   initForm();
+  initMusclesLinks();
   initEditModal();
   initDeleteModal();
   await loadData();
@@ -121,6 +124,25 @@ function initForm(): void {
     void handleSubmit();
   });
 
+}
+
+function initMusclesLinks(): void {
+  const links = document.querySelectorAll<HTMLAnchorElement>("a.exercise-form__manage-link");
+  for (const link of links) {
+    link.addEventListener("click", (event: MouseEvent) => {
+      if (
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
+      event.preventDefault();
+      navigate("/muscles");
+    });
+  }
 }
 
 function initEditModal(): void {
