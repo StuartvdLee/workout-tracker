@@ -48,7 +48,7 @@ public class SidebarNavigationTests
 
         var labels = page.Locator(".sidebar__label");
         var texts = await labels.AllTextContentsAsync();
-        Assert.Equal(["Home", "Workouts", "Exercises", "Muscles", "History"], texts);
+        Assert.Equal(["Let's go!", "Workouts", "Exercises", "Muscles", "History"], texts);
 
         var icons = page.Locator(".sidebar__icon");
         await Expect(icons).ToHaveCountAsync(5);

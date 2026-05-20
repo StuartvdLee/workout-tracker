@@ -37,7 +37,7 @@ public class HomeLandingPageSelectionTests
         await Expect(sidebarTitle).ToHaveTextAsync("Workout Tracker");
 
         var pageTitle = page.Locator("h1");
-        await Expect(pageTitle).ToHaveTextAsync("Home");
+        await Expect(pageTitle).ToHaveTextAsync("Let's go!");
 
         await page.CloseAsync();
     }
