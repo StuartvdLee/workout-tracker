@@ -2,7 +2,7 @@
 
 **Feature Branch**: `020-effort-slider-colours`  
 **Created**: 2026-05-20  
-**Status**: Draft  
+**Status**: Implemented  
 **Input**: User description: "I want to add colours to the effort sliders. Ideally, the slider should change colour while sliding. Or it should immediately become the colour when letting go of the slider on a value."
 
 ## User Scenarios & Testing *(mandatory)*
@@ -41,18 +41,18 @@ A user adjusts the effort slider and releases the thumb at a chosen value. The s
 
 ---
 
-### User Story 3 - Colour Persists on Page Load (Priority: P3)
+### User Story 3 - Colour Persists on Re-Render (Priority: P3)
 
-A user returns to a workout session or views a completed set entry where an effort value was previously saved. The effort slider (or its static representation) displays the colour corresponding to the saved effort value, so the user can instantly recognise the intensity at a glance.
+A user is in an active workout session and has already rated effort for one or more exercises. If the exercise list is re-rendered mid-session (e.g., after reordering exercises), the effort sliders rebuild with the previously entered values intact and their colours immediately visible — no re-interaction required.
 
-**Why this priority**: Consistency between active and historical views reinforces the colour system's meaning. If the colour only appears during interaction, it loses long-term utility as a visual language.
+**Why this priority**: The exercise list can be re-rendered during a session (e.g., drag-to-reorder). Without colour restoration, re-rendered sliders would silently lose their colour state even though the effort value itself is preserved.
 
-**Independent Test**: Can be tested by saving an effort value, navigating away, and returning to the same session or view — confirming the slider renders with the correct colour for the stored value.
+**Independent Test**: Can be tested by setting an effort value on a per-exercise slider, triggering a re-render of the exercise list (e.g., via exercise reorder), and confirming the rebuilt slider renders with the correct palette colour for the previously entered value without requiring the user to touch it again.
 
 **Acceptance Scenarios**:
 
-1. **Given** an effort value of 9 (All Out) was previously saved, **When** the user navigates to the session view, **Then** the effort slider shows the colour `#8A417D`.
-2. **Given** an effort value of 4 (Moderate) was previously saved, **When** the page renders, **Then** the effort slider shows the colour `#356089` without requiring any interaction.
+1. **Given** an effort value of 9 (All Out) was entered earlier in the session, **When** the exercise list is re-rendered, **Then** the effort slider shows the colour `#8A417D` immediately on render.
+2. **Given** an effort value of 4 (Moderate) was entered earlier in the session, **When** the exercise list re-renders, **Then** the effort slider shows the colour `#356089` without requiring any interaction.
 
 ---
 
@@ -80,7 +80,7 @@ A user returns to a workout session or views a completed set entry where an effo
   - 10 (All Out): `#8A3666`
 - **FR-002**: The slider colour MUST update in real-time as the user drags the slider thumb across the range.
 - **FR-003**: The slider colour MUST update immediately when the user releases the slider at a value (if real-time update is not triggered during drag).
-- **FR-004**: The slider colour MUST be correct when the page loads or the slider value is restored from a previously saved state.
+- **FR-004**: The slider colour MUST be correct when the exercise list is re-rendered mid-session with previously entered effort values (e.g., after exercise reorder).
 - **FR-005**: All effort sliders in the application that use the 1–10 effort scale MUST use this colour system consistently.
 - **FR-006**: The slider colour change MUST apply to the slider's filled track and/or thumb element — whichever visual element represents the current value — so the colour is clearly associated with the chosen value.
 
@@ -109,7 +109,7 @@ A user returns to a workout session or views a completed set entry where an effo
 - **SC-001**: All 10 effort values (1–10) display their designated colour when the slider is set to that value — verified by manual and automated visual inspection across all effort slider instances in the application.
 - **SC-002**: Slider colour updates are perceived as immediate during drag interactions — no user-reported lag in colour change when moving the thumb.
 - **SC-003**: 100% of effort sliders in the application use the defined colour palette consistently — no slider renders a colour outside the defined set for a given value.
-- **SC-004**: The correct colour is displayed for previously saved effort values upon page load — verified for all effort slider instances that restore state.
+- **SC-004**: The correct colour is displayed for previously entered effort values when the exercise list is re-rendered mid-session — verified for all effort slider instances that restore state.
 - **SC-005**: The colour system is consistent across all supported interaction methods (mouse drag, touch drag, keyboard navigation) — all produce the same colour output for the same value.
 
 ## Assumptions

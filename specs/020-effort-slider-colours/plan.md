@@ -68,9 +68,10 @@ src/WorkoutTracker.Web/
         └── pages/
             └── active-session.ts                  # MODIFIED: import getEffortColour; apply
                                                    #   slider accent-color + band/value colour
-                                                   #   in per-exercise input handler and in
-                                                   #   handleEffortSliderInput(); clear colours
-                                                   #   in openEffortModal() reset block
+                                                   #   in per-exercise input handler (renderExerciseInputs)
+                                                   #   and in handleEffortSliderInput(); restore
+                                                   #   colours from previousLogEntries on re-render;
+                                                   #   clear colours in openEffortModal() reset block
 
 src/WorkoutTracker.Web/wwwroot/ts/__tests__/
 └── utils.test.ts                                  # MODIFIED: add describe('getEffortColour')

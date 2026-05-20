@@ -48,18 +48,22 @@ State: TOUCHED
   - slider accent-color: EFFORT_COLOUR[value]
   - value display color: EFFORT_COLOUR[value]
   - band display color: EFFORT_COLOUR[value]
-  - trigger → modal reset (openEffortModal) → State: NOT_TOUCHED
+  - trigger (overall modal only) → openEffortModal() → State: NOT_TOUCHED
+  - trigger (per-exercise only) → renderExerciseInputs() rebuilds DOM → State: NOT_TOUCHED
+    (unless previousLogEntries has a saved value, in which case → State: TOUCHED at restored value)
 ```
 
 ## Behaviour Contract
 
-| Event                         | Slider `accent-color`         | Value display `color`         | Band display `color`          |
-|-------------------------------|-------------------------------|-------------------------------|-------------------------------|
-| Page load (value pre-set)     | `EFFORT_COLOUR[value]`        | `EFFORT_COLOUR[value]`        | `EFFORT_COLOUR[value]`        |
-| User drags slider (input)     | `EFFORT_COLOUR[current]`      | `EFFORT_COLOUR[current]`      | `EFFORT_COLOUR[current]`      |
-| User releases slider          | No additional change required | No additional change required | No additional change required |
-| Modal reset (not touched)     | `""` (cleared)                | `""` (cleared)                | `""` (cleared)                |
-| Value not yet selected        | `""` (unset)                  | `""` (unset)                  | `""` (unset)                  |
+| Event                                    | Slider `accent-color`         | Value display `color`         | Band display `color`          |
+|------------------------------------------|-------------------------------|-------------------------------|-------------------------------|
+| Re-render with pre-existing effort value | `EFFORT_COLOUR[value]`        | `EFFORT_COLOUR[value]`        | `EFFORT_COLOUR[value]`        |
+| User drags slider (input)                | `EFFORT_COLOUR[current]`      | `EFFORT_COLOUR[current]`      | `EFFORT_COLOUR[current]`      |
+| User releases slider                     | No additional change required | No additional change required | No additional change required |
+| Modal reset (not touched)                | `""` (cleared)                | `""` (cleared)                | `""` (cleared)                |
+| Value not yet selected                   | `""` (unset)                  | `""` (unset)                  | `""` (unset)                  |
+
+> **Per-exercise slider reset**: Per-exercise sliders are torn down and rebuilt by `renderExerciseInputs()` on each call. No explicit colour-clearing is needed — the DOM element is recreated from scratch with default (unset) inline styles, then optionally restored from `previousLogEntries` if a prior value exists. Only the overall effort modal slider uses an explicit `style.accentColor = ""` clear in `openEffortModal()`.
 
 ## CSS Transition
 
