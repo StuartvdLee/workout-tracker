@@ -384,10 +384,15 @@ function renderExerciseInputs(previousData: Map<string, PreviousExerciseData> | 
   if (!exercisesEl || !workout) return;
 
   exercisesEl.innerHTML = "";
+  const previousLogEntries = logEntries;
   logEntries = new Map();
 
   for (const exercise of workout.exercises) {
-    logEntries.set(exercise.exerciseId, { loggedWeight: "", loggedEffort: null });
+    const existingEntry = previousLogEntries.get(exercise.exerciseId);
+    logEntries.set(exercise.exerciseId, {
+      loggedWeight: existingEntry?.loggedWeight ?? "",
+      loggedEffort: existingEntry?.loggedEffort ?? null,
+    });
 
     const item = document.createElement("div");
     item.className = "active-session__exercise-item";
@@ -517,8 +522,10 @@ function renderExerciseInputs(previousData: Map<string, PreviousExerciseData> | 
     effortSlider.value = "1";
     effortSlider.removeAttribute("aria-valuenow");
 
-    // Restore colour if the entry already has a saved effort value
-    const existingEntry = logEntries.get(exercise.exerciseId);
+    const effortBandEl = document.createElement("span");
+    effortBandEl.className = "active-session__effort-band";
+    effortBandEl.id = `effort-band-${exercise.exerciseId}`;
+
     if (existingEntry?.loggedEffort !== null && existingEntry?.loggedEffort !== undefined) {
       const restored = existingEntry.loggedEffort;
       effortSlider.value = String(restored);
@@ -527,14 +534,12 @@ function renderExerciseInputs(previousData: Map<string, PreviousExerciseData> | 
       const restoredLabel = getEffortLabel(restored);
       effortSlider.setAttribute("aria-valuetext", `${restored}, ${restoredLabel}`);
       effortValueEl.textContent = String(restored);
+      effortBandEl.textContent = restoredLabel;
       const restoredColour = getEffortColour(restored);
       effortSlider.style.accentColor = restoredColour;
       effortValueEl.style.color = restoredColour;
+      effortBandEl.style.color = restoredColour;
     }
-
-    const effortBandEl = document.createElement("span");
-    effortBandEl.className = "active-session__effort-band";
-    effortBandEl.id = `effort-band-${exercise.exerciseId}`;
 
     effortSlider.addEventListener("input", () => {
       hasChanges = true;
