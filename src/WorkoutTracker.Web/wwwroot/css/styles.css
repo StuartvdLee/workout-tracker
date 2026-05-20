@@ -1043,10 +1043,6 @@ body {
     display: none;
   }
 
-  .home-page {
-    padding-top: 4rem;
-  }
-
   .workout-form__select,
   .workout-form__button {
     font-size: var(--font-size-lg);
