@@ -82,7 +82,7 @@ public class HomeLandingPageResponsiveTests
     {
         var page = await CreatePageWithViewportAsync(1920, 1080);
 
-        var appEl = page.Locator(".app");
+        var appEl = page.Locator(".home-page");
         var box = await appEl.BoundingBoxAsync();
 
         Assert.NotNull(box);
