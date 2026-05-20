@@ -28,8 +28,8 @@ let loadedWorkouts: Map<string, PlannedWorkout> = new Map();
 
 export function render(container: HTMLElement): void {
   container.innerHTML = `
-    <div class="app">
-      <h1 class="app__title">Home</h1>
+    <div class="home-page">
+      <h1 class="home-page__title">Home</h1>
       <form class="workout-form" id="workout-form" novalidate>
         <div class="workout-form__group">
           <label class="workout-form__label" for="workout-select">
