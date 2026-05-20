@@ -526,7 +526,7 @@ function renderExerciseInputs(previousData: Map<string, PreviousExerciseData> | 
     effortBandEl.className = "active-session__effort-band";
     effortBandEl.id = `effort-band-${exercise.exerciseId}`;
 
-    if (existingEntry?.loggedEffort !== null && existingEntry?.loggedEffort !== undefined) {
+    if (existingEntry && existingEntry.loggedEffort !== null) {
       const restored = existingEntry.loggedEffort;
       effortSlider.value = String(restored);
       effortSlider.setAttribute("data-touched", "true");
