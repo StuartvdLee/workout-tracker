@@ -1,5 +1,5 @@
 import { navigate } from "../router.js";
-import { getEffortLabel, applyOrder } from "../utils.js";
+import { getEffortLabel, getEffortColour, applyOrder } from "../utils.js";
 
 interface WorkoutExercise {
   readonly exerciseId: string;
@@ -257,9 +257,16 @@ function openEffortModal(): void {
     slider.value = "1";
     slider.removeAttribute("aria-valuenow");
     slider.setAttribute("aria-valuetext", "Not rated");
+    slider.style.accentColor = "";
   }
-  if (valueEl) valueEl.textContent = "Not rated";
-  if (bandEl) bandEl.textContent = "";
+  if (valueEl) {
+    valueEl.textContent = "Not rated";
+    valueEl.style.color = "";
+  }
+  if (bandEl) {
+    bandEl.textContent = "";
+    bandEl.style.color = "";
+  }
 
   backdrop.style.display = "";
   saveBtn?.focus();
@@ -287,6 +294,10 @@ function handleEffortSliderInput(): void {
 
   if (valueEl) valueEl.textContent = String(value);
   if (bandEl) bandEl.textContent = label;
+  const colour = getEffortColour(value);
+  slider.style.accentColor = colour;
+  if (valueEl) valueEl.style.color = colour;
+  if (bandEl) bandEl.style.color = colour;
 }
 
 function handleEffortSave(): void {
@@ -373,10 +384,15 @@ function renderExerciseInputs(previousData: Map<string, PreviousExerciseData> | 
   if (!exercisesEl || !workout) return;
 
   exercisesEl.innerHTML = "";
+  const previousLogEntries = logEntries;
   logEntries = new Map();
 
   for (const exercise of workout.exercises) {
-    logEntries.set(exercise.exerciseId, { loggedWeight: "", loggedEffort: null });
+    const existingEntry = previousLogEntries.get(exercise.exerciseId);
+    logEntries.set(exercise.exerciseId, {
+      loggedWeight: existingEntry?.loggedWeight ?? "",
+      loggedEffort: existingEntry?.loggedEffort ?? null,
+    });
 
     const item = document.createElement("div");
     item.className = "active-session__exercise-item";
@@ -510,6 +526,21 @@ function renderExerciseInputs(previousData: Map<string, PreviousExerciseData> | 
     effortBandEl.className = "active-session__effort-band";
     effortBandEl.id = `effort-band-${exercise.exerciseId}`;
 
+    if (existingEntry && existingEntry.loggedEffort !== null) {
+      const restored = existingEntry.loggedEffort;
+      effortSlider.value = String(restored);
+      effortSlider.setAttribute("data-touched", "true");
+      effortSlider.setAttribute("aria-valuenow", String(restored));
+      const restoredLabel = getEffortLabel(restored);
+      effortSlider.setAttribute("aria-valuetext", `${restored}, ${restoredLabel}`);
+      effortValueEl.textContent = String(restored);
+      effortBandEl.textContent = restoredLabel;
+      const restoredColour = getEffortColour(restored);
+      effortSlider.style.accentColor = restoredColour;
+      effortValueEl.style.color = restoredColour;
+      effortBandEl.style.color = restoredColour;
+    }
+
     effortSlider.addEventListener("input", () => {
       hasChanges = true;
       const value = parseInt(effortSlider.value, 10);
@@ -525,6 +556,10 @@ function renderExerciseInputs(previousData: Map<string, PreviousExerciseData> | 
 
       effortValueEl.textContent = String(value);
       effortBandEl.textContent = label;
+      const colour = getEffortColour(value);
+      effortSlider.style.accentColor = colour;
+      effortValueEl.style.color = colour;
+      effortBandEl.style.color = colour;
     });
 
     effortGroup.appendChild(effortLabel);

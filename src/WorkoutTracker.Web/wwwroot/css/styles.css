@@ -1687,17 +1687,20 @@ body.is-dragging .workout-selected__drag-handle {
   font-weight: 600;
   color: var(--color-text);
   min-width: 2ch;
+  transition: color 0.15s ease;
 }
 
 .active-session__effort-band {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
+  transition: color 0.15s ease;
 }
 
 .active-session__effort-slider {
   width: 100%;
   min-height: var(--min-touch-target);
   cursor: pointer;
+  transition: accent-color 0.15s ease;
 }
 
 .active-session__actions {
@@ -1951,6 +1954,7 @@ body.is-dragging .workout-selected__drag-handle {
 .effort-modal__value {
   font-size: var(--font-size-sm);
   color: var(--color-text-light);
+  transition: color 0.15s ease;
 }
 
 .effort-modal__band {
@@ -1959,11 +1963,13 @@ body.is-dragging .workout-selected__drag-handle {
   color: var(--color-text-light);
   margin-top: var(--spacing-xs);
   min-height: 1.25rem;
+  transition: color 0.15s ease;
 }
 
 .effort-modal__slider {
   width: 100%;
   cursor: pointer;
+  transition: accent-color 0.15s ease;
 }
 
 .effort-modal__actions {

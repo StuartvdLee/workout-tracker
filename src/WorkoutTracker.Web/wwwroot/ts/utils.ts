@@ -1,3 +1,20 @@
+const EFFORT_COLOURS: Record<number, string> = {
+  1: "#267252",
+  2: "#127368",
+  3: "#0E6577",
+  4: "#356089",
+  5: "#2E3C80",
+  6: "#4C3D8A",
+  7: "#68448C",
+  8: "#71398B",
+  9: "#8A417D",
+  10: "#8A3666",
+};
+
+export function getEffortColour(value: number): string {
+  return EFFORT_COLOURS[value] ?? "";
+}
+
 const EFFORT_LABELS: Record<number, string> = {
   1: "Easy",
   2: "Easy",
