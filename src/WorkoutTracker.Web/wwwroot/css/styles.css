@@ -1044,11 +1044,6 @@ body {
     display: none;
   }
 
-  .workout-form__select,
-  .workout-form__button {
-    font-size: var(--font-size-lg);
-  }
-
   .page-placeholder__title {
     font-size: 2.25rem;
   }
