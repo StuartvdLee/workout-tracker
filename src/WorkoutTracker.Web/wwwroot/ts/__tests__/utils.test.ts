@@ -1,5 +1,41 @@
 import { describe, it, expect } from 'vitest';
-import { reorder, shuffle, applyOrder } from '../utils';
+import { reorder, shuffle, applyOrder, getEffortColour } from '../utils';
+
+describe('getEffortColour', () => {
+  it('returns #267252 for value 1 (Easy)', () => {
+    expect(getEffortColour(1)).toBe('#267252');
+  });
+  it('returns #127368 for value 2 (Easy)', () => {
+    expect(getEffortColour(2)).toBe('#127368');
+  });
+  it('returns #0E6577 for value 3 (Easy)', () => {
+    expect(getEffortColour(3)).toBe('#0E6577');
+  });
+  it('returns #356089 for value 4 (Moderate)', () => {
+    expect(getEffortColour(4)).toBe('#356089');
+  });
+  it('returns #2E3C80 for value 5 (Moderate)', () => {
+    expect(getEffortColour(5)).toBe('#2E3C80');
+  });
+  it('returns #4C3D8A for value 6 (Moderate)', () => {
+    expect(getEffortColour(6)).toBe('#4C3D8A');
+  });
+  it('returns #68448C for value 7 (Hard)', () => {
+    expect(getEffortColour(7)).toBe('#68448C');
+  });
+  it('returns #71398B for value 8 (Hard)', () => {
+    expect(getEffortColour(8)).toBe('#71398B');
+  });
+  it('returns #8A417D for value 9 (All Out)', () => {
+    expect(getEffortColour(9)).toBe('#8A417D');
+  });
+  it('returns #8A3666 for value 10 (All Out)', () => {
+    expect(getEffortColour(10)).toBe('#8A3666');
+  });
+  it('returns empty string for out-of-range value 0', () => {
+    expect(getEffortColour(0)).toBe('');
+  });
+});
 
 describe('reorder', () => {
   it('moves the first element to the last position', () => {
