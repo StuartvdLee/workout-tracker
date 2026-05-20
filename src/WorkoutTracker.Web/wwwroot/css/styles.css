@@ -490,6 +490,17 @@ body {
   display: none;
 }
 
+.exercise-form__manage-link {
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.exercise-form__manage-link:hover,
+.exercise-form__manage-link:focus-visible {
+  text-decoration: underline;
+}
+
 /* === Muscle Toggle === */
 .muscle-toggle {
   min-height: var(--min-touch-target);

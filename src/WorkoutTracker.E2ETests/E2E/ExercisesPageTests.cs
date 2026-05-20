@@ -1213,6 +1213,61 @@ public class ExercisesPageTests
         }
     }
 
+    // === Manage Muscles Link ===
+
+    [Fact]
+    public async Task MusclesLink_IsVisibleInAddForm()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var link = page.Locator("#exercise-form a.exercise-form__manage-link");
+            await Expect(link).ToBeVisibleAsync();
+            await Expect(link).ToHaveTextAsync("Manage");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task MusclesLink_IsVisibleInEditModal()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.Locator("#exercise-name").FillAsync("Bench Press");
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
+            await page.Locator(".exercise-list__edit-btn").First.ClickAsync();
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeVisibleAsync();
+
+            var link = page.Locator("#edit-modal-form a.exercise-form__manage-link");
+            await Expect(link).ToBeVisibleAsync();
+            await Expect(link).ToHaveTextAsync("Manage");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task MusclesLink_NavigatesToMusclesPage()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var link = page.Locator("#exercise-form a.exercise-form__manage-link");
+            await link.ClickAsync();
+            Assert.EndsWith("/muscles", page.Url);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
     private static ILocatorAssertions Expect(ILocator locator) =>
         Assertions.Expect(locator);
 
