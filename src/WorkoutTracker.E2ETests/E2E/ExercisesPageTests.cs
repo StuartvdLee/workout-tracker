@@ -691,6 +691,10 @@ public class ExercisesPageTests
             await page.Locator("#exercise-name").FocusAsync();
             await Expect(page.Locator("#exercise-name")).ToBeFocusedAsync();
 
+            // Tab to Manage link (now sits between name input and muscle toggles)
+            await page.Keyboard.PressAsync("Tab");
+            await Expect(page.Locator("#exercise-form a.exercise-form__manage-link")).ToBeFocusedAsync();
+
             // Tab to first muscle toggle
             await page.Keyboard.PressAsync("Tab");
             var firstToggle = page.Locator("#exercise-muscles .muscle-toggle").First;
