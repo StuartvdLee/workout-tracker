@@ -2018,6 +2018,12 @@ body.is-dragging .workout-selected__drag-handle {
   margin-bottom: var(--spacing-lg);
 }
 
+@media (min-width: 768px) {
+  .history-page__title {
+    font-size: 2.25rem;
+  }
+}
+
 .history-page__empty {
   text-align: center;
   padding: var(--spacing-xl);
