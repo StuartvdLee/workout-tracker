@@ -103,5 +103,5 @@ C# on .NET 10 (backend), vanilla TypeScript (frontend): Follow standard conventi
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/017-targeted-muscles-page/plan.md
+at specs/018-home-page-rebrand/plan.md
 <!-- SPECKIT END -->
