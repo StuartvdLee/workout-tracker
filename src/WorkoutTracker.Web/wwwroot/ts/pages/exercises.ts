@@ -129,7 +129,16 @@ function initForm(): void {
 function initMusclesLinks(): void {
   const links = document.querySelectorAll<HTMLAnchorElement>("a.exercise-form__manage-link");
   for (const link of links) {
-    link.addEventListener("click", (event: Event) => {
+    link.addEventListener("click", (event: MouseEvent) => {
+      if (
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
       event.preventDefault();
       navigate("/muscles");
     });

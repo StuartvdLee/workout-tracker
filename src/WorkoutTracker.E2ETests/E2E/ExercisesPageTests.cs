@@ -1243,7 +1243,9 @@ public class ExercisesPageTests
         {
             await page.Locator("#exercise-name").FillAsync("Bench Press");
             await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
-            await page.Locator(".exercise-list__edit-btn").First.ClickAsync();
+            var editButton = page.Locator(".exercise-list__edit-btn").First;
+            await Expect(editButton).ToBeVisibleAsync();
+            await editButton.ClickAsync();
             await Expect(page.Locator("#edit-modal-backdrop")).ToBeVisibleAsync();
 
             var link = page.Locator("#edit-modal-form a.exercise-form__manage-link");
