@@ -58,6 +58,7 @@
 html {
   font-size: 100%;
   -webkit-text-size-adjust: 100%;
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -210,22 +211,18 @@ body {
   justify-content: center;
 }
 
-/* === Content Inner Layout === */
-.content>.app {
+/* === Home Page === */
+.home-page {
   width: 100%;
   max-width: var(--max-content-width);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--spacing-xl);
   padding-top: var(--spacing-xl);
 }
 
-.app__title {
+.home-page__title {
   font-size: var(--font-size-xl);
   font-weight: 700;
-  text-align: center;
   color: var(--color-text);
+  margin-bottom: var(--spacing-lg);
 }
 
 /* === Workout Form === */
@@ -1047,25 +1044,13 @@ body {
     display: none;
   }
 
-  .content>.app {
-    padding-top: 4rem;
-  }
-
-  .app__title {
-    font-size: 2.25rem;
-  }
-
-  .workout-form__select,
-  .workout-form__button {
-    font-size: var(--font-size-lg);
-  }
-
   .page-placeholder__title {
     font-size: 2.25rem;
   }
 
   .exercises-page__title,
-  .muscles-page__title {
+  .muscles-page__title,
+  .home-page__title {
     font-size: 2.25rem;
   }
 
@@ -1092,6 +1077,12 @@ body {
   font-weight: 700;
   color: var(--color-text);
   margin-bottom: var(--spacing-lg);
+}
+
+@media (min-width: 768px) {
+  .workouts-page__title {
+    font-size: 2.25rem;
+  }
 }
 
 /* === Workout Form (create/edit) === */
@@ -2024,6 +2015,12 @@ body.is-dragging .workout-selected__drag-handle {
   font-weight: 700;
   color: var(--color-text);
   margin-bottom: var(--spacing-lg);
+}
+
+@media (min-width: 768px) {
+  .history-page__title {
+    font-size: 2.25rem;
+  }
 }
 
 .history-page__empty {
