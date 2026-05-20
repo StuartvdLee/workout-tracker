@@ -1080,6 +1080,12 @@ body {
   margin-bottom: var(--spacing-lg);
 }
 
+@media (min-width: 768px) {
+  .workouts-page__title {
+    font-size: 2.25rem;
+  }
+}
+
 /* === Workout Form (create/edit) === */
 .workout-form__input {
   width: 100%;
