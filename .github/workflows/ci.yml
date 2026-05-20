@@ -94,7 +94,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-playwright-${{ hashFiles('src/WorkoutTracker.E2ETests/WorkoutTracker.E2ETests.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
 
       - name: Build and test TypeScript
         working-directory: src/WorkoutTracker.Web
