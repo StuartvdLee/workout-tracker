@@ -2,7 +2,7 @@
 
 **Feature Branch**: `021-modal-close-button`  
 **Created**: 2026-05-21  
-**Status**: Draft
+**Status**: Implemented
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -37,6 +37,21 @@ The Exercise and Workout edit modals already have a Cancel button, but the X but
 
 ---
 
+### User Story 3 - Close Pre-start and Effort Modals via X Button (Priority: P2)
+
+When starting a workout from the Workouts page, a pre-start modal appears with an option to randomise exercise order. When saving a completed active session, an effort-rating modal appears. Both modals have action buttons but no obvious way to dismiss without taking an action. The X button gives users a clear, familiar exit path.
+
+**Why this priority**: These modals block progression until the user acts. Adding X provides a non-destructive escape route alongside the existing action buttons.
+
+**Independent Test**: Open the pre-start modal (click Start on a workout), click the X button — modal closes and the user remains on the Workouts page. Open the effort modal (complete and save an active session), click the X button — modal closes and the user remains on the active session page without saving.
+
+**Acceptance Scenarios**:
+
+1. **Given** the pre-start modal is open, **When** the user clicks the X button, **Then** the modal closes and the user remains on the Workouts page with no workout started.
+2. **Given** the effort modal is open, **When** the user clicks the X button, **Then** the modal closes without saving the effort rating and the user stays on the active session page.
+
+---
+
 ### Edge Cases
 
 - What happens if the user accidentally clicks the backdrop behind the modal? The X button should not change this existing behaviour — backdrop click behaviour stays as-is.
@@ -53,9 +68,11 @@ The Exercise and Workout edit modals already have a Cancel button, but the X but
 - **FR-003**: The X button MUST be disabled while a save or delete network request is in progress.
 - **FR-004**: The X button on the Edit Exercise modal MUST close that modal without saving changes (equivalent to the existing Cancel button).
 - **FR-005**: The X button on the Edit Workout modal MUST close that modal without saving changes (equivalent to the existing Cancel button).
-- **FR-006**: The X button MUST be keyboard-accessible (focusable via Tab, activatable via Enter and Space).
-- **FR-007**: The X button MUST have an accessible label (e.g., `aria-label="Close"`) so screen-reader users understand its purpose.
-- **FR-008**: The X button MUST be visually placed in the top-right corner of the modal, inside the modal boundary.
+- **FR-006**: The X button on the pre-start modal MUST close that modal and return the user to the Workouts page without starting a workout.
+- **FR-007**: The X button on the effort modal MUST close that modal without saving the effort rating, leaving the user on the active session page.
+- **FR-008**: The X button MUST be keyboard-accessible (focusable via Tab, activatable via Enter and Space).
+- **FR-009**: The X button MUST have an accessible label (e.g., `aria-label="Close"`) so screen-reader users understand its purpose.
+- **FR-010**: The X button MUST be visually placed in the top-right corner of the modal, inside the modal boundary.
 
 ### Security & Privacy Requirements
 
@@ -64,7 +81,7 @@ The Exercise and Workout edit modals already have a Cancel button, but the X but
 
 ### User Experience Consistency Requirements
 
-- **UX-001**: The X button MUST use the same visual and interaction style across all affected modals (Edit Muscle, Edit Exercise, Edit Workout).
+- **UX-001**: The X button MUST use the same visual and interaction style across all affected modals (Edit Muscle, Edit Exercise, Edit Workout, Pre-start, Effort).
 - **UX-002**: The X button appearance MUST be consistent with the existing modal design language (colours, border-radius, hover/focus states).
 - **UX-003**: The X button MUST be visible in both light and dark mode.
 - **UX-004**: The modals that already have a Cancel button (Edit Exercise, Edit Workout) retain their Cancel button; the X button is additive.
@@ -77,15 +94,15 @@ The Exercise and Workout edit modals already have a Cancel button, but the X but
 
 ### Measurable Outcomes
 
-- **SC-001**: Every modal that previously had no dismiss-without-action path (Edit Muscle) now has at least one clear, labelled close affordance.
-- **SC-002**: 100% of affected modals (Edit Muscle, Edit Exercise, Edit Workout) display an X button in the top-right corner.
-- **SC-003**: Clicking the X button on any affected modal closes it without triggering a save or delete operation in all tested scenarios.
+- **SC-001**: Every modal that previously had no dismiss-without-action path now has at least one clear, labelled close affordance.
+- **SC-002**: 100% of affected modals (Edit Muscle, Edit Exercise, Edit Workout, Pre-start, Effort) display an X button in the top-right corner.
+- **SC-003**: Clicking the X button on any affected modal closes it without triggering a save or network operation in all tested scenarios.
 - **SC-004**: The X button is reachable via keyboard Tab order and activatable in all affected modals.
 - **SC-005**: The X button is visually distinguishable and labelled for screen readers in all affected modals.
 
 ## Assumptions
 
-- The fix targets edit-style modals (Edit Muscle, Edit Exercise, Edit Workout) and now also includes the Pre-start and Effort choice modals to provide a consistent top-right close affordance.
+- The fix targets edit-style modals (Edit Muscle, Edit Exercise, Edit Workout) and the Pre-start and Effort modals, providing a consistent top-right close affordance across all five.
 - Confirmation/alert modals (Delete, Discard) remain out of scope for this feature.
 - "Close without saving" means no API call is made and the displayed data reverts to its prior state.
 - The Escape key already dismisses some modals; this feature does not change that existing behaviour but the X button should be consistent with it.

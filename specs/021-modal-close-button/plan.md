@@ -5,7 +5,7 @@
 
 ## Summary
 
-Add an X close button to the top-right corner of the three edit-style modals (Edit Muscle, Edit Exercise, Edit Workout). The Edit Muscle modal is the only modal in the application with no dismiss-without-action path — it only has Save and Delete. The other two modals already have Cancel buttons; the X button is an additive consistency improvement. The X button is placed last in the modal's DOM order, positioned absolutely in the top-right corner via CSS, and wired to the existing `closeEditModal()` function in each page module. It is disabled while a save request is in progress. No backend, API, or data model changes are required.
+Add an X close button to the top-right corner of five modals: Edit Muscle, Edit Exercise, Edit Workout, Pre-start (Randomise Exercise Order), and Effort (save active session). The Edit Muscle modal is the only modal with no dismiss-without-action path — it only has Save and Delete. The other edit modals already have Cancel buttons; the X button is an additive consistency improvement. The Pre-start and Effort modals have action buttons but no obvious escape route. The X button is placed last in each modal's DOM order, positioned absolutely in the top-right corner via CSS, and wired to the relevant close function in each page module. It is disabled while a save request is in progress (edit modals). No backend, API, or data model changes are required.
 
 ## Technical Context
 
@@ -17,7 +17,7 @@ Add an X close button to the top-right corner of the three edit-style modals (Ed
 **Project Type**: Web application (SPA with Aspire orchestration)  
 **Performance Goals**: No measurable change — X button is a static DOM element with one event listener  
 **Constraints**: Strict TypeScript (noUnusedLocals, noUnusedParameters, noImplicitReturns); BEM CSS; existing tests must pass; no JS frameworks  
-**Scale/Scope**: 4 files modified (muscles.ts, exercises.ts, workouts.ts, styles.css) + 1 E2E test file; no backend changes
+**Scale/Scope**: 5 TypeScript files modified (muscles.ts, exercises.ts, workouts.ts, active-session.ts, styles.css) + 4 E2E test files; no backend changes
 
 ## Constitution Check
 
@@ -53,9 +53,11 @@ src/WorkoutTracker.Web/
 └── wwwroot/
     ├── css/
     │   └── styles.css                              # MODIFIED: add `position: relative` to
-    │                                               #   `.edit-modal`; add `.edit-modal__close`
-    │                                               #   rule (absolute top-right, ghost icon
-    │                                               #   button, hover/focus states, disabled state)
+    │                                               #   `.edit-modal`, `.effort-modal`,
+    │                                               #   `.prestart-modal`; add
+    │                                               #   `.edit-modal__close` rule (absolute
+    │                                               #   top-right, ghost icon button,
+    │                                               #   hover/focus states, disabled state)
     └── ts/
         └── pages/
             ├── muscles.ts                          # MODIFIED: add X button HTML after </form>
@@ -66,15 +68,27 @@ src/WorkoutTracker.Web/
             │                                       #   inside .edit-modal; wire click handler
             │                                       #   → closeEditModal(); disable during
             │                                       #   isEditSubmitting
-            └── workouts.ts                         # MODIFIED: add X button HTML after </form>
-                                                    #   inside .edit-modal; wire click handler
-                                                    #   → closeEditModal(); disable during
-                                                    #   isEditSubmitting
+            ├── workouts.ts                         # MODIFIED: add X button HTML on edit modal
+            │                                       #   → closeEditModal(); disable during
+            │                                       #   isEditSubmitting; ALSO add X button on
+            │                                       #   prestart modal → closePreStartModal()
+            └── active-session.ts                   # MODIFIED: add X button HTML after </form>
+                                                    #   on .effort-modal; wire click handler
+                                                    #   → closeEffortModal() only (no save)
 
 src/WorkoutTracker.E2ETests/
 └── E2E/
-    └── MusclesPageTests.cs                         # MODIFIED: add
-                                                    #   EditMuscle_CloseButton_ClosesModalWithoutSaving
+    ├── MusclesPageTests.cs                         # MODIFIED: add
+    │                                               #   EditMuscle_CloseButton_ClosesModalWithoutSaving
+    ├── ExercisesPageTests.cs                       # MODIFIED: add
+    │                                               #   EditExercise_CloseButton_ClosesModalWithoutSaving
+    ├── WorkoutsPageTests.cs                        # MODIFIED: add
+    │                                               #   EditWorkout_CloseButton_ClosesModalWithoutSaving,
+    │                                               #   PrestartModal_CloseButton_DismissesModal
+    └── WorkoutHistoryTests.cs                      # MODIFIED: update
+                                                    #   SaveWorkout_EffortModal_TrapsKeyboardFocus
+                                                    #   (correct tab order after X button added);
+                                                    #   add SaveWorkout_EffortModal_CloseButton_DismissesWithoutSaving
 
 ```
 

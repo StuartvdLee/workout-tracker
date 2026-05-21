@@ -75,13 +75,33 @@ description: "Task list template for feature implementation"
 
 ---
 
+## Phase 3b: User Story 3 — Pre-start & Effort Modal Close Buttons (Priority: P2)
+
+**Goal**: The Pre-start modal (Randomise Exercise Order) and the Effort modal (save active session) gain an X button. Clicking X dismisses without performing any action.
+
+### E2E Tests for User Story 3
+
+- [X] T014 [US3] Add test method `PrestartModal_CloseButton_DismissesModal` to `src/WorkoutTracker.E2ETests/E2E/WorkoutsPageTests.cs`. Test: navigate to `/workouts`, click Start on a workout to open the pre-start modal, click `#prestart-close`, assert the modal is hidden and the user remains on the Workouts page.
+- [X] T015 [US3] Add test method `SaveWorkout_EffortModal_CloseButton_DismissesWithoutSaving` to `src/WorkoutTracker.E2ETests/E2E/WorkoutHistoryTests.cs`. Test: complete an active session, click Save to open the effort modal, click `#effort-modal-close`, assert the modal is hidden and the user remains on the active session page (no navigation to history).
+- [X] T016 [US3] Update `SaveWorkout_EffortModal_TrapsKeyboardFocus` in `WorkoutHistoryTests.cs` to reflect the new tab order: focus trap now wraps `#effort-modal-close` (last) ↔ `#overall-effort-slider` (first). Correct forward cycle: Save → Skip → X → [trap] → Slider → Save. Correct backward cycle: Save → Slider → [trap] → X → Skip.
+
+### Implementation for User Story 3
+
+- [X] T017 [US3] In `src/WorkoutTracker.Web/wwwroot/css/styles.css`: add `position: relative;` to the `.effort-modal` rule and to the `.prestart-modal` rule to enable absolute positioning of the X button within each modal boundary.
+- [X] T018 [US3] In `src/WorkoutTracker.Web/wwwroot/ts/pages/active-session.ts`, inside the `initEffortModal()` HTML template: add `<button class="edit-modal__close" id="effort-modal-close" type="button" aria-label="Close">&#x2715;</button>` as the last child of `.effort-modal`. Wire click handler → `closeEffortModal()` only (does NOT call `handleSave(null)` — user dismisses and stays on active session page).
+- [X] T019 [US3] In `src/WorkoutTracker.Web/wwwroot/ts/pages/workouts.ts`, inside the prestart modal HTML template: add `<button class="edit-modal__close" id="prestart-close" type="button" aria-label="Close">&#x2715;</button>` as the last child of `.prestart-modal`. Wire click handler → `closePreStartModal()` in `initPreStartModal()`.
+
+**Checkpoint**: Pre-start modal shows ✕ and dismisses on click. Effort modal shows ✕ and dismisses on click without saving. Focus trap test updated and passing.
+
+---
+
 ## Phase 4: Polish & Verification
 
 **Purpose**: Confirm the full build and all pre-existing tests pass. No regressions.
 
 - [X] T011 [P] Run `cd src/WorkoutTracker.Web && npm test` — confirm all Vitest tests pass (no new unit tests added by this feature, but existing tests must remain green).
 - [X] T012 [P] Run `dotnet build src/WorkoutTracker.slnx` — confirm the .NET solution builds cleanly with no errors or warnings.
-- [ ] T013 Manual smoke test in a browser — verify: (1) Edit Muscle modal shows ✕ in the top-right, clicking it closes the modal with no changes saved; (2) Edit Exercise modal shows ✕, clicking it closes with no changes saved, Cancel button also still works; (3) Edit Workout modal same as exercise; (4) dark mode active — ✕ button is visible against the modal background; (5) Tab key cycles: text input → Save → Delete [→ Cancel if present] → ✕ → back to text input.
+- [ ] T013 Manual smoke test in a browser — verify: (1) Edit Muscle modal shows ✕ in the top-right, clicking it closes the modal with no changes saved; (2) Edit Exercise modal shows ✕, clicking it closes with no changes saved, Cancel button also still works; (3) Edit Workout modal same as exercise; (4) Pre-start modal shows ✕, clicking it dismisses without starting a workout; (5) Effort modal shows ✕, clicking it dismisses without saving the effort rating; (6) dark mode active — ✕ button is visible against the modal background; (7) Tab key cycles correctly through each modal's focusable elements.
 
 ---
 
@@ -92,7 +112,8 @@ description: "Task list template for feature implementation"
 - **Foundational (Phase 1)**: No dependencies — start immediately
 - **US1 (Phase 2)**: Depends on Phase 1 complete (CSS rule must exist before the button renders)
 - **US2 (Phase 3)**: Depends on Phase 1 complete; independent of US1 (different files)
-- **Polish (Phase 4)**: Depends on Phases 1–3 complete
+- **US3 (Phase 3b)**: Depends on Phase 1 complete; independent of US1 and US2 (different files)
+- **Polish (Phase 4)**: Depends on Phases 1–3b complete
 
 ### Within Each Phase
 
