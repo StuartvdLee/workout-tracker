@@ -2,7 +2,7 @@
 
 **Feature Branch**: `023-unsaved-changes-warning`  
 **Created**: 2026-05-21  
-**Status**: Draft
+**Status**: Delivered — PR #93 merged to `main`
 
 ## User Scenarios & Testing *(mandatory)*
 

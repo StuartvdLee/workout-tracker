@@ -1,6 +1,6 @@
 # Implementation Plan: Unsaved Changes Warning in Edit Modals
 
-**Branch**: `023-unsaved-changes-warning` | **Date**: 2026-05-21 | **Spec**: [spec.md](./spec.md)  
+**Branch**: `023-unsaved-changes-warning` | **Date**: 2026-05-21 | **Spec**: [spec.md](./spec.md) | **Status**: Delivered — PR #93  
 **Input**: Feature specification from `/specs/023-unsaved-changes-warning/spec.md`
 
 ## Summary
@@ -218,3 +218,12 @@ IDs used per page:
 ## Complexity Tracking
 
 > No constitution violations.
+
+## Delivery Notes
+
+**Unplanned fix (T038)**: After implementation, CI revealed that `WorkoutReorderTests.EditWorkout_DragReorder_ThenCancel_OriginalOrderPreserved` (a pre-existing test outside the scope of this feature) clicked Cancel after a drag-reorder, which now triggers the discard dialog. The test was updated to go through the discard flow before asserting the modal hidden.
+
+**exercises.ts import**: `exercises.ts` required a new `import { trapModalTabKey } from "../prestart-modal.js"` — it was the only page that didn't already import from `prestart-modal.js`. `trapModalTabKey` is used in the discard modal's Tab-key focus trap.
+
+**hasEditChanges() for exercises**: The Set membership check uses a `for...of` loop over `originalEditMuscleIds` rather than `.every()` on a spread, matching strict TypeScript lint rules (`noUnusedLocals`).
+
