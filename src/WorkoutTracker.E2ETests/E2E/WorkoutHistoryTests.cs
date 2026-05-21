@@ -691,15 +691,15 @@ public class WorkoutHistoryTests
             await page.Keyboard.PressAsync("Tab");
             await Expect(page.Locator("#effort-modal-skip")).ToBeFocusedAsync();
             await page.Keyboard.PressAsync("Tab");
-            await Expect(page.Locator("#overall-effort-slider")).ToBeFocusedAsync();
-            await page.Keyboard.PressAsync("Tab");
             await Expect(page.Locator("#effort-modal-close")).ToBeFocusedAsync();
+            await page.Keyboard.PressAsync("Tab");
+            await Expect(page.Locator("#overall-effort-slider")).ToBeFocusedAsync();
             await page.Keyboard.PressAsync("Tab");
             await Expect(page.Locator("#effort-modal-save")).ToBeFocusedAsync();
             await page.Keyboard.PressAsync("Shift+Tab");
-            await Expect(page.Locator("#effort-modal-close")).ToBeFocusedAsync();
-            await page.Keyboard.PressAsync("Shift+Tab");
             await Expect(page.Locator("#overall-effort-slider")).ToBeFocusedAsync();
+            await page.Keyboard.PressAsync("Shift+Tab");
+            await Expect(page.Locator("#effort-modal-close")).ToBeFocusedAsync();
             await page.Keyboard.PressAsync("Shift+Tab");
             await Expect(page.Locator("#effort-modal-skip")).ToBeFocusedAsync();
         }
