@@ -103,5 +103,5 @@ C# on .NET 10 (backend), vanilla TypeScript (frontend): Follow standard conventi
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/021-modal-close-button/plan.md
+at specs/022-fix-modal-outside-click/plan.md
 <!-- SPECKIT END -->
