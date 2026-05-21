@@ -252,8 +252,10 @@ public class WorkoutReorderTests
 
             await Expect(page.Locator("#edit-selected-list .workout-selected__name").Nth(2)).ToHaveTextAsync("Bench Press");
 
-            // Cancel without saving
+            // Cancel without saving — confirm discard since changes were made
             await page.Locator("#workout-edit-cancel").ClickAsync();
+            await Expect(page.Locator("#workout-edit-discard-backdrop")).ToBeVisibleAsync();
+            await page.Locator("#workout-edit-discard-confirm").ClickAsync();
             await Expect(page.Locator("#workout-edit-backdrop")).ToBeHiddenAsync();
 
             // Re-open and confirm original order is unchanged
