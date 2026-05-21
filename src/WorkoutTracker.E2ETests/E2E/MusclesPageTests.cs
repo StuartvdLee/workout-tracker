@@ -173,6 +173,30 @@ public class MusclesPageTests
     }
 
     [Fact]
+    public async Task EditMuscle_CloseButton_ClosesModalWithoutSaving()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await MuscleCard(page, "Chest").ClickAsync();
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeVisibleAsync();
+
+            await page.Locator("#edit-muscle-name").FillAsync("Changed Name");
+            await page.Locator("#edit-modal-close").ClickAsync();
+
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeHiddenAsync();
+
+            var names = await GetMuscleNamesAsync(page);
+            Assert.Contains("Chest", names);
+            Assert.DoesNotContain("Changed Name", names);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
     public async Task EditMuscle_DuplicateNameShowsError()
     {
         var page = await CreatePageAsync();

@@ -575,6 +575,33 @@ public class WorkoutsPageTests
     }
 
     [Fact]
+    public async Task EditWorkout_CloseButton_ClosesModalWithoutSaving()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await SeedExerciseAsync(page, "Bench Press");
+            await NavigateToWorkoutsAsync(page);
+            await CreateWorkoutViaUIAsync(page, "Push Day", "Bench Press");
+
+            await page.Locator(".workout-list__edit-btn").First.ClickAsync();
+            await Expect(page.Locator("#workout-edit-backdrop")).ToBeVisibleAsync();
+
+            await page.Locator("#edit-workout-name").FillAsync("Changed Name");
+            await page.Locator("#workout-edit-close").ClickAsync();
+
+            await Expect(page.Locator("#workout-edit-backdrop")).ToBeHiddenAsync();
+
+            // Name should be unchanged
+            await Expect(page.Locator(".workout-list__name").First).ToHaveTextAsync("Push Day");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
     public async Task EditWorkout_EscapeClosesModal()
     {
         var page = await CreatePageAsync();
@@ -866,6 +893,28 @@ public class WorkoutsPageTests
             await page.Locator("#prestart-yes").ClickAsync();
 
             await Expect(page).ToHaveURLAsync(new Regex(@"/active-session\?id=.*&order="));
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task PrestartModal_CloseButton_DismissesModal()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await CreateTwoExerciseWorkoutViaApiAsync(page);
+            await NavigateToWorkoutsAsync(page);
+
+            await page.Locator(".workout-list__start-btn").First.ClickAsync();
+            await page.WaitForSelectorAsync("#workout-prestart-backdrop", new() { State = WaitForSelectorState.Visible });
+            await page.Locator("#prestart-close").ClickAsync();
+
+            await Expect(page.Locator("#workout-prestart-backdrop")).ToBeHiddenAsync();
+            await Expect(page.Locator(".workouts-page")).ToBeVisibleAsync();
         }
         finally
         {

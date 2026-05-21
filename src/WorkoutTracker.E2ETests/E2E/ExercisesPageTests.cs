@@ -567,6 +567,34 @@ public class ExercisesPageTests
     }
 
     [Fact]
+    public async Task EditExercise_CloseButton_ClosesModalWithoutSaving()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.Locator("#exercise-name").FillAsync("Bench Press");
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
+            await Expect(page.Locator(".exercise-list__item")).ToBeVisibleAsync();
+
+            await page.Locator(".exercise-list__edit-btn").First.ClickAsync();
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeVisibleAsync();
+
+            await page.Locator("#edit-exercise-name").FillAsync("Changed Name");
+            await page.Locator("#edit-modal-close").ClickAsync();
+
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeHiddenAsync();
+
+            var exerciseNames = await page.Locator(".exercise-list__item").AllTextContentsAsync();
+            Assert.Contains(exerciseNames, n => n.Contains("Bench Press"));
+            Assert.DoesNotContain(exerciseNames, n => n.Contains("Changed Name"));
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
     public async Task EditMode_ClearNameShowsRequiredError()
     {
         var page = await CreatePageAsync();
