@@ -37,9 +37,9 @@
 
 ## Decision 4: Scope — which modals get the X button
 
-**Decision**: Edit Muscle (P1), Edit Exercise (P2), Edit Workout (P2). All three share the `.edit-modal` / `.edit-modal-backdrop` CSS pattern, so a single new CSS rule covers all three.
+**Decision**: Edit Muscle (P1), Edit Exercise (P2), Edit Workout (P2), Pre-start, and Effort. The edit modals share the `.edit-modal` / `.edit-modal-backdrop` CSS pattern, and the same close-button style is reused for Pre-start and Effort for UI consistency.
 
-**Out of scope**: Delete modals (Cancel + Delete), Discard modal (Discard + Continue), Effort modal (Save + Skip), Pre-start modal (No + Yes). All have clear action-based dismiss paths.
+**Out of scope**: Delete modals (Cancel + Delete), Discard modal (Discard + Continue).
 
 ---
 
@@ -59,6 +59,6 @@
 
 ## Decision 7: Testing strategy
 
-**Decision**: One new E2E test in `MusclesPageTests.cs` covering the P1 case (Edit Muscle X button closes without saving). Edit Exercise and Edit Workout already have Cancel-button E2E tests and the X button invokes the same code path — a snapshot test would be redundant. If product owners want explicit X-button coverage for exercises/workouts, that can be added in a follow-up.
+**Decision**: Add explicit E2E coverage for the close button flows in each affected area: `MusclesPageTests.cs` (Edit Muscle), `ExercisesPageTests.cs` (Edit Exercise), `WorkoutsPageTests.cs` (Edit Workout and Pre-start), and `WorkoutHistoryTests.cs` (Effort modal).
 
-**No unit tests**: The X button is a simple DOM event wire-up with no logic to isolate. The E2E test proves the full integrated behaviour.
+**No unit tests**: The close button behavior is DOM event wiring and modal interaction, so end-to-end tests provide the strongest regression protection for these flows.

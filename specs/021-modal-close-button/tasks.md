@@ -154,5 +154,6 @@ Sequential after both pairs complete:
 - `disabled` attribute (not `aria-disabled`) is used on the X button during submit — this removes it from the `getVisibleModalButtons` focus cycle automatically
 - **Delete handler — no change needed**: `openDeleteConfirmModal()` calls `closeEditModal()` before showing the delete confirmation, so the X button in the edit modal is always hidden before any delete request is in-flight. No X button disable logic is required in the delete path.
 - **Escape key — already implemented and tested**: `editBackdrop` has a `keydown` listener that calls `closeEditModal()` when `event.key === "Escape"`. This is already verified by the existing `EditMuscle_EscapeDiscardChanges` and `EditWorkout_EscapeClosesModal` E2E tests. No new implementation or tests needed for Escape behaviour.
-- Do not add an X button to delete-confirm, discard, effort, or pre-start modals — those already have clear dismiss paths and are out of scope
+- Scope update: the feature implementation also adds X close buttons to the pre-start and effort modals for consistency with edit modals
+- Do not add an X button to delete-confirm or discard modals — those remain out of scope
 - Commit after each checkpoint

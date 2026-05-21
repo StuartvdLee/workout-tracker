@@ -187,7 +187,7 @@ function initEditModal(): void {
       if (!modal) return;
 
       const focusable = modal.querySelectorAll<HTMLElement>(
-        'input, button, [tabindex]:not([tabindex="-1"])'
+        'input:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])'
       );
       if (focusable.length === 0) return;
 

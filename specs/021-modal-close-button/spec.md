@@ -85,6 +85,7 @@ The Exercise and Workout edit modals already have a Cancel button, but the X but
 
 ## Assumptions
 
-- The fix targets edit-style modals (Edit Muscle, Edit Exercise, Edit Workout). Confirmation/alert modals (Delete, Discard) and choice modals (Pre-start, Effort) already provide adequate dismiss paths via their action buttons and are out of scope for this feature.
+- The fix targets edit-style modals (Edit Muscle, Edit Exercise, Edit Workout) and now also includes the Pre-start and Effort choice modals to provide a consistent top-right close affordance.
+- Confirmation/alert modals (Delete, Discard) remain out of scope for this feature.
 - "Close without saving" means no API call is made and the displayed data reverts to its prior state.
 - The Escape key already dismisses some modals; this feature does not change that existing behaviour but the X button should be consistent with it.
