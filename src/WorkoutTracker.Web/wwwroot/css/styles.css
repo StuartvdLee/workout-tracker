@@ -884,6 +884,7 @@ body {
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  position: relative;
 }
 
 .edit-modal__title {
@@ -908,6 +909,40 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+.edit-modal__close {
+  position: absolute;
+  top: var(--spacing-md);
+  right: var(--spacing-md);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--spacing-xs);
+  border-radius: var(--radius);
+  color: var(--color-text-light);
+  font-size: var(--font-size-lg);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  min-height: 2rem;
+}
+
+.edit-modal__close:hover {
+  color: var(--color-text);
+  background-color: var(--color-bg);
+}
+
+.edit-modal__close:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.edit-modal__close:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 /* === Delete Confirmation Modal === */
@@ -1918,6 +1953,7 @@ body.is-dragging .workout-selected__drag-handle {
   width: 100%;
   max-width: 24rem;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  position: relative;
 }
 
 .effort-modal__title {
@@ -2429,6 +2465,7 @@ html[data-theme-pref="system"] .topbar__theme-icon--system {
   width: 100%;
   max-width: 28rem;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  position: relative;
 }
 
 .prestart-modal__title {

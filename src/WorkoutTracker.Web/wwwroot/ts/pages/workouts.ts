@@ -105,6 +105,7 @@ export async function render(container: HTMLElement): Promise<void> {
             </div>
             <div class="workout-form__api-error" id="edit-workout-api-error" role="alert" aria-live="polite"></div>
           </form>
+          <button class="edit-modal__close" id="workout-edit-close" type="button" aria-label="Close">&#x2715;</button>
         </div>
       </div>
       <div class="delete-modal-backdrop" id="workout-delete-backdrop" style="display:none;">
@@ -125,6 +126,7 @@ export async function render(container: HTMLElement): Promise<void> {
             <button class="prestart-modal__no-btn" type="button" id="prestart-no">No</button>
             <button class="prestart-modal__yes-btn" type="button" id="prestart-yes">Yes</button>
           </div>
+          <button class="edit-modal__close" id="prestart-close" type="button" aria-label="Close">&#x2715;</button>
         </div>
       </div>
     </div>
@@ -171,6 +173,7 @@ function initForm(): void {
 function initEditModal(): void {
   const form = document.getElementById("workout-edit-form") as HTMLFormElement | null;
   const cancelBtn = document.getElementById("workout-edit-cancel") as HTMLButtonElement | null;
+  const closeBtn = document.getElementById("workout-edit-close") as HTMLButtonElement | null;
   const backdrop = document.getElementById("workout-edit-backdrop") as HTMLElement | null;
 
   if (!form || !backdrop) return;
@@ -182,6 +185,12 @@ function initEditModal(): void {
 
   cancelBtn?.addEventListener("click", () => {
     closeEditModal();
+  });
+
+  closeBtn?.addEventListener("click", () => {
+    if (!isEditSubmitting) {
+      closeEditModal();
+    }
   });
 
   backdrop.addEventListener("click", (event: Event) => {
@@ -202,7 +211,7 @@ function initEditModal(): void {
       if (!modal) return;
 
       const focusable = modal.querySelectorAll<HTMLElement>(
-        'input, button, [tabindex]:not([tabindex="-1"])'
+        'input:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])'
       );
       if (focusable.length === 0) return;
 
@@ -915,10 +924,12 @@ async function handleEditSubmit(): Promise<void> {
   }
 
   isEditSubmitting = true;
+  const closeBtn = document.getElementById("workout-edit-close") as HTMLButtonElement | null;
   submitBtn.setAttribute("aria-disabled", "true");
   const originalText = submitBtn.textContent;
   submitBtn.textContent = "Saving...";
   submitBtn.classList.add("workout-form__submit--loading");
+  if (closeBtn) closeBtn.disabled = true;
 
   try {
     const exercises = editSelectedExercises.map(exerciseId => ({
@@ -952,6 +963,7 @@ async function handleEditSubmit(): Promise<void> {
     submitBtn.removeAttribute("aria-disabled");
     submitBtn.textContent = originalText ?? "Save Changes";
     submitBtn.classList.remove("workout-form__submit--loading");
+    if (closeBtn) closeBtn.disabled = false;
   }
 }
 
@@ -1060,9 +1072,11 @@ function initPreStartModal(): void {
 
   const yesBtn = document.getElementById("prestart-yes") as HTMLButtonElement | null;
   const noBtn = document.getElementById("prestart-no") as HTMLButtonElement | null;
+  const closeBtn = document.getElementById("prestart-close") as HTMLButtonElement | null;
 
   yesBtn?.addEventListener("click", () => { handleYes(); });
   noBtn?.addEventListener("click", () => { handleNo(); });
+  closeBtn?.addEventListener("click", () => { closePreStartModal(); });
 
   backdrop.addEventListener("click", (event: Event) => {
     if (event.target === backdrop) closePreStartModal();

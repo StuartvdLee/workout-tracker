@@ -107,6 +107,7 @@ export async function render(container: HTMLElement): Promise<void> {
             <button class="effort-modal__save" type="button" id="effort-modal-save">Save</button>
             <button class="effort-modal__skip" type="button" id="effort-modal-skip">Skip</button>
           </div>
+          <button class="edit-modal__close" id="effort-modal-close" type="button" aria-label="Close">&#x2715;</button>
         </div>
       </div>
     </div>
@@ -188,6 +189,7 @@ function initEffortModal(): void {
   const backdrop = document.getElementById("effort-backdrop") as HTMLElement | null;
   const saveBtn = document.getElementById("effort-modal-save") as HTMLButtonElement | null;
   const skipBtn = document.getElementById("effort-modal-skip") as HTMLButtonElement | null;
+  const closeBtn = document.getElementById("effort-modal-close") as HTMLButtonElement | null;
   const slider = document.getElementById("overall-effort-slider") as HTMLInputElement | null;
 
   if (!backdrop) return;
@@ -198,6 +200,10 @@ function initEffortModal(): void {
 
   skipBtn?.addEventListener("click", () => {
     handleEffortSkip();
+  });
+
+  closeBtn?.addEventListener("click", () => {
+    closeEffortModal();
   });
 
   slider?.addEventListener("input", () => {

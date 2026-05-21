@@ -84,6 +84,7 @@ export async function render(container: HTMLElement): Promise<void> {
             </div>
             <div class="exercise-form__api-error" id="edit-exercise-api-error" role="alert" aria-live="polite"></div>
           </form>
+          <button class="edit-modal__close" id="edit-modal-close" type="button" aria-label="Close">&#x2715;</button>
         </div>
       </div>
       <div class="delete-modal-backdrop" id="delete-modal-backdrop" style="display:none;">
@@ -148,6 +149,7 @@ function initMusclesLinks(): void {
 function initEditModal(): void {
   const form = document.getElementById("edit-modal-form") as HTMLFormElement | null;
   const cancelBtn = document.getElementById("edit-modal-cancel") as HTMLButtonElement | null;
+  const closeBtn = document.getElementById("edit-modal-close") as HTMLButtonElement | null;
   const backdrop = document.getElementById("edit-modal-backdrop") as HTMLElement | null;
 
   if (!form || !backdrop) return;
@@ -159,6 +161,12 @@ function initEditModal(): void {
 
   cancelBtn?.addEventListener("click", () => {
     closeEditModal();
+  });
+
+  closeBtn?.addEventListener("click", () => {
+    if (!isEditSubmitting) {
+      closeEditModal();
+    }
   });
 
   backdrop.addEventListener("click", (event: Event) => {
@@ -179,7 +187,7 @@ function initEditModal(): void {
       if (!modal) return;
 
       const focusable = modal.querySelectorAll<HTMLElement>(
-        'input, button, [tabindex]:not([tabindex="-1"])'
+        'input:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])'
       );
       if (focusable.length === 0) return;
 
@@ -504,10 +512,12 @@ async function handleEditSubmit(): Promise<void> {
   }
 
   isEditSubmitting = true;
+  const closeBtn = document.getElementById("edit-modal-close") as HTMLButtonElement | null;
   submitBtn.setAttribute("aria-disabled", "true");
   const originalText = submitBtn.textContent;
   submitBtn.textContent = "Saving...";
   submitBtn.classList.add("exercise-form__submit--loading");
+  if (closeBtn) closeBtn.disabled = true;
 
   try {
     const muscleIds = Array.from(selectedEditMuscleIds);
@@ -537,6 +547,7 @@ async function handleEditSubmit(): Promise<void> {
     submitBtn.removeAttribute("aria-disabled");
     submitBtn.textContent = originalText ?? "Save Changes";
     submitBtn.classList.remove("exercise-form__submit--loading");
+    if (closeBtn) closeBtn.disabled = false;
   }
 }
 

@@ -67,6 +67,7 @@ export async function render(container: HTMLElement): Promise<void> {
             </div>
             <div class="edit-modal__api-error" id="edit-modal-api-error" role="alert" aria-live="polite"></div>
           </form>
+          <button class="edit-modal__close" id="edit-modal-close" type="button" aria-label="Close">&#x2715;</button>
         </div>
       </div>
       <div class="delete-modal-backdrop" id="delete-confirm-backdrop" style="display:none;">
@@ -100,6 +101,7 @@ function initEventListeners(): void {
   const editBackdrop = document.getElementById("edit-modal-backdrop") as HTMLElement | null;
   const editModal = document.getElementById("edit-modal") as HTMLElement | null;
   const deleteBtn = document.getElementById("edit-modal-delete-btn") as HTMLButtonElement | null;
+  const closeBtn = document.getElementById("edit-modal-close") as HTMLButtonElement | null;
   const deleteConfirmBackdrop = document.getElementById("delete-confirm-backdrop") as HTMLElement | null;
   const deleteConfirmBtn = document.getElementById("delete-confirm-btn") as HTMLButtonElement | null;
   const deleteConfirmCancel = document.getElementById("delete-confirm-cancel") as HTMLButtonElement | null;
@@ -136,6 +138,12 @@ function initEventListeners(): void {
 
   editBackdrop?.addEventListener("click", (event: Event) => {
     if (event.target === editBackdrop) {
+      closeEditModal();
+    }
+  });
+
+  closeBtn?.addEventListener("click", () => {
+    if (!isEditSubmitting) {
       closeEditModal();
     }
   });
@@ -384,8 +392,10 @@ async function handleEditSave(event: SubmitEvent): Promise<void> {
   }
 
   isEditSubmitting = true;
+  const closeBtn = document.getElementById("edit-modal-close") as HTMLButtonElement | null;
   submitBtn.setAttribute("aria-disabled", "true");
   submitBtn.textContent = "Saving...";
+  if (closeBtn) closeBtn.disabled = true;
 
   try {
     const response = await fetch(`/api/muscles/${editingMuscleId}`, {
@@ -410,6 +420,7 @@ async function handleEditSave(event: SubmitEvent): Promise<void> {
       isEditSubmitting = false;
       submitBtn.removeAttribute("aria-disabled");
       submitBtn.textContent = "Save";
+      if (closeBtn) closeBtn.disabled = false;
     }
   }
 }

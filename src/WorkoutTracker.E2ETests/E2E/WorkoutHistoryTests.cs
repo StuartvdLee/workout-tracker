@@ -691,14 +691,41 @@ public class WorkoutHistoryTests
             await page.Keyboard.PressAsync("Tab");
             await Expect(page.Locator("#effort-modal-skip")).ToBeFocusedAsync();
             await page.Keyboard.PressAsync("Tab");
+            await Expect(page.Locator("#effort-modal-close")).ToBeFocusedAsync();
+            await page.Keyboard.PressAsync("Tab");
             await Expect(page.Locator("#overall-effort-slider")).ToBeFocusedAsync();
             await page.Keyboard.PressAsync("Tab");
             await Expect(page.Locator("#effort-modal-save")).ToBeFocusedAsync();
             await page.Keyboard.PressAsync("Shift+Tab");
             await Expect(page.Locator("#overall-effort-slider")).ToBeFocusedAsync();
-
+            await page.Keyboard.PressAsync("Shift+Tab");
+            await Expect(page.Locator("#effort-modal-close")).ToBeFocusedAsync();
             await page.Keyboard.PressAsync("Shift+Tab");
             await Expect(page.Locator("#effort-modal-skip")).ToBeFocusedAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task SaveWorkout_EffortModal_CloseButton_DismissesWithoutSaving()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var (workoutId, _) = await CreateWorkoutAndSessionViaApiAsync(page);
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}");
+            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+            await page.Locator("#session-save").ClickAsync();
+            await Expect(page.Locator("#effort-backdrop")).ToBeVisibleAsync();
+
+            await page.Locator("#effort-modal-close").ClickAsync();
+
+            await Expect(page.Locator("#effort-backdrop")).ToBeHiddenAsync();
+            await Expect(page.Locator("#session-save")).ToBeVisibleAsync();
         }
         finally
         {
