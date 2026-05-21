@@ -585,6 +585,8 @@ function closeEditModal(): void {
   if (backdrop) backdrop.style.display = "none";
   editingWorkoutId = null;
   editSelectedExercises = [];
+  originalEditName = "";
+  originalEditExerciseIds = [];
 
   const discardBackdrop = document.getElementById("workout-edit-discard-backdrop") as HTMLElement | null;
   if (discardBackdrop) {
