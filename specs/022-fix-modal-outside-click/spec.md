@@ -2,7 +2,7 @@
 
 **Feature Branch**: `022-fix-modal-outside-click`  
 **Created**: 2026-05-21  
-**Status**: Draft  
+**Status**: Delivered  
 
 ## User Scenarios & Testing *(mandatory)*
 

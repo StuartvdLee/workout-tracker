@@ -41,7 +41,9 @@ Clicking outside the Overall Workout Effort modal (on its backdrop) incorrectly 
 specs/022-fix-modal-outside-click/
 ├── plan.md              # This file
 ├── research.md          # Phase 0 output
-└── tasks.md             # Phase 2 output (/speckit.tasks — NOT created by /speckit.plan)
+├── tasks.md             # Phase 2 output (/speckit.tasks — NOT created by /speckit.plan)
+└── checklists/
+    └── requirements.md  # Spec quality checklist — all 16 items passing
 ```
 
 *No `data-model.md`, `quickstart.md`, or `contracts/` — pure one-line frontend bug fix with no API surface or data model changes.*
