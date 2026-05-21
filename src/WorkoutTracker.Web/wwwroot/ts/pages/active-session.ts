@@ -212,7 +212,7 @@ function initEffortModal(): void {
 
   backdrop.addEventListener("click", (event: Event) => {
     if (event.target === backdrop) {
-      handleEffortSkip();
+      closeEffortModal();
     }
   });
 

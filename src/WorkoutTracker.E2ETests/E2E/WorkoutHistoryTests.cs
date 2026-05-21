@@ -734,6 +734,33 @@ public class WorkoutHistoryTests
     }
 
     [Fact]
+    public async Task SaveWorkout_EffortModal_BackdropClick_DismissesWithoutSaving()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var (workoutId, _) = await CreateWorkoutAndSessionViaApiAsync(page);
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}");
+            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+            await page.Locator("#session-save").ClickAsync();
+            await Expect(page.Locator("#effort-backdrop")).ToBeVisibleAsync();
+
+            await page.Locator("#effort-backdrop").ClickAsync(new LocatorClickOptions { Position = new Position { X = 5, Y = 5 } });
+
+            await Expect(page.Locator("#effort-backdrop")).ToBeHiddenAsync();
+            await Expect(page.Locator("#session-save")).ToBeVisibleAsync();
+
+            await page.Locator("#session-save").ClickAsync();
+            await Expect(page.Locator("#effort-backdrop")).ToBeVisibleAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
     public async Task SaveWorkout_EffortModal_ConfirmSavesWithEffort()
     {
         var page = await CreatePageAsync();
