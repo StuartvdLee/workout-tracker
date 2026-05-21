@@ -13,6 +13,7 @@ let muscles: Muscle[] = [];
 let isSubmitting = false;
 let editingMuscleId: string | null = null;
 let isEditSubmitting = false;
+let originalEditName: string = "";
 let deletingMuscleId: string | null = null;
 let isDeleteSubmitting = false;
 
@@ -70,6 +71,16 @@ export async function render(container: HTMLElement): Promise<void> {
           <button class="edit-modal__close" id="edit-modal-close" type="button" aria-label="Close">&#x2715;</button>
         </div>
       </div>
+      <div class="discard-modal-backdrop" id="muscle-edit-discard-backdrop" style="display:none;">
+        <div class="discard-modal" role="alertdialog" aria-modal="true" aria-labelledby="muscle-edit-discard-title" aria-describedby="muscle-edit-discard-desc">
+          <h2 class="discard-modal__title" id="muscle-edit-discard-title">Discard changes?</h2>
+          <p class="discard-modal__desc" id="muscle-edit-discard-desc">You have unsaved changes. Are you sure you want to discard them?</p>
+          <div class="discard-modal__actions">
+            <button class="discard-modal__discard" type="button" id="muscle-edit-discard-confirm">Discard</button>
+            <button class="discard-modal__continue" type="button" id="muscle-edit-discard-cancel">Keep editing</button>
+          </div>
+        </div>
+      </div>
       <div class="delete-modal-backdrop" id="delete-confirm-backdrop" style="display:none;">
         <div class="delete-modal" role="alertdialog" aria-modal="true" aria-labelledby="delete-confirm-title" aria-describedby="delete-confirm-desc">
           <h2 class="delete-modal__title" id="delete-confirm-title">Delete Muscle</h2>
@@ -88,6 +99,7 @@ export async function render(container: HTMLElement): Promise<void> {
   isSubmitting = false;
   editingMuscleId = null;
   isEditSubmitting = false;
+  originalEditName = "";
   deletingMuscleId = null;
   isDeleteSubmitting = false;
 
@@ -106,6 +118,10 @@ function initEventListeners(): void {
   const deleteConfirmBtn = document.getElementById("delete-confirm-btn") as HTMLButtonElement | null;
   const deleteConfirmCancel = document.getElementById("delete-confirm-cancel") as HTMLButtonElement | null;
   const deleteConfirmModal = deleteConfirmBackdrop?.querySelector(".delete-modal") as HTMLElement | null;
+  const discardBackdrop = document.getElementById("muscle-edit-discard-backdrop") as HTMLElement | null;
+  const discardConfirmBtn = document.getElementById("muscle-edit-discard-confirm") as HTMLButtonElement | null;
+  const discardCancelBtn = document.getElementById("muscle-edit-discard-cancel") as HTMLButtonElement | null;
+  const discardModal = discardBackdrop?.querySelector(".discard-modal") as HTMLElement | null;
 
   form?.addEventListener("submit", (event: SubmitEvent) => {
     void handleAddMuscle(event);
@@ -132,25 +148,47 @@ function initEventListeners(): void {
     closeDeleteConfirmModal();
   });
 
+  discardConfirmBtn?.addEventListener("click", () => {
+    closeEditModal();
+  });
+
+  discardCancelBtn?.addEventListener("click", () => {
+    closeEditDiscardModal();
+  });
+
+  discardBackdrop?.addEventListener("click", (event: Event) => {
+    if (event.target === discardBackdrop) {
+      closeEditDiscardModal();
+    }
+  });
+
+  discardBackdrop?.addEventListener("keydown", (event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      closeEditDiscardModal();
+      return;
+    }
+    if (discardModal) {
+      trapModalTabKey(event, discardModal);
+    }
+  });
+
   editModal?.addEventListener("click", (event: Event) => {
     event.stopPropagation();
   });
 
   editBackdrop?.addEventListener("click", (event: Event) => {
     if (event.target === editBackdrop) {
-      closeEditModal();
+      requestCloseEditModal();
     }
   });
 
   closeBtn?.addEventListener("click", () => {
-    if (!isEditSubmitting) {
-      closeEditModal();
-    }
+    requestCloseEditModal();
   });
 
   editBackdrop?.addEventListener("keydown", (event: KeyboardEvent) => {
     if (event.key === "Escape") {
-      closeEditModal();
+      requestCloseEditModal();
       return;
     }
 
@@ -325,6 +363,7 @@ function openEditModal(muscle: Muscle): void {
 
   editingMuscleId = muscle.muscleId;
   input.value = muscle.name;
+  originalEditName = muscle.name;
   clearValidationError(input, errorEl);
   apiErrorEl.textContent = "";
 
@@ -359,6 +398,43 @@ function closeEditModal(): void {
 
   editingMuscleId = null;
   isEditSubmitting = false;
+
+  const discardBackdrop = document.getElementById("muscle-edit-discard-backdrop") as HTMLElement | null;
+  if (discardBackdrop) {
+    discardBackdrop.style.display = "none";
+  }
+}
+
+function hasEditChanges(): boolean {
+  const input = document.getElementById("edit-muscle-name") as HTMLInputElement | null;
+  return input !== null && input.value.trim() !== originalEditName;
+}
+
+function openEditDiscardModal(): void {
+  const backdrop = document.getElementById("muscle-edit-discard-backdrop") as HTMLElement | null;
+  const confirmBtn = document.getElementById("muscle-edit-discard-confirm") as HTMLButtonElement | null;
+  if (backdrop) {
+    backdrop.style.display = "";
+  }
+  confirmBtn?.focus();
+}
+
+function closeEditDiscardModal(): void {
+  const backdrop = document.getElementById("muscle-edit-discard-backdrop") as HTMLElement | null;
+  const nameInput = document.getElementById("edit-muscle-name") as HTMLInputElement | null;
+  if (backdrop) {
+    backdrop.style.display = "none";
+  }
+  nameInput?.focus();
+}
+
+function requestCloseEditModal(): void {
+  if (isEditSubmitting) return;
+  if (hasEditChanges()) {
+    openEditDiscardModal();
+  } else {
+    closeEditModal();
+  }
 }
 
 async function handleEditSave(event: SubmitEvent): Promise<void> {

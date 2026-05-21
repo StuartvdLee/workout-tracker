@@ -590,6 +590,9 @@ public class WorkoutsPageTests
             await page.Locator("#edit-workout-name").FillAsync("Changed Name");
             await page.Locator("#workout-edit-close").ClickAsync();
 
+            await Expect(page.Locator("#workout-edit-discard-backdrop")).ToBeVisibleAsync();
+            await page.Locator("#workout-edit-discard-confirm").ClickAsync();
+
             await Expect(page.Locator("#workout-edit-backdrop")).ToBeHiddenAsync();
 
             // Name should be unchanged
@@ -944,6 +947,153 @@ public class WorkoutsPageTests
             await page.Locator("button[type='submit']").ClickAsync();
 
             await Expect(page).ToHaveURLAsync(new Regex(@"/active-session\?id=.*&order="));
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task EditWorkout_DiscardWarning_ShownWhenChangesExist()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await SeedExerciseAsync(page, "Bench Press");
+            await NavigateToWorkoutsAsync(page);
+            await CreateWorkoutViaUIAsync(page, "Push Day", "Bench Press");
+
+            await page.Locator(".workout-list__edit-btn").First.ClickAsync();
+            await Expect(page.Locator("#workout-edit-backdrop")).ToBeVisibleAsync();
+
+            await page.Locator("#edit-workout-name").FillAsync("Changed Name");
+            await page.Locator("#workout-edit-close").ClickAsync();
+
+            await Expect(page.Locator("#workout-edit-discard-backdrop")).ToBeVisibleAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task EditWorkout_DiscardWarning_DiscardConfirmed_ModalCloses()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await SeedExerciseAsync(page, "Bench Press");
+            await NavigateToWorkoutsAsync(page);
+            await CreateWorkoutViaUIAsync(page, "Push Day", "Bench Press");
+
+            await page.Locator(".workout-list__edit-btn").First.ClickAsync();
+            await page.Locator("#edit-workout-name").FillAsync("Changed Name");
+            await page.Locator("#workout-edit-close").ClickAsync();
+
+            await Expect(page.Locator("#workout-edit-discard-backdrop")).ToBeVisibleAsync();
+            await page.Locator("#workout-edit-discard-confirm").ClickAsync();
+
+            await Expect(page.Locator("#workout-edit-backdrop")).ToBeHiddenAsync();
+            await Expect(page.Locator(".workout-list__name").First).ToHaveTextAsync("Push Day");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task EditWorkout_DiscardWarning_KeepEditing_ModalStaysOpen()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await SeedExerciseAsync(page, "Bench Press");
+            await NavigateToWorkoutsAsync(page);
+            await CreateWorkoutViaUIAsync(page, "Push Day", "Bench Press");
+
+            await page.Locator(".workout-list__edit-btn").First.ClickAsync();
+            await page.Locator("#edit-workout-name").FillAsync("Changed Name");
+            await page.Locator("#workout-edit-cancel").ClickAsync();
+
+            await Expect(page.Locator("#workout-edit-discard-backdrop")).ToBeVisibleAsync();
+            await page.Locator("#workout-edit-discard-cancel").ClickAsync();
+
+            await Expect(page.Locator("#workout-edit-discard-backdrop")).ToBeHiddenAsync();
+            await Expect(page.Locator("#workout-edit-backdrop")).ToBeVisibleAsync();
+            await Expect(page.Locator("#edit-workout-name")).ToHaveValueAsync("Changed Name");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task EditWorkout_NoWarning_WhenNoChanges()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await SeedExerciseAsync(page, "Bench Press");
+            await NavigateToWorkoutsAsync(page);
+            await CreateWorkoutViaUIAsync(page, "Push Day", "Bench Press");
+
+            await page.Locator(".workout-list__edit-btn").First.ClickAsync();
+            await Expect(page.Locator("#workout-edit-backdrop")).ToBeVisibleAsync();
+
+            await page.Locator("#workout-edit-close").ClickAsync();
+
+            await Expect(page.Locator("#workout-edit-discard-backdrop")).ToBeHiddenAsync();
+            await Expect(page.Locator("#workout-edit-backdrop")).ToBeHiddenAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task EditWorkout_DiscardWarning_ShownOnEscape()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await SeedExerciseAsync(page, "Bench Press");
+            await NavigateToWorkoutsAsync(page);
+            await CreateWorkoutViaUIAsync(page, "Push Day", "Bench Press");
+
+            await page.Locator(".workout-list__edit-btn").First.ClickAsync();
+            await page.Locator("#edit-workout-name").FillAsync("Changed Name");
+            await page.Keyboard.PressAsync("Escape");
+
+            await Expect(page.Locator("#workout-edit-discard-backdrop")).ToBeVisibleAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task EditWorkout_DiscardWarning_ShownOnBackdropClick()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await SeedExerciseAsync(page, "Bench Press");
+            await NavigateToWorkoutsAsync(page);
+            await CreateWorkoutViaUIAsync(page, "Push Day", "Bench Press");
+
+            await page.Locator(".workout-list__edit-btn").First.ClickAsync();
+            await page.Locator("#edit-workout-name").FillAsync("Changed Name");
+
+            var backdrop = page.Locator("#workout-edit-backdrop");
+            await backdrop.ClickAsync(new LocatorClickOptions { Position = new Position { X = 5, Y = 5 } });
+
+            await Expect(page.Locator("#workout-edit-discard-backdrop")).ToBeVisibleAsync();
         }
         finally
         {

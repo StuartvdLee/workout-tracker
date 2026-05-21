@@ -1,4 +1,5 @@
 import { navigate } from "../router.js";
+import { trapModalTabKey } from "../prestart-modal.js";
 
 interface ExerciseMuscle {
   readonly muscleId: string;
@@ -25,6 +26,8 @@ let isSubmitting = false;
 let editingExerciseId: string | null = null;
 let selectedEditMuscleIds: Set<string> = new Set();
 let isEditSubmitting = false;
+let originalEditName: string = "";
+let originalEditMuscleIds: ReadonlySet<string> = new Set();
 
 // Delete confirmation state
 let deletingExerciseId: string | null = null;
@@ -87,6 +90,16 @@ export async function render(container: HTMLElement): Promise<void> {
           <button class="edit-modal__close" id="edit-modal-close" type="button" aria-label="Close">&#x2715;</button>
         </div>
       </div>
+      <div class="discard-modal-backdrop" id="exercise-edit-discard-backdrop" style="display:none;">
+        <div class="discard-modal" role="alertdialog" aria-modal="true" aria-labelledby="exercise-edit-discard-title" aria-describedby="exercise-edit-discard-desc">
+          <h2 class="discard-modal__title" id="exercise-edit-discard-title">Discard changes?</h2>
+          <p class="discard-modal__desc" id="exercise-edit-discard-desc">You have unsaved changes. Are you sure you want to discard them?</p>
+          <div class="discard-modal__actions">
+            <button class="discard-modal__discard" type="button" id="exercise-edit-discard-confirm">Discard</button>
+            <button class="discard-modal__continue" type="button" id="exercise-edit-discard-cancel">Keep editing</button>
+          </div>
+        </div>
+      </div>
       <div class="delete-modal-backdrop" id="delete-modal-backdrop" style="display:none;">
         <div class="delete-modal" role="alertdialog" aria-modal="true" aria-labelledby="delete-modal-title" aria-describedby="delete-modal-desc">
           <h2 class="delete-modal__title" id="delete-modal-title">Delete Exercise</h2>
@@ -106,6 +119,8 @@ export async function render(container: HTMLElement): Promise<void> {
   selectedEditMuscleIds = new Set();
   isSubmitting = false;
   isEditSubmitting = false;
+  originalEditName = "";
+  originalEditMuscleIds = new Set();
   deletingExerciseId = null;
   isDeleting = false;
 
@@ -151,6 +166,10 @@ function initEditModal(): void {
   const cancelBtn = document.getElementById("edit-modal-cancel") as HTMLButtonElement | null;
   const closeBtn = document.getElementById("edit-modal-close") as HTMLButtonElement | null;
   const backdrop = document.getElementById("edit-modal-backdrop") as HTMLElement | null;
+  const discardBackdrop = document.getElementById("exercise-edit-discard-backdrop") as HTMLElement | null;
+  const discardConfirmBtn = document.getElementById("exercise-edit-discard-confirm") as HTMLButtonElement | null;
+  const discardCancelBtn = document.getElementById("exercise-edit-discard-cancel") as HTMLButtonElement | null;
+  const discardModal = discardBackdrop?.querySelector(".discard-modal") as HTMLElement | null;
 
   if (!form || !backdrop) return;
 
@@ -160,24 +179,22 @@ function initEditModal(): void {
   });
 
   cancelBtn?.addEventListener("click", () => {
-    closeEditModal();
+    requestCloseEditModal();
   });
 
   closeBtn?.addEventListener("click", () => {
-    if (!isEditSubmitting) {
-      closeEditModal();
-    }
+    requestCloseEditModal();
   });
 
   backdrop.addEventListener("click", (event: Event) => {
     if (event.target === backdrop) {
-      closeEditModal();
+      requestCloseEditModal();
     }
   });
 
   backdrop.addEventListener("keydown", (event: KeyboardEvent) => {
     if (event.key === "Escape") {
-      closeEditModal();
+      requestCloseEditModal();
       return;
     }
 
@@ -205,6 +222,30 @@ function initEditModal(): void {
           first.focus();
         }
       }
+    }
+  });
+
+  discardConfirmBtn?.addEventListener("click", () => {
+    closeEditModal();
+  });
+
+  discardCancelBtn?.addEventListener("click", () => {
+    closeEditDiscardModal();
+  });
+
+  discardBackdrop?.addEventListener("click", (event: Event) => {
+    if (event.target === discardBackdrop) {
+      closeEditDiscardModal();
+    }
+  });
+
+  discardBackdrop?.addEventListener("keydown", (event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      closeEditDiscardModal();
+      return;
+    }
+    if (discardModal) {
+      trapModalTabKey(event, discardModal);
     }
   });
 
@@ -432,6 +473,8 @@ function openEditModal(exercise: Exercise): void {
 
   // Set muscle toggle states
   selectedEditMuscleIds = new Set(exercise.muscles.map(m => m.muscleId));
+  originalEditName = exercise.name;
+  originalEditMuscleIds = new Set(selectedEditMuscleIds);
   renderEditMuscleToggles();
 
   backdrop.style.display = "";
@@ -443,6 +486,49 @@ function closeEditModal(): void {
   if (backdrop) backdrop.style.display = "none";
   editingExerciseId = null;
   selectedEditMuscleIds = new Set();
+
+  const discardBackdrop = document.getElementById("exercise-edit-discard-backdrop") as HTMLElement | null;
+  if (discardBackdrop) {
+    discardBackdrop.style.display = "none";
+  }
+}
+
+function hasEditChanges(): boolean {
+  const nameInput = document.getElementById("edit-exercise-name") as HTMLInputElement | null;
+  if (!nameInput) return false;
+  if (nameInput.value.trim() !== originalEditName) return true;
+  if (selectedEditMuscleIds.size !== originalEditMuscleIds.size) return true;
+  for (const id of originalEditMuscleIds) {
+    if (!selectedEditMuscleIds.has(id)) return true;
+  }
+  return false;
+}
+
+function openEditDiscardModal(): void {
+  const backdrop = document.getElementById("exercise-edit-discard-backdrop") as HTMLElement | null;
+  const confirmBtn = document.getElementById("exercise-edit-discard-confirm") as HTMLButtonElement | null;
+  if (backdrop) {
+    backdrop.style.display = "";
+  }
+  confirmBtn?.focus();
+}
+
+function closeEditDiscardModal(): void {
+  const backdrop = document.getElementById("exercise-edit-discard-backdrop") as HTMLElement | null;
+  const nameInput = document.getElementById("edit-exercise-name") as HTMLInputElement | null;
+  if (backdrop) {
+    backdrop.style.display = "none";
+  }
+  nameInput?.focus();
+}
+
+function requestCloseEditModal(): void {
+  if (isEditSubmitting) return;
+  if (hasEditChanges()) {
+    openEditDiscardModal();
+  } else {
+    closeEditModal();
+  }
 }
 
 function renderEditMuscleToggles(): void {

@@ -582,6 +582,9 @@ public class ExercisesPageTests
             await page.Locator("#edit-exercise-name").FillAsync("Changed Name");
             await page.Locator("#edit-modal-close").ClickAsync();
 
+            await Expect(page.Locator("#exercise-edit-discard-backdrop")).ToBeVisibleAsync();
+            await page.Locator("#exercise-edit-discard-confirm").ClickAsync();
+
             await Expect(page.Locator("#edit-modal-backdrop")).ToBeHiddenAsync();
 
             var exerciseNames = await page.Locator(".exercise-list__item").AllTextContentsAsync();
@@ -1295,6 +1298,160 @@ public class ExercisesPageTests
             var link = page.Locator("#exercise-form a.exercise-form__manage-link");
             await link.ClickAsync();
             Assert.EndsWith("/muscles", page.Url);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task EditExercise_DiscardWarning_ShownWhenChangesExist()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.Locator("#exercise-name").FillAsync("Bench Press");
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
+            await Expect(page.Locator(".exercise-list__item")).ToBeVisibleAsync();
+
+            await page.Locator(".exercise-list__edit-btn").First.ClickAsync();
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeVisibleAsync();
+
+            await page.Locator("#edit-exercise-name").FillAsync("Changed Name");
+            await page.Locator("#edit-modal-close").ClickAsync();
+
+            await Expect(page.Locator("#exercise-edit-discard-backdrop")).ToBeVisibleAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task EditExercise_DiscardWarning_DiscardConfirmed_ModalCloses()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.Locator("#exercise-name").FillAsync("Bench Press");
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
+            await Expect(page.Locator(".exercise-list__item")).ToBeVisibleAsync();
+
+            await page.Locator(".exercise-list__edit-btn").First.ClickAsync();
+            await page.Locator("#edit-exercise-name").FillAsync("Changed Name");
+            await page.Locator("#edit-modal-close").ClickAsync();
+
+            await Expect(page.Locator("#exercise-edit-discard-backdrop")).ToBeVisibleAsync();
+            await page.Locator("#exercise-edit-discard-confirm").ClickAsync();
+
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeHiddenAsync();
+
+            var exerciseNames = await page.Locator(".exercise-list__item").AllTextContentsAsync();
+            Assert.Contains(exerciseNames, n => n.Contains("Bench Press"));
+            Assert.DoesNotContain(exerciseNames, n => n.Contains("Changed Name"));
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task EditExercise_DiscardWarning_KeepEditing_ModalStaysOpen()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.Locator("#exercise-name").FillAsync("Bench Press");
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
+            await Expect(page.Locator(".exercise-list__item")).ToBeVisibleAsync();
+
+            await page.Locator(".exercise-list__edit-btn").First.ClickAsync();
+            await page.Locator("#edit-exercise-name").FillAsync("Changed Name");
+            await page.Locator("#edit-modal-cancel").ClickAsync();
+
+            await Expect(page.Locator("#exercise-edit-discard-backdrop")).ToBeVisibleAsync();
+            await page.Locator("#exercise-edit-discard-cancel").ClickAsync();
+
+            await Expect(page.Locator("#exercise-edit-discard-backdrop")).ToBeHiddenAsync();
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeVisibleAsync();
+            await Expect(page.Locator("#edit-exercise-name")).ToHaveValueAsync("Changed Name");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task EditExercise_NoWarning_WhenNoChanges()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.Locator("#exercise-name").FillAsync("Bench Press");
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
+            await Expect(page.Locator(".exercise-list__item")).ToBeVisibleAsync();
+
+            await page.Locator(".exercise-list__edit-btn").First.ClickAsync();
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeVisibleAsync();
+
+            await page.Locator("#edit-modal-close").ClickAsync();
+
+            await Expect(page.Locator("#exercise-edit-discard-backdrop")).ToBeHiddenAsync();
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeHiddenAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task EditExercise_DiscardWarning_ShownOnEscape()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.Locator("#exercise-name").FillAsync("Bench Press");
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
+            await Expect(page.Locator(".exercise-list__item")).ToBeVisibleAsync();
+
+            await page.Locator(".exercise-list__edit-btn").First.ClickAsync();
+            await page.Locator("#edit-exercise-name").FillAsync("Changed Name");
+            await page.Keyboard.PressAsync("Escape");
+
+            await Expect(page.Locator("#exercise-edit-discard-backdrop")).ToBeVisibleAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task EditExercise_DiscardWarning_ShownOnBackdropClick()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.Locator("#exercise-name").FillAsync("Bench Press");
+            await page.Locator("#exercise-form .exercise-form__submit").ClickAsync();
+            await Expect(page.Locator(".exercise-list__item")).ToBeVisibleAsync();
+
+            await page.Locator(".exercise-list__edit-btn").First.ClickAsync();
+            await page.Locator("#edit-exercise-name").FillAsync("Changed Name");
+
+            var backdrop = page.Locator("#edit-modal-backdrop");
+            var box = await backdrop.BoundingBoxAsync();
+            if (box != null)
+            {
+                await page.Mouse.ClickAsync(box.X + 2, box.Y + 2);
+            }
+
+            await Expect(page.Locator("#exercise-edit-discard-backdrop")).ToBeVisibleAsync();
         }
         finally
         {
