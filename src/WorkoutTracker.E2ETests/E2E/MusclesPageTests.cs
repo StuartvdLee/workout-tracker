@@ -160,6 +160,10 @@ public class MusclesPageTests
             await page.Locator("#edit-muscle-name").FillAsync("Upper Chest");
             await page.Keyboard.PressAsync("Escape");
 
+            await Expect(page.Locator("#muscle-edit-discard-backdrop")).ToBeVisibleAsync();
+
+            await page.Locator("#muscle-edit-discard-confirm").ClickAsync();
+
             await Expect(page.Locator("#edit-modal-backdrop")).ToBeHiddenAsync();
 
             var names = await GetMuscleNamesAsync(page);
@@ -183,6 +187,10 @@ public class MusclesPageTests
 
             await page.Locator("#edit-muscle-name").FillAsync("Changed Name");
             await page.Locator("#edit-modal-close").ClickAsync();
+
+            await Expect(page.Locator("#muscle-edit-discard-backdrop")).ToBeVisibleAsync();
+
+            await page.Locator("#muscle-edit-discard-confirm").ClickAsync();
 
             await Expect(page.Locator("#edit-modal-backdrop")).ToBeHiddenAsync();
 
@@ -263,6 +271,136 @@ public class MusclesPageTests
 
             var names = await GetMuscleNamesAsync(page);
             Assert.Contains("Chest", names);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task EditMuscle_DiscardWarning_ShownWhenChangesExist()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await MuscleCard(page, "Chest").ClickAsync();
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeVisibleAsync();
+
+            await page.Locator("#edit-muscle-name").FillAsync("Changed Name");
+            await page.Locator("#edit-modal-close").ClickAsync();
+
+            await Expect(page.Locator("#muscle-edit-discard-backdrop")).ToBeVisibleAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task EditMuscle_DiscardWarning_DiscardConfirmed_ModalCloses()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await MuscleCard(page, "Chest").ClickAsync();
+            await page.Locator("#edit-muscle-name").FillAsync("Changed Name");
+            await page.Locator("#edit-modal-close").ClickAsync();
+
+            await Expect(page.Locator("#muscle-edit-discard-backdrop")).ToBeVisibleAsync();
+            await page.Locator("#muscle-edit-discard-confirm").ClickAsync();
+
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeHiddenAsync();
+
+            var names = await GetMuscleNamesAsync(page);
+            Assert.Contains("Chest", names);
+            Assert.DoesNotContain("Changed Name", names);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task EditMuscle_DiscardWarning_KeepEditing_ModalStaysOpen()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await MuscleCard(page, "Chest").ClickAsync();
+            await page.Locator("#edit-muscle-name").FillAsync("Changed Name");
+            await page.Locator("#edit-modal-close").ClickAsync();
+
+            await Expect(page.Locator("#muscle-edit-discard-backdrop")).ToBeVisibleAsync();
+            await page.Locator("#muscle-edit-discard-cancel").ClickAsync();
+
+            await Expect(page.Locator("#muscle-edit-discard-backdrop")).ToBeHiddenAsync();
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeVisibleAsync();
+            await Expect(page.Locator("#edit-muscle-name")).ToHaveValueAsync("Changed Name");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task EditMuscle_NoWarning_WhenNoChanges()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await MuscleCard(page, "Chest").ClickAsync();
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeVisibleAsync();
+
+            await page.Locator("#edit-modal-close").ClickAsync();
+
+            await Expect(page.Locator("#muscle-edit-discard-backdrop")).ToBeHiddenAsync();
+            await Expect(page.Locator("#edit-modal-backdrop")).ToBeHiddenAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task EditMuscle_DiscardWarning_ShownOnEscape()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await MuscleCard(page, "Chest").ClickAsync();
+            await page.Locator("#edit-muscle-name").FillAsync("Changed Name");
+            await page.Keyboard.PressAsync("Escape");
+
+            await Expect(page.Locator("#muscle-edit-discard-backdrop")).ToBeVisibleAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task EditMuscle_DiscardWarning_ShownOnBackdropClick()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await MuscleCard(page, "Chest").ClickAsync();
+            await page.Locator("#edit-muscle-name").FillAsync("Changed Name");
+
+            var backdrop = page.Locator("#edit-modal-backdrop");
+            var box = await backdrop.BoundingBoxAsync();
+            if (box != null)
+            {
+                await page.Mouse.ClickAsync(box.X + 2, box.Y + 2);
+            }
+
+            await Expect(page.Locator("#muscle-edit-discard-backdrop")).ToBeVisibleAsync();
         }
         finally
         {

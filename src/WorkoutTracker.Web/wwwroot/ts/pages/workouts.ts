@@ -30,6 +30,8 @@ let isSubmitting = false;
 let editingWorkoutId: string | null = null;
 let editSelectedExercises: string[] = [];
 let isEditSubmitting = false;
+let originalEditName: string = "";
+let originalEditExerciseIds: string[] = [];
 
 // Delete confirmation state
 let deletingWorkoutId: string | null = null;
@@ -108,6 +110,16 @@ export async function render(container: HTMLElement): Promise<void> {
           <button class="edit-modal__close" id="workout-edit-close" type="button" aria-label="Close">&#x2715;</button>
         </div>
       </div>
+      <div class="discard-modal-backdrop" id="workout-edit-discard-backdrop" style="display:none;">
+        <div class="discard-modal" role="alertdialog" aria-modal="true" aria-labelledby="workout-edit-discard-title" aria-describedby="workout-edit-discard-desc">
+          <h2 class="discard-modal__title" id="workout-edit-discard-title">Discard changes?</h2>
+          <p class="discard-modal__desc" id="workout-edit-discard-desc">You have unsaved changes. Are you sure you want to discard them?</p>
+          <div class="discard-modal__actions">
+            <button class="discard-modal__discard" type="button" id="workout-edit-discard-confirm">Discard</button>
+            <button class="discard-modal__continue" type="button" id="workout-edit-discard-cancel">Keep editing</button>
+          </div>
+        </div>
+      </div>
       <div class="delete-modal-backdrop" id="workout-delete-backdrop" style="display:none;">
         <div class="delete-modal" role="alertdialog" aria-modal="true" aria-labelledby="workout-delete-title" aria-describedby="workout-delete-desc">
           <h2 class="delete-modal__title" id="workout-delete-title">Delete Workout</h2>
@@ -137,6 +149,8 @@ export async function render(container: HTMLElement): Promise<void> {
   editSelectedExercises = [];
   isSubmitting = false;
   isEditSubmitting = false;
+  originalEditName = "";
+  originalEditExerciseIds = [];
   deletingWorkoutId = null;
   isDeleting = false;
   prestartWorkout = null;
@@ -175,6 +189,10 @@ function initEditModal(): void {
   const cancelBtn = document.getElementById("workout-edit-cancel") as HTMLButtonElement | null;
   const closeBtn = document.getElementById("workout-edit-close") as HTMLButtonElement | null;
   const backdrop = document.getElementById("workout-edit-backdrop") as HTMLElement | null;
+  const discardBackdrop = document.getElementById("workout-edit-discard-backdrop") as HTMLElement | null;
+  const discardConfirmBtn = document.getElementById("workout-edit-discard-confirm") as HTMLButtonElement | null;
+  const discardCancelBtn = document.getElementById("workout-edit-discard-cancel") as HTMLButtonElement | null;
+  const discardModal = discardBackdrop?.querySelector(".discard-modal") as HTMLElement | null;
 
   if (!form || !backdrop) return;
 
@@ -184,24 +202,22 @@ function initEditModal(): void {
   });
 
   cancelBtn?.addEventListener("click", () => {
-    closeEditModal();
+    requestCloseEditModal();
   });
 
   closeBtn?.addEventListener("click", () => {
-    if (!isEditSubmitting) {
-      closeEditModal();
-    }
+    requestCloseEditModal();
   });
 
   backdrop.addEventListener("click", (event: Event) => {
     if (event.target === backdrop) {
-      closeEditModal();
+      requestCloseEditModal();
     }
   });
 
   backdrop.addEventListener("keydown", (event: KeyboardEvent) => {
     if (event.key === "Escape") {
-      closeEditModal();
+      requestCloseEditModal();
       return;
     }
 
@@ -229,6 +245,30 @@ function initEditModal(): void {
           first.focus();
         }
       }
+    }
+  });
+
+  discardConfirmBtn?.addEventListener("click", () => {
+    closeEditModal();
+  });
+
+  discardCancelBtn?.addEventListener("click", () => {
+    closeEditDiscardModal();
+  });
+
+  discardBackdrop?.addEventListener("click", (event: Event) => {
+    if (event.target === discardBackdrop) {
+      closeEditDiscardModal();
+    }
+  });
+
+  discardBackdrop?.addEventListener("keydown", (event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      closeEditDiscardModal();
+      return;
+    }
+    if (discardModal) {
+      trapModalTabKey(event, discardModal);
     }
   });
 }
@@ -520,10 +560,14 @@ async function fetchAndPopulateEditModal(workoutId: string, nameInput: HTMLInput
 
     const fullWorkout: Workout = await response.json();
 
+    if (editingWorkoutId !== workoutId) return;
+
     nameInput.value = fullWorkout.name;
 
     // Populate selected exercises from the workout in persisted sequence order
     editSelectedExercises = fullWorkout.exercises.map(ex => ex.exerciseId);
+    originalEditName = fullWorkout.name;
+    originalEditExerciseIds = [...editSelectedExercises];
 
     initDragAndDrop("edit-selected-list", "edit-reorder-announce", () => editSelectedExercises, renderEditExerciseDropdown);
 
@@ -541,6 +585,47 @@ function closeEditModal(): void {
   if (backdrop) backdrop.style.display = "none";
   editingWorkoutId = null;
   editSelectedExercises = [];
+  originalEditName = "";
+  originalEditExerciseIds = [];
+
+  const discardBackdrop = document.getElementById("workout-edit-discard-backdrop") as HTMLElement | null;
+  if (discardBackdrop) {
+    discardBackdrop.style.display = "none";
+  }
+}
+
+function hasEditChanges(): boolean {
+  const nameInput = document.getElementById("edit-workout-name") as HTMLInputElement | null;
+  if (!nameInput) return false;
+  if (nameInput.value.trim() !== originalEditName) return true;
+  return JSON.stringify(editSelectedExercises) !== JSON.stringify(originalEditExerciseIds);
+}
+
+function openEditDiscardModal(): void {
+  const backdrop = document.getElementById("workout-edit-discard-backdrop") as HTMLElement | null;
+  const confirmBtn = document.getElementById("workout-edit-discard-confirm") as HTMLButtonElement | null;
+  if (backdrop) {
+    backdrop.style.display = "";
+  }
+  confirmBtn?.focus();
+}
+
+function closeEditDiscardModal(): void {
+  const backdrop = document.getElementById("workout-edit-discard-backdrop") as HTMLElement | null;
+  const nameInput = document.getElementById("edit-workout-name") as HTMLInputElement | null;
+  if (backdrop) {
+    backdrop.style.display = "none";
+  }
+  nameInput?.focus();
+}
+
+function requestCloseEditModal(): void {
+  if (isEditSubmitting) return;
+  if (hasEditChanges()) {
+    openEditDiscardModal();
+  } else {
+    closeEditModal();
+  }
 }
 
 function renderEditExerciseDropdown(): void {
