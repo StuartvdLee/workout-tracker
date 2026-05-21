@@ -50,7 +50,7 @@ description: "Task list template for feature implementation"
   });
   ```
 
-  No other changes to `initEffortModal()` are needed. `closeEffortModal()` is already defined and imported in the same file (line 281); `handleEffortSkip()` retains its existing wiring to the Skip button (line 202) and Escape key (line 221).
+  No other changes to `initEffortModal()` are needed. `closeEffortModal()` is already defined in the same file (line 281); `handleEffortSkip()` retains its existing wiring to the Skip button (line 202) and Escape key (line 221).
 
 - [x] T003 [US1] Run `cd src/WorkoutTracker.Web && npm run build` from the repository root and confirm zero TypeScript compilation errors. The change touches one function call inside a callback — no type signatures change, so no new strict-mode violations are expected.
 

@@ -28,7 +28,7 @@ No unknowns require external research. All decisions are grounded in the existin
 
 **Decision**: New test `SaveWorkout_EffortModal_BackdropClick_DismissesWithoutSaving` in `WorkoutHistoryTests.cs`, modelled on the existing `WorkoutsPageTests.cs` backdrop pattern and the existing `SaveWorkout_EffortModal_CloseButton_DismissesWithoutSaving` test from feature 021.
 
-**Rationale**: This is a regression test that must fail before the fix and pass after. The `WorkoutHistoryTests.cs` file already contains all effort-modal E2E coverage; adding the new test here is consistent. The test clicks the backdrop edge (position `{ X: 5, Y: 5 }`), asserts the modal is hidden, then asserts no session was saved (via `WebAppFixture.GetLatestSessionAsync()`), then asserts the effort modal can be re-opened by clicking Save Workout again.
+**Rationale**: This is a regression test that must fail before the fix and pass after. The `WorkoutHistoryTests.cs` file already contains all effort-modal E2E coverage; adding the new test here is consistent. The test clicks the backdrop edge (position `{ X: 5, Y: 5 }`), asserts the modal is hidden, then asserts no session was saved by confirming `#session-save` remains visible (user stays on the active-session page rather than navigating to history — the same assertion pattern used by `SaveWorkout_EffortModal_CloseButton_DismissesWithoutSaving`), then asserts the effort modal can be re-opened by clicking Save Workout again.
 
 **Alternatives considered**:
 - Vitest unit test — not suitable; the behaviour is a DOM event interaction on a live page, not a pure function.
