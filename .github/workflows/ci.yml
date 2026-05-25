@@ -91,7 +91,7 @@ jobs:
           cache-dependency-path: src/WorkoutTracker.Web/package-lock.json
 
       - name: Cache Playwright browsers
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('src/WorkoutTracker.E2ETests/WorkoutTracker.E2ETests.csproj') }}
