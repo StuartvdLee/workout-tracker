@@ -2,35 +2,35 @@ import { describe, it, expect } from 'vitest';
 import { reorder, shuffle, applyOrder, getEffortColour } from '../utils';
 
 describe('getEffortColour', () => {
-  it('returns #267252 for value 1 (Easy)', () => {
-    expect(getEffortColour(1)).toBe('#267252');
+  it('returns #22C55E for value 1 (Easy)', () => {
+    expect(getEffortColour(1)).toBe('#22C55E');
   });
-  it('returns #127368 for value 2 (Easy)', () => {
-    expect(getEffortColour(2)).toBe('#127368');
+  it('returns #4ADE80 for value 2 (Easy)', () => {
+    expect(getEffortColour(2)).toBe('#4ADE80');
   });
-  it('returns #0E6577 for value 3 (Easy)', () => {
-    expect(getEffortColour(3)).toBe('#0E6577');
+  it('returns #84CC16 for value 3 (Easy)', () => {
+    expect(getEffortColour(3)).toBe('#84CC16');
   });
-  it('returns #356089 for value 4 (Moderate)', () => {
-    expect(getEffortColour(4)).toBe('#356089');
+  it('returns #A3E635 for value 4 (Moderate)', () => {
+    expect(getEffortColour(4)).toBe('#A3E635');
   });
-  it('returns #2E3C80 for value 5 (Moderate)', () => {
-    expect(getEffortColour(5)).toBe('#2E3C80');
+  it('returns #EAB308 for value 5 (Moderate)', () => {
+    expect(getEffortColour(5)).toBe('#EAB308');
   });
-  it('returns #4C3D8A for value 6 (Moderate)', () => {
-    expect(getEffortColour(6)).toBe('#4C3D8A');
+  it('returns #F59E0B for value 6 (Moderate)', () => {
+    expect(getEffortColour(6)).toBe('#F59E0B');
   });
-  it('returns #68448C for value 7 (Hard)', () => {
-    expect(getEffortColour(7)).toBe('#68448C');
+  it('returns #F97316 for value 7 (Hard)', () => {
+    expect(getEffortColour(7)).toBe('#F97316');
   });
-  it('returns #71398B for value 8 (Hard)', () => {
-    expect(getEffortColour(8)).toBe('#71398B');
+  it('returns #EA580C for value 8 (Hard)', () => {
+    expect(getEffortColour(8)).toBe('#EA580C');
   });
-  it('returns #8A417D for value 9 (All Out)', () => {
-    expect(getEffortColour(9)).toBe('#8A417D');
+  it('returns #EF4444 for value 9 (All Out)', () => {
+    expect(getEffortColour(9)).toBe('#EF4444');
   });
-  it('returns #8A3666 for value 10 (All Out)', () => {
-    expect(getEffortColour(10)).toBe('#8A3666');
+  it('returns #DC2626 for value 10 (All Out)', () => {
+    expect(getEffortColour(10)).toBe('#DC2626');
   });
   it('returns empty string for out-of-range value 0', () => {
     expect(getEffortColour(0)).toBe('');

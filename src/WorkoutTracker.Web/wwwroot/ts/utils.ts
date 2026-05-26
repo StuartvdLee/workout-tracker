@@ -1,14 +1,14 @@
 const EFFORT_COLOURS: Record<number, string> = {
-  1: "#267252",
-  2: "#127368",
-  3: "#0E6577",
-  4: "#356089",
-  5: "#2E3C80",
-  6: "#4C3D8A",
-  7: "#68448C",
-  8: "#71398B",
-  9: "#8A417D",
-  10: "#8A3666",
+  1: "#22C55E",
+  2: "#4ADE80",
+  3: "#84CC16",
+  4: "#A3E635",
+  5: "#EAB308",
+  6: "#F59E0B",
+  7: "#F97316",
+  8: "#EA580C",
+  9: "#EF4444",
+  10: "#DC2626",
 };
 
 export function getEffortColour(value: number): string {

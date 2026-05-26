@@ -119,6 +119,45 @@ public class WorkoutHistoryTests
         return (workoutId, exerciseId);
     }
 
+    private static async Task<string> GetInlineColorAsync(IPage page, string selector)
+    {
+        return await page.EvaluateAsync<string>(
+            @"sel => {
+                const el = document.querySelector(sel);
+                return el ? el.style.color : '';
+            }",
+            selector);
+    }
+
+    private static async Task<double> MeasureColorUpdateLatencyMsAsync(
+        IPage page,
+        string sliderSelector,
+        string valueSelector,
+        string sliderValue)
+    {
+        return await page.EvaluateAsync<double>(
+            @"async ({ sliderSelector, valueSelector, sliderValue }) => {
+                const slider = document.querySelector(sliderSelector);
+                const valueEl = document.querySelector(valueSelector);
+                if (!slider || !valueEl) return 10000;
+
+                // Clear any previously applied inline colour so repeated samples don't short-circuit.
+                valueEl.style.color = '';
+
+                const start = performance.now();
+                slider.value = sliderValue;
+                slider.dispatchEvent(new Event('input', { bubbles: true }));
+
+                const timeoutMs = 500;
+                while ((performance.now() - start) <= timeoutMs) {
+                    if ((valueEl.style.color ?? '').length > 0) return performance.now() - start;
+                    await new Promise(resolve => requestAnimationFrame(resolve));
+                }
+                return timeoutMs + 1;
+            }",
+            new { sliderSelector, valueSelector, sliderValue });
+    }
+
     // ──────────────────────────────────────────
     // History Page
     // ──────────────────────────────────────────
@@ -783,6 +822,158 @@ public class WorkoutHistoryTests
             var latestSession = sessionsJson?.EnumerateArray().First();
             Assert.NotNull(latestSession);
             Assert.Equal(7, latestSession.Value.GetProperty("overallEffort").GetInt32());
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task ActiveSession_PerExerciseEffortSlider_AppliesExpectedColour()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var (workoutId, _) = await CreateWorkoutAndSessionViaApiAsync(page);
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}");
+            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+            var slider = page.Locator(".active-session__effort-slider").First;
+            await slider.FillAsync("7");
+            await slider.DispatchEventAsync("input");
+
+            var valueColor = await GetInlineColorAsync(page, ".active-session__effort-value");
+            var bandColor = await GetInlineColorAsync(page, ".active-session__effort-band");
+            var expected = await page.EvaluateAsync<string>(
+                @"() => { const el = document.createElement('span'); el.style.color = '#F97316'; return el.style.color; }");
+            Assert.Equal(expected, valueColor);
+            Assert.Equal(expected, bandColor);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task SaveWorkout_EffortModal_AppliesExpectedColour()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var (workoutId, _) = await CreateWorkoutAndSessionViaApiAsync(page);
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}");
+            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+            await page.Locator("#session-save").ClickAsync();
+            await Expect(page.Locator("#effort-backdrop")).ToBeVisibleAsync();
+
+            await page.Locator("#overall-effort-slider").FillAsync("10");
+            await page.Locator("#overall-effort-slider").DispatchEventAsync("input");
+
+            var valueColor = await GetInlineColorAsync(page, "#overall-effort-value");
+            var bandColor = await GetInlineColorAsync(page, "#overall-effort-band");
+            var expected = await page.EvaluateAsync<string>(
+                @"() => { const el = document.createElement('span'); el.style.color = '#DC2626'; return el.style.color; }");
+            Assert.Equal(expected, valueColor);
+            Assert.Equal(expected, bandColor);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task ActiveSession_EffortColours_AreConsistentAcrossSliders()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var (workoutId, _) = await CreateWorkoutAndSessionViaApiAsync(page);
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}");
+            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+            var perExerciseSlider = page.Locator(".active-session__effort-slider").First;
+            await perExerciseSlider.FillAsync("5");
+            await perExerciseSlider.DispatchEventAsync("input");
+            var perExerciseColor = await GetInlineColorAsync(page, ".active-session__effort-value");
+
+            await page.Locator("#session-save").ClickAsync();
+            await page.Locator("#overall-effort-slider").FillAsync("5");
+            await page.Locator("#overall-effort-slider").DispatchEventAsync("input");
+            var overallColor = await GetInlineColorAsync(page, "#overall-effort-value");
+
+            Assert.Equal(perExerciseColor, overallColor);
+            Assert.NotEqual(string.Empty, overallColor);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task SaveWorkout_EffortModal_UntouchedState_IsNeutral()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var (workoutId, _) = await CreateWorkoutAndSessionViaApiAsync(page);
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}");
+            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+            await page.Locator("#session-save").ClickAsync();
+            await Expect(page.Locator("#effort-backdrop")).ToBeVisibleAsync();
+
+            await Expect(page.Locator("#overall-effort-value")).ToHaveTextAsync("Not rated");
+            await Expect(page.Locator("#overall-effort-band")).ToHaveTextAsync(string.Empty);
+
+            var valueInlineColor = await page.EvaluateAsync<string>(
+                "document.querySelector('#overall-effort-value')?.style.color ?? ''");
+            var bandInlineColor = await page.EvaluateAsync<string>(
+                "document.querySelector('#overall-effort-band')?.style.color ?? ''");
+            var sliderInlineAccent = await page.EvaluateAsync<string>(
+                "document.querySelector('#overall-effort-slider')?.style.accentColor ?? ''");
+
+            Assert.Equal(string.Empty, valueInlineColor);
+            Assert.Equal(string.Empty, bandInlineColor);
+            Assert.Equal(string.Empty, sliderInlineAccent);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task ActiveSession_EffortColourUpdate_LatencyMeetsBudget()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var (workoutId, _) = await CreateWorkoutAndSessionViaApiAsync(page);
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}");
+            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+            var sampleCount = 20;
+            var passCount = 0;
+
+            for (var i = 0; i < sampleCount; i++)
+            {
+                var elapsed = await MeasureColorUpdateLatencyMsAsync(
+                    page,
+                    ".active-session__effort-slider",
+                    ".active-session__effort-value",
+                    "5");
+                if (elapsed <= 100)
+                {
+                    passCount++;
+                }
+            }
+
+            Assert.True(passCount >= 19, $"Expected at least 19/20 interactions <= 100ms, got {passCount}/20.");
         }
         finally
         {
