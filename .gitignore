@@ -50,6 +50,8 @@ src/WorkoutTracker.Web/wwwroot/js/
 # OS files
 .DS_Store
 Thumbs.db
+*.tmp
+*.swp
 
 # Environment
 .env
@@ -64,3 +66,6 @@ coverage/
 
 # appsettings
 appsettings.Development.json
+
+# Editor
+.vscode/
