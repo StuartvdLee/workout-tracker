@@ -103,5 +103,5 @@ C# on .NET 10 (backend), vanilla TypeScript (frontend): Follow standard conventi
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/023-unsaved-changes-warning/plan.md
+at specs/024-change-effort-slider-colours/plan.md
 <!-- SPECKIT END -->
