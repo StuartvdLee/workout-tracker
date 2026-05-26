@@ -141,6 +141,9 @@ public class WorkoutHistoryTests
                 const valueEl = document.querySelector(valueSelector);
                 if (!slider || !valueEl) return 10000;
 
+                // Clear any previously applied inline colour so repeated samples don't short-circuit.
+                valueEl.style.color = '';
+
                 const start = performance.now();
                 slider.value = sliderValue;
                 slider.dispatchEvent(new Event('input', { bubbles: true }));
@@ -842,8 +845,10 @@ public class WorkoutHistoryTests
 
             var valueColor = await GetInlineColorAsync(page, ".active-session__effort-value");
             var bandColor = await GetInlineColorAsync(page, ".active-session__effort-band");
-            Assert.NotEqual(string.Empty, valueColor);
-            Assert.NotEqual(string.Empty, bandColor);
+            var expected = await page.EvaluateAsync<string>(
+                @"() => { const el = document.createElement('span'); el.style.color = '#F97316'; return el.style.color; }");
+            Assert.Equal(expected, valueColor);
+            Assert.Equal(expected, bandColor);
         }
         finally
         {
@@ -869,8 +874,10 @@ public class WorkoutHistoryTests
 
             var valueColor = await GetInlineColorAsync(page, "#overall-effort-value");
             var bandColor = await GetInlineColorAsync(page, "#overall-effort-band");
-            Assert.NotEqual(string.Empty, valueColor);
-            Assert.NotEqual(string.Empty, bandColor);
+            var expected = await page.EvaluateAsync<string>(
+                @"() => { const el = document.createElement('span'); el.style.color = '#DC2626'; return el.style.color; }");
+            Assert.Equal(expected, valueColor);
+            Assert.Equal(expected, bandColor);
         }
         finally
         {
