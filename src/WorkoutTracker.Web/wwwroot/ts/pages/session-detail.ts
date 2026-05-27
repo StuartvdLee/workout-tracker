@@ -304,7 +304,8 @@ function renderChartForSelection(selection: string, trends: SessionTrends, bodyE
       yMin,
       yMax,
       "session-chart__line--effort",
-      "session-chart__point--effort"
+      "session-chart__point--effort",
+      "Overall session effort"
     );
     return;
   }
@@ -343,7 +344,10 @@ function renderChartForSelection(selection: string, trends: SessionTrends, bodyE
     return;
   }
 
-  bodyEl.innerHTML = renderCombinedExerciseSvg(dates, weightValues, effortValues);
+  const resolvedExerciseName = selectedExerciseName
+    ?? dp.flatMap(d => d.exercises).find(matchesSelection)?.exerciseName
+    ?? "exercise";
+  bodyEl.innerHTML = renderCombinedExerciseSvg(dates, weightValues, effortValues, resolvedExerciseName);
 }
 
 function renderLineSvg(
@@ -352,7 +356,8 @@ function renderLineSvg(
   yMin: number,
   yMax: number,
   lineModifierClass: string,
-  pointModifierClass: string
+  pointModifierClass: string,
+  ariaLabel: string
 ): string {
   const n = dates.length;
   const xOf = (i: number): number => n > 1 ? 50 + (i / (n - 1)) * 530 : 315;
@@ -392,7 +397,7 @@ function renderLineSvg(
     .join("");
 
   return `<div class="session-chart__container">
-    <svg class="session-chart__svg" viewBox="0 0 600 260" aria-hidden="true">
+    <svg class="session-chart__svg" viewBox="0 0 600 260" role="img" aria-label="${escapeHtml(ariaLabel)}">
       <line class="session-chart__axis-line" x1="50" y1="20" x2="50" y2="220"/>
       <line class="session-chart__axis-line" x1="50" y1="220" x2="580" y2="220"/>
       ${yTickLines}
@@ -406,7 +411,8 @@ function renderLineSvg(
 function renderCombinedExerciseSvg(
   dates: readonly string[],
   weightValues: readonly (number | null)[],
-  effortValues: readonly (number | null)[]
+  effortValues: readonly (number | null)[],
+  exerciseName: string
 ): string {
   const n = dates.length;
   const xOf = (i: number): number => n > 1 ? 50 + (i / (n - 1)) * 530 : 315;
@@ -462,7 +468,7 @@ function renderCombinedExerciseSvg(
       <span class="session-chart__legend-item"><span class="session-chart__legend-swatch session-chart__legend-swatch--weight"></span>Weight</span>
       <span class="session-chart__legend-item"><span class="session-chart__legend-swatch session-chart__legend-swatch--effort"></span>Effort</span>
     </div>
-    <svg class="session-chart__svg" viewBox="0 0 600 260" aria-hidden="true">
+    <svg class="session-chart__svg" viewBox="0 0 600 260" role="img" aria-label="${escapeHtml(`Weight and effort for ${exerciseName}`)}">
       <line class="session-chart__axis-line" x1="50" y1="20" x2="50" y2="220"/>
       <line class="session-chart__axis-line" x1="580" y1="20" x2="580" y2="220"/>
       <line class="session-chart__axis-line" x1="50" y1="220" x2="580" y2="220"/>
