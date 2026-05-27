@@ -522,6 +522,8 @@ function buildPointCircles(
     .join("");
 }
 
+let pendingDeleteSessionId: string | null = null;
+
 function appendDeleteSection(contentEl: HTMLElement, sessionId: string): void {
   const deleteSection = document.createElement("div");
   deleteSection.className = "session-detail__delete-section";
@@ -531,6 +533,13 @@ function appendDeleteSection(contentEl: HTMLElement, sessionId: string): void {
          role="alert" aria-live="polite" style="display:none;"></div>
   `;
   contentEl.appendChild(deleteSection);
+
+  // deleteBtn is a fresh element on every load — safe to add listener directly
+  const deleteBtn = deleteSection.querySelector<HTMLButtonElement>("#session-detail-delete")!;
+  deleteBtn.addEventListener("click", () => {
+    pendingDeleteSessionId = sessionId;
+    openDeleteModal();
+  });
 
   if (!document.getElementById("session-delete-confirm-backdrop")) {
     const backdrop = document.createElement("div");
@@ -552,9 +561,9 @@ function appendDeleteSection(contentEl: HTMLElement, sessionId: string): void {
       </div>
     `;
     document.body.appendChild(backdrop);
+    // Wire modal handlers exactly once — they use pendingDeleteSessionId
+    wireModalHandlers();
   }
-
-  wireDeleteHandlers(sessionId);
 }
 
 function openDeleteModal(): void {
@@ -573,15 +582,10 @@ function closeDeleteModal(): void {
   document.getElementById("session-detail-delete")?.focus();
 }
 
-function wireDeleteHandlers(sessionId: string): void {
-  const deleteBtn = document.getElementById("session-detail-delete") as HTMLButtonElement | null;
+function wireModalHandlers(): void {
   const confirmOk = document.getElementById("session-delete-confirm-ok") as HTMLButtonElement | null;
   const confirmCancel = document.getElementById("session-delete-confirm-cancel") as HTMLButtonElement | null;
   const backdrop = document.getElementById("session-delete-confirm-backdrop");
-
-  deleteBtn?.addEventListener("click", () => {
-    openDeleteModal();
-  });
 
   confirmCancel?.addEventListener("click", () => {
     closeDeleteModal();
@@ -589,7 +593,9 @@ function wireDeleteHandlers(sessionId: string): void {
 
   confirmOk?.addEventListener("click", () => {
     closeDeleteModal();
-    void handleDeleteConfirmed(sessionId);
+    if (pendingDeleteSessionId !== null) {
+      void handleDeleteConfirmed(pendingDeleteSessionId);
+    }
   });
 
   backdrop?.addEventListener("keydown", (e: KeyboardEvent) => {
