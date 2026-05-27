@@ -76,3 +76,47 @@ export function applyOrder<T extends { readonly exerciseId: string }>(
 
   return orderedExercises;
 }
+
+// Maps a data value to a Y coordinate within the SVG plot area (y: 20–220, top-to-bottom).
+// When min === max (flat line), returns 120 (midpoint) to avoid division-by-zero.
+export function normaliseValue(value: number, min: number, max: number): number {
+  if (min === max) return 120;
+  return 220 - ((value - min) / (max - min)) * 200;
+}
+
+// Returns tickCount evenly spaced tick values from min to max inclusive.
+// If tickCount < 2, returns [min].
+export function buildYTicks(min: number, max: number, tickCount: number): number[] {
+  if (tickCount < 2) return [min];
+  const ticks: number[] = [];
+  for (let i = 0; i < tickCount; i++) {
+    ticks.push(min + (i / (tickCount - 1)) * (max - min));
+  }
+  return ticks;
+}
+
+// Returns an array the same length as dates. Labels are shown at evenly spaced indices up to
+// maxLabels (always including the last); intermediate positions get null (no label rendered).
+// Shown dates are formatted as "DD MMM" (e.g. "01 Apr").
+export function buildXLabels(dates: readonly string[], maxLabels: number): (string | null)[] {
+  if (dates.length === 0) return [];
+  const result: (string | null)[] = new Array(dates.length).fill(null);
+  if (maxLabels <= 0) return result;
+
+  // Always show the last label
+  const indices = new Set<number>([dates.length - 1]);
+
+  if (maxLabels > 1 && dates.length > 1) {
+    const step = (dates.length - 1) / (maxLabels - 1);
+    for (let i = 0; i < maxLabels - 1; i++) {
+      indices.add(Math.round(i * step));
+    }
+  }
+
+  for (const idx of indices) {
+    const d = new Date(dates[idx]);
+    result[idx] = d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+  }
+
+  return result;
+}

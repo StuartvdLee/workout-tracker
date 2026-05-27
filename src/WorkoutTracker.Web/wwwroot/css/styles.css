@@ -2327,6 +2327,140 @@ body.is-dragging .workout-selected__drag-handle {
 }
 
 /* =============================================
+   SESSION CHART (feature 025)
+   ============================================= */
+
+.session-chart {
+  margin-top: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.session-chart__header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.session-chart__label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-light);
+  white-space: nowrap;
+}
+
+.session-chart__select {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  background: var(--color-white);
+}
+
+.session-chart__loading,
+.session-chart__empty {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-light);
+  padding: var(--spacing-md) 0;
+}
+
+.session-chart__error {
+  font-size: var(--font-size-sm);
+  color: var(--color-error);
+  padding: var(--spacing-md) 0;
+}
+
+.session-chart__container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.session-chart__svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.session-chart__axis-line {
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.session-chart__gridline {
+  stroke: var(--color-border);
+  stroke-width: 1;
+  opacity: 0.5;
+}
+
+.session-chart__tick-label,
+.session-chart__date-label {
+  fill: var(--color-text-light);
+  font-size: 11px;
+  font-family: var(--font-family);
+}
+
+.session-chart__line {
+  stroke-width: 2;
+  fill: none;
+}
+
+.session-chart__point {
+  stroke-width: 1;
+}
+
+.session-chart__line--weight {
+  stroke: var(--color-primary);
+}
+
+.session-chart__point--weight {
+  fill: var(--color-primary);
+  stroke: var(--color-primary);
+}
+
+.session-chart__line--effort {
+  stroke: var(--color-error);
+}
+
+.session-chart__point--effort {
+  fill: var(--color-error);
+  stroke: var(--color-error);
+}
+
+.session-chart__legend {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-light);
+}
+
+.session-chart__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.session-chart__legend-swatch {
+  width: 14px;
+  height: 3px;
+  border-radius: 999px;
+}
+
+.session-chart__legend-swatch--weight {
+  background: var(--color-primary);
+}
+
+.session-chart__legend-swatch--effort {
+  background: var(--color-error);
+}
+
+/* =============================================
    THEME SELECTOR STYLES (feature 007)
    ============================================= */
 
