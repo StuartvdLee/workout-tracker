@@ -2854,10 +2854,8 @@ html[data-theme-pref="system"] .topbar__theme-icon--system {
   border-radius: var(--radius);
 }
 
-@media (prefers-color-scheme: dark) {
-  .history-page__banner {
-    color: #86efac;
-    background-color: #052e16;
-    border-color: #166534;
-  }
+[data-theme="dark"] .history-page__banner {
+  color: #86efac;
+  background-color: #052e16;
+  border-color: #166534;
 }
