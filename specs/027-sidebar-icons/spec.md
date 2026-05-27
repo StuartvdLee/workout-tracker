@@ -2,8 +2,9 @@
 
 **Feature Branch**: `027-sidebar-icons`  
 **Created**: 2026-05-27  
-**Status**: Draft  
-**Input**: User description: "I want to change the icons in the sidebar for Workouts and Exercises"
+**Status**: Complete  
+**Input**: User description: "I want to change the icons in the sidebar for Workouts and Exercises"  
+**PR**: https://github.com/StuartvdLee/workout-tracker/pull/104
 
 ## User Scenarios & Testing *(mandatory)*
 
