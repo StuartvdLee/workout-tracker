@@ -48,8 +48,9 @@ dotnet test src/WorkoutTracker.E2ETests/WorkoutTracker.E2ETests.csproj
 |------|--------|
 | `src/WorkoutTracker.Api/Program.cs` | Add `DELETE /api/sessions/{sessionId:guid}` |
 | `src/WorkoutTracker.Web/Program.cs` | Add proxy `DELETE /api/sessions/{sessionId:guid}` |
-| `src/WorkoutTracker.Web/wwwroot/ts/pages/session-detail.ts` | Delete button, modal, fetch logic |
+| `src/WorkoutTracker.Web/wwwroot/ts/pages/session-detail.ts` | Delete button, modal, fetch logic, `pendingDeleteSessionId` guard |
 | `src/WorkoutTracker.Web/wwwroot/ts/pages/history.ts` | Read `?deleted=1`, render banner |
-| `src/WorkoutTracker.Web/wwwroot/css/styles.css` | BEM styles for delete section + banner |
+| `src/WorkoutTracker.Web/wwwroot/css/styles.css` | Full-width solid red delete button + banner styles |
 | `src/WorkoutTracker.UnitTests/Api/SessionApiTests.cs` | 4 new DELETE endpoint tests |
 | `src/WorkoutTracker.E2ETests/E2E/WorkoutHistoryTests.cs` | 6 new E2E tests |
+| `src/WorkoutTracker.E2ETests/Infrastructure/WebAppFixture.cs` | Add mock `DELETE /api/sessions/{sessionId}` endpoint |

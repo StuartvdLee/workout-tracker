@@ -2,7 +2,7 @@
 
 **Feature Branch**: `026-delete-session`  
 **Created**: 2026-05-27  
-**Status**: Draft  
+**Status**: Delivered  
 **Input**: User description: "I want to be able to remove previous sessions. I want to be able to do so on the page of a previous session"
 
 ## User Scenarios & Testing *(mandatory)*

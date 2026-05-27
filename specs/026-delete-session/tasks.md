@@ -49,20 +49,23 @@ description: "Task list for 026-delete-session"
 ### Implementation for User Story 1
 
 - [x] T004 [P] [US1] Add BEM CSS styles to `src/WorkoutTracker.Web/wwwroot/css/styles.css`:
-  - `.session-detail__delete-section` — wrapper div, positioned after chart content
-  - `.session-detail__delete` — destructive-action button styling (follows existing delete/danger button convention)
+  - `.session-detail__delete-section` — wrapper div with no separator line (no border-top)
+  - `.session-detail__delete` — full-width solid red button (`background-color: var(--color-error); color: var(--color-white); border: none; width: 100%`); hover darkens to `#b91c1c`
   - `.history-page__banner` — success banner styling (subtle, distinct from error states)
 - [x] T005 [US1] Append delete section HTML and confirmation modal HTML to `#session-detail-content` after chart (or after overall-effort row for ad-hoc sessions) in `src/WorkoutTracker.Web/wwwroot/ts/pages/session-detail.ts`:
   - Delete section: `<div class="session-detail__delete-section">`, button `#session-detail-delete`, error div `#session-detail-delete-error` (`role="alert"` `aria-live="polite"`)
   - Modal: `.discard-modal-backdrop` `#session-delete-confirm-backdrop`, `.discard-modal` with `role="alertdialog"` `aria-modal="true"` `aria-labelledby="session-delete-confirm-title"` `aria-describedby="session-delete-confirm-desc"`, Delete button `#session-delete-confirm-ok` (`.discard-modal__discard`), Keep session button `#session-delete-confirm-cancel` (`.discard-modal__continue`)
 - [x] T006 [US1] Wire event handlers for the confirmation modal in `src/WorkoutTracker.Web/wwwroot/ts/pages/session-detail.ts`:
-  - `#session-detail-delete` click → show `#session-delete-confirm-backdrop`, focus `#session-delete-confirm-ok`
+  - Modal DOM appended to `document.body` once and reused across SPA navigations (guarded by `getElementById`)
+  - Handlers wired exactly once in `wireModalHandlers()` to prevent listener accumulation across navigations
+  - Module-level `pendingDeleteSessionId` set on each `#session-detail-delete` click to capture the current session
   - `#session-delete-confirm-cancel` click → hide backdrop, return focus to `#session-detail-delete`
   - Escape key on modal → same as cancel
-  - Tab key in modal → trap focus between `#session-delete-confirm-ok` and `#session-delete-confirm-cancel` (reuse `trapModalTabKey` from `prestart-modal.js` if available, else inline)
+  - Tab key in modal → trap focus between `#session-delete-confirm-ok` and `#session-delete-confirm-cancel`
 - [x] T007 [US1] Implement confirmed-delete logic in `src/WorkoutTracker.Web/wwwroot/ts/pages/session-detail.ts`:
   - `isDeleting` module-level boolean guard (prevents double-submit)
-  - `#session-delete-confirm-ok` click: set `isDeleting = true`, disable `#session-detail-delete`, hide modal, `DELETE /api/sessions/{sessionId}`
+  - `pendingDeleteSessionId` module-level variable captures the target session (avoids stale closure bugs with SPA reuse)
+  - `#session-delete-confirm-ok` click: set `isDeleting = true`, close modal, disable `#session-detail-delete`, `DELETE /api/sessions/{pendingDeleteSessionId}`
   - On 204 or 404 response: `navigate("/history?deleted=1")`
   - On other error or network failure: show message in `#session-detail-delete-error`, re-enable button, reset `isDeleting`
 - [x] T008 [P] [US1] Update `render()` in `src/WorkoutTracker.Web/wwwroot/ts/pages/history.ts`:
@@ -77,6 +80,8 @@ description: "Task list for 026-delete-session"
   5. `DeleteSession_ConfirmedSession_AbsentFromHistoryList` — after deletion, assert the deleted session's workout name no longer appears in `.history-session` list
 
 **Checkpoint**: User Story 1 is fully functional and independently testable. All 5 E2E tests and 4 integration tests pass.
+
+> **Implementation note**: The E2E test fixture (`WebAppFixture.cs`) required an additional `MapDelete("/api/sessions/{sessionId}", ...)` mock endpoint — matching the pattern of existing mock DELETE endpoints for muscles/exercises/workouts — to prevent the fallback `MapFallbackToFile` from returning 405 on DELETE requests.
 
 ---
 

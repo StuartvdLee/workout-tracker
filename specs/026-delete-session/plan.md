@@ -91,8 +91,10 @@ src/WorkoutTracker.UnitTests/
     └── SessionApiTests.cs                       MODIFIED: add DELETE endpoint tests (4 new tests)
 
 src/WorkoutTracker.E2ETests/
-└── E2E/
-    └── WorkoutHistoryTests.cs                   MODIFIED: add delete flow E2E tests (6 new tests)
+├── E2E/
+│   └── WorkoutHistoryTests.cs                   MODIFIED: add delete flow E2E tests (6 new tests)
+└── Infrastructure/
+    └── WebAppFixture.cs                         MODIFIED: add mock DELETE /api/sessions/{sessionId}
 ```
 
 **Structure Decision**: Web application pattern (ASP.NET Core + Aspire + vanilla TypeScript SPA). No new projects or files. All changes are surgical additions to existing files. No DB migration — cascade delete already configured.
@@ -180,10 +182,37 @@ Reuses `.discard-modal-backdrop` / `.discard-modal` CSS classes (no new CSS for 
 </div>
 ```
 
-### isDeleting guard (session-detail.ts)
+### Delete handler pattern (session-detail.ts)
+
+The modal DOM is appended to `document.body` once and reused across SPA navigations. To prevent listener accumulation (stale `sessionId` from a previous page load triggering on the next), the modal handlers are wired exactly once via `wireModalHandlers()`. The current session's ID is captured in a module-level variable when the delete button is clicked.
 
 ```typescript
 let isDeleting = false;
+let pendingDeleteSessionId: string | null = null;
+
+// Called once when the modal is first created
+function wireModalHandlers(): void {
+  const okBtn = document.getElementById("session-delete-confirm-ok");
+  const cancelBtn = document.getElementById("session-delete-confirm-cancel");
+  const backdrop = document.getElementById("session-delete-confirm-backdrop");
+  okBtn?.addEventListener("click", () => {
+    if (pendingDeleteSessionId) handleDeleteConfirmed(pendingDeleteSessionId);
+  });
+  cancelBtn?.addEventListener("click", closeDeleteModal);
+  backdrop?.addEventListener("keydown", (e) => {
+    if ((e as KeyboardEvent).key === "Escape") closeDeleteModal();
+  });
+}
+
+// Called on each session load — sets the target for this navigation
+function openDeleteModal(sessionId: string): void {
+  pendingDeleteSessionId = sessionId;
+  const backdrop = document.getElementById("session-delete-confirm-backdrop") as HTMLElement | null;
+  if (backdrop) {
+    backdrop.style.display = "";
+    document.getElementById("session-delete-confirm-ok")?.focus();
+  }
+}
 
 async function handleDeleteConfirmed(sessionId: string): Promise<void> {
   if (isDeleting) return;
@@ -191,12 +220,13 @@ async function handleDeleteConfirmed(sessionId: string): Promise<void> {
 
   const deleteBtn = document.getElementById("session-detail-delete") as HTMLButtonElement | null;
   const errorEl = document.getElementById("session-detail-delete-error") as HTMLElement | null;
+  if (errorEl) errorEl.style.display = "none";
   if (deleteBtn) deleteBtn.disabled = true;
+  closeDeleteModal();
 
   try {
     const response = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}`, { method: "DELETE" });
     if (response.ok || response.status === 404) {
-      // 404 means already gone — treat as success
       navigate("/history?deleted=1");
       return;
     }
