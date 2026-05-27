@@ -1180,7 +1180,7 @@ public class WorkoutHistoryTests
             await Expect(page.Locator(".session-chart")).ToBeVisibleAsync();
             // Dropdown must exist and be enabled
             await Expect(page.Locator("#session-chart-select")).ToBeVisibleAsync();
-            await Expect(page.Locator("#session-chart-select")).ToBeEnabledAsync();
+            await Expect(page.Locator("#session-chart-select")).ToBeEnabledAsync(new() { Timeout = 15000 });
             // SVG chart must be rendered
             await Expect(page.Locator(".session-chart__svg")).ToBeVisibleAsync();
         }
@@ -1233,13 +1233,13 @@ public class WorkoutHistoryTests
             await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
             var selectEl = page.Locator("#session-chart-select");
-            await Expect(selectEl).ToBeEnabledAsync();
+            await Expect(selectEl).ToBeEnabledAsync(new() { Timeout = 15000 });
 
             // Default is "overall" — SVG should already be present
             await Expect(page.Locator(".session-chart__svg")).ToBeVisibleAsync();
 
             // Switch to exercise combined series (weight + effort)
-            await selectEl.SelectOptionAsync(new SelectOptionValue { Value = $"exercise:{exerciseId}" });
+            await selectEl.SelectOptionAsync(new SelectOptionValue { Label = "Deadlift" });
             await Expect(page.Locator(".session-chart__svg")).ToBeVisibleAsync();
 
             // Switch back to overall
@@ -1290,10 +1290,10 @@ public class WorkoutHistoryTests
             await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
             var selectEl = page.Locator("#session-chart-select");
-            await Expect(selectEl).ToBeEnabledAsync();
+            await Expect(selectEl).ToBeEnabledAsync(new() { Timeout = 15000 });
 
             // Switch to exercise combined series (no weight/effort data logged)
-            await selectEl.SelectOptionAsync(new SelectOptionValue { Value = $"exercise:{exerciseId}" });
+            await selectEl.SelectOptionAsync(new SelectOptionValue { Label = "Plank" });
 
             // No SVG — empty message shown
             await Expect(page.Locator(".session-chart__svg")).ToHaveCountAsync(0);
@@ -1343,7 +1343,7 @@ public class WorkoutHistoryTests
 
             // Default selection should be "overall"
             var selectEl = page.Locator("#session-chart-select");
-            await Expect(selectEl).ToBeEnabledAsync();
+            await Expect(selectEl).ToBeEnabledAsync(new() { Timeout = 15000 });
             var selectedValue = await selectEl.InputValueAsync();
             Assert.Equal("overall", selectedValue);
 

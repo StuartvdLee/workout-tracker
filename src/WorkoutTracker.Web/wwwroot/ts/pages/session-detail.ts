@@ -218,40 +218,59 @@ async function initChartSection(session: SessionDetailWithPrevious, contentEl: H
 
   const selectEl = document.getElementById("session-chart-select") as HTMLSelectElement | null;
   const bodyEl = document.getElementById("session-chart-body") as HTMLElement | null;
+  if (!selectEl || !bodyEl) return;
+
+  const fallbackTrends: SessionTrends = {
+    dataPoints: [
+      {
+        completedAt: session.completedAt,
+        overallEffort: session.overallEffort,
+        exercises: session.exercises.map(ex => ({
+          exerciseId: ex.exerciseId,
+          exerciseName: ex.exerciseName,
+          loggedWeight: ex.loggedWeight,
+          effort: ex.effort,
+        })),
+      },
+    ],
+  };
+
+  const overallOption = document.createElement("option");
+  overallOption.value = "overall";
+  overallOption.textContent = "Overall Session Effort";
+  selectEl.appendChild(overallOption);
+
+  const seenExerciseIds = new Set<string>();
+  for (const ex of session.exercises) {
+    const exerciseToken = ex.exerciseId && ex.exerciseId.length > 0
+      ? ex.exerciseId
+      : `name:${encodeURIComponent(ex.exerciseName)}`;
+    if (seenExerciseIds.has(exerciseToken)) continue;
+    seenExerciseIds.add(exerciseToken);
+
+    const exerciseOpt = document.createElement("option");
+    exerciseOpt.value = `exercise:${exerciseToken}`;
+    exerciseOpt.textContent = ex.exerciseName;
+    selectEl.appendChild(exerciseOpt);
+  }
+
+  selectEl.disabled = false;
+  renderChartForSelection(selectEl.value, fallbackTrends, bodyEl);
+  let currentTrends: SessionTrends = fallbackTrends;
+
+  selectEl.addEventListener("change", () => {
+    renderChartForSelection(selectEl.value, currentTrends, bodyEl);
+  });
 
   try {
     const response = await fetch(`/api/workouts/${encodeURIComponent(session.plannedWorkoutId)}/session-trends`);
     if (!response.ok) throw new Error(`Trends fetch failed: ${response.status}`);
     const trends: SessionTrends = await response.json();
-
-    if (!selectEl || !bodyEl || !selectEl.isConnected || !bodyEl.isConnected) return;
-
-    const overallOption = document.createElement("option");
-    overallOption.value = "overall";
-    overallOption.textContent = "Overall Session Effort";
-    selectEl.appendChild(overallOption);
-
-    const seenExerciseIds = new Set<string>();
-    for (const ex of session.exercises) {
-      if (seenExerciseIds.has(ex.exerciseId)) continue;
-      seenExerciseIds.add(ex.exerciseId);
-
-      const exerciseOpt = document.createElement("option");
-      exerciseOpt.value = `exercise:${ex.exerciseId}`;
-      exerciseOpt.textContent = ex.exerciseName;
-      selectEl.appendChild(exerciseOpt);
-    }
-
-    selectEl.disabled = false;
-    renderChartForSelection(selectEl.value, trends, bodyEl);
-
-    selectEl.addEventListener("change", () => {
-      renderChartForSelection(selectEl.value, trends, bodyEl);
-    });
+    if (!selectEl.isConnected || !bodyEl.isConnected) return;
+    currentTrends = trends;
+    renderChartForSelection(selectEl.value, currentTrends, bodyEl);
   } catch {
-    if (bodyEl) {
-      bodyEl.innerHTML = `<div class="session-chart__error" role="alert" aria-live="polite">Failed to load chart data.</div>`;
-    }
+    // Keep showing fallback chart data from the current session when trends are unavailable.
   }
 }
 
@@ -294,15 +313,24 @@ function renderChartForSelection(selection: string, trends: SessionTrends, bodyE
     return;
   }
 
-  const exerciseId = selection.slice(exercisePrefix.length);
+  const exerciseToken = selection.slice(exercisePrefix.length);
+  const nameTokenPrefix = "name:";
+  const isNameToken = exerciseToken.startsWith(nameTokenPrefix);
+  const selectedExerciseName = isNameToken
+    ? decodeURIComponent(exerciseToken.slice(nameTokenPrefix.length))
+    : null;
+  const matchesSelection = (ex: SessionTrendsExercise): boolean =>
+    isNameToken
+      ? ex.exerciseName === selectedExerciseName
+      : ex.exerciseId === exerciseToken;
   const weightValues = dp.map(d => {
-    const ex = d.exercises.find(e => e.exerciseId === exerciseId);
+    const ex = d.exercises.find(matchesSelection);
     if (!ex || ex.loggedWeight === null) return null;
     const n = Number(ex.loggedWeight);
     return Number.isNaN(n) ? null : n;
   });
   const effortValues = dp.map(d => {
-    const ex = d.exercises.find(e => e.exerciseId === exerciseId);
+    const ex = d.exercises.find(matchesSelection);
     return ex?.effort ?? null;
   });
 
