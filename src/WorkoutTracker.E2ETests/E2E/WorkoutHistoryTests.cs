@@ -1355,4 +1355,172 @@ public class WorkoutHistoryTests
             await page.CloseAsync();
         }
     }
+
+    // ──────────────────────────────────────────
+    // Delete Session (feature 026)
+    // ──────────────────────────────────────────
+
+    [Fact]
+    public async Task DeleteSession_DeleteButton_VisibleOnSessionDetailPage()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await CreateWorkoutAndSessionViaApiAsync(page);
+            await NavigateToHistoryAsync(page);
+
+            await page.Locator(".history-session__header").First.ClickAsync();
+            await page.WaitForSelectorAsync("#session-detail-content");
+
+            await Expect(page.Locator("#session-detail-delete")).ToBeVisibleAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task DeleteSession_ClickDelete_ShowsConfirmationModal()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await CreateWorkoutAndSessionViaApiAsync(page);
+            await NavigateToHistoryAsync(page);
+
+            await page.Locator(".history-session__header").First.ClickAsync();
+            await page.WaitForSelectorAsync("#session-detail-delete");
+            await page.ClickAsync("#session-detail-delete");
+
+            await Expect(page.Locator("#session-delete-confirm-backdrop")).ToBeVisibleAsync();
+            await Expect(page.Locator("#session-delete-confirm-ok")).ToBeVisibleAsync();
+            await Expect(page.Locator("#session-delete-confirm-cancel")).ToBeVisibleAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task DeleteSession_CancelModal_KeepsSessionAndStaysOnPage()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await CreateWorkoutAndSessionViaApiAsync(page);
+            await NavigateToHistoryAsync(page);
+
+            await page.Locator(".history-session__header").First.ClickAsync();
+            await page.WaitForSelectorAsync("#session-detail-delete");
+            await page.ClickAsync("#session-detail-delete");
+            await Expect(page.Locator("#session-delete-confirm-backdrop")).ToBeVisibleAsync();
+
+            await page.ClickAsync("#session-delete-confirm-cancel");
+
+            await Expect(page.Locator("#session-delete-confirm-backdrop")).ToBeHiddenAsync();
+            await Expect(page.Locator("#session-detail-content")).ToBeVisibleAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task DeleteSession_ConfirmDelete_RedirectsToHistoryWithBanner()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await CreateWorkoutAndSessionViaApiAsync(page);
+            await NavigateToHistoryAsync(page);
+
+            await page.Locator(".history-session__header").First.ClickAsync();
+            await page.WaitForSelectorAsync("#session-detail-delete");
+            await page.ClickAsync("#session-detail-delete");
+            await Expect(page.Locator("#session-delete-confirm-ok")).ToBeVisibleAsync();
+
+            await page.ClickAsync("#session-delete-confirm-ok");
+
+            await Expect(page).ToHaveURLAsync(new Regex(".*/history$"));
+            await Expect(page.Locator(".history-page__banner")).ToBeVisibleAsync();
+            await Expect(page.Locator(".history-page__banner")).ToContainTextAsync("Session deleted.");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task DeleteSession_ConfirmedSession_AbsentFromHistoryList()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await CreateWorkoutAndSessionViaApiAsync(page, workoutName: "Push Day Deletion Test");
+            await NavigateToHistoryAsync(page);
+
+            await page.Locator(".history-session__header").First.ClickAsync();
+            await page.WaitForSelectorAsync("#session-detail-delete");
+            await page.ClickAsync("#session-detail-delete");
+            await Expect(page.Locator("#session-delete-confirm-ok")).ToBeVisibleAsync();
+            await page.ClickAsync("#session-delete-confirm-ok");
+
+            await Expect(page).ToHaveURLAsync(new Regex(".*/history$"));
+            await page.WaitForSelectorAsync(".history-page");
+
+            await Expect(page.Locator(".history-session__workout-name").Filter(new() { HasText = "Push Day Deletion Test" }))
+                .ToHaveCountAsync(0);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task DeleteSession_StaleUrl_ShowsSessionNotFound()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await SeedExerciseAsync(page, "Stale Session Exercise");
+            var exercisesResponse = await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/exercises");
+            var exercisesJson = await exercisesResponse.JsonAsync();
+            var exerciseId = exercisesJson?.EnumerateArray()
+                .First(e => e.GetProperty("name").GetString() == "Stale Session Exercise")
+                .GetProperty("exerciseId").GetString()!;
+
+            var createResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts", new()
+            {
+                DataObject = new { name = "Stale URL Workout", exercises = new[] { new { exerciseId } } },
+            });
+            var workoutData = await createResponse.JsonAsync();
+            var workoutId = workoutData?.GetProperty("plannedWorkoutId").GetString()!;
+
+            var sessionResp = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new { loggedExercises = new[] { new { exerciseId } } },
+            });
+            var sessionData = await sessionResp.JsonAsync();
+            var sessionId = sessionData?.GetProperty("workoutSessionId").GetString()!;
+
+            // Delete the session directly via API (simulating a stale URL)
+            await page.APIRequest.DeleteAsync($"{_webApp.BaseUrl}/api/sessions/{sessionId}");
+
+            // Navigate directly to the now-deleted session URL
+            await page.GotoAsync($"{_webApp.BaseUrl}/history/session?id={sessionId}");
+            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+            await Expect(page.Locator("#session-detail-error")).ToBeVisibleAsync();
+            await Expect(page.Locator("#session-detail-error")).ToContainTextAsync("Session not found.");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
 }

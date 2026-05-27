@@ -1163,6 +1163,70 @@ public class SessionApiTests : IAsyncLifetime
         }
     }
 
+    // --- DELETE /api/sessions/{sessionId} ---
+
+    [Fact]
+    public async Task DeleteSession_Returns204_AndSessionNoLongerRetrievable()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Delete Test Workout", "Delete Test Exercise");
+        var session = await CreateSessionAsync(workoutId, exerciseId);
+
+        var deleteResponse = await _client.DeleteAsync($"/api/sessions/{session.WorkoutSessionId}");
+        Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
+
+        var getResponse = await _client.GetAsync($"/api/sessions/{session.WorkoutSessionId}");
+        Assert.Equal(HttpStatusCode.NotFound, getResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteSession_Returns204_AndSessionAbsentFromList()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Delete List Test", "Delete List Exercise");
+        var session = await CreateSessionAsync(workoutId, exerciseId);
+
+        var deleteResponse = await _client.DeleteAsync($"/api/sessions/{session.WorkoutSessionId}");
+        Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
+
+        var listResponse = await _client.GetAsync("/api/sessions");
+        Assert.Equal(HttpStatusCode.OK, listResponse.StatusCode);
+        var sessions = await listResponse.Content.ReadFromJsonAsync<List<SessionDto>>();
+        Assert.NotNull(sessions);
+        Assert.DoesNotContain(sessions, s => s.WorkoutSessionId == session.WorkoutSessionId);
+    }
+
+    [Fact]
+    public async Task DeleteSession_Returns204_AndCascadesLoggedExercises()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Cascade Test Workout", "Cascade Test Exercise");
+        var session = await CreateSessionAsync(workoutId, exerciseId, "100", 8);
+
+        var deleteResponse = await _client.DeleteAsync($"/api/sessions/{session.WorkoutSessionId}");
+        Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
+
+        // Session is gone
+        var getResponse = await _client.GetAsync($"/api/sessions/{session.WorkoutSessionId}");
+        Assert.Equal(HttpStatusCode.NotFound, getResponse.StatusCode);
+
+        // Session list is empty
+        var listResponse = await _client.GetAsync("/api/sessions");
+        var sessions = await listResponse.Content.ReadFromJsonAsync<List<SessionDto>>();
+        Assert.NotNull(sessions);
+        Assert.DoesNotContain(sessions, s => s.WorkoutSessionId == session.WorkoutSessionId);
+    }
+
+    [Fact]
+    public async Task DeleteSession_Returns404_WhenSessionDoesNotExist()
+    {
+        var nonExistentId = Guid.NewGuid();
+
+        var response = await _client.DeleteAsync($"/api/sessions/{nonExistentId}");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+        var error = await response.Content.ReadFromJsonAsync<ErrorDto>();
+        Assert.NotNull(error);
+        Assert.Equal("Session not found.", error.Error);
+    }
+
     // --- Helpers ---
 
     private async Task<(Guid WorkoutId, Guid ExerciseId)> CreateWorkoutWithExerciseAsync(

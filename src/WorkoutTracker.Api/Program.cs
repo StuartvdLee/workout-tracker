@@ -887,6 +887,22 @@ app.MapGet("/api/sessions/{sessionId:guid}", async (Guid sessionId, WorkoutTrack
     });
 });
 
+app.MapDelete("/api/sessions/{sessionId:guid}", async (Guid sessionId, WorkoutTrackerDbContext db) =>
+{
+    var session = await db.WorkoutSessions
+        .FirstOrDefaultAsync(ws => ws.WorkoutSessionId == sessionId);
+
+    if (session is null)
+    {
+        return Results.Json(new { error = "Session not found." }, statusCode: 404);
+    }
+
+    db.WorkoutSessions.Remove(session);
+    await db.SaveChangesAsync();
+
+    return Results.NoContent();
+});
+
 app.Run();
 
 // Expose Program class for WebApplicationFactory in tests

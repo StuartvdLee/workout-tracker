@@ -348,6 +348,26 @@ app.MapGet("/api/sessions/{sessionId:guid}", async (Guid sessionId, ILogger<Prog
     }
 });
 
+app.MapDelete("/api/sessions/{sessionId:guid}", async (Guid sessionId, ILogger<Program> logger, IHttpClientFactory httpClientFactory) =>
+{
+    try
+    {
+        var client = httpClientFactory.CreateClient("api");
+        var response = await client.DeleteAsync($"/api/sessions/{sessionId}");
+        if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+        {
+            return Results.NoContent();
+        }
+        var responseContent = await response.Content.ReadAsStringAsync();
+        return Results.Content(responseContent, "application/json", statusCode: (int)response.StatusCode);
+    }
+    catch (Exception ex)
+    {
+        WebProxyLog.ProxyError(logger, $"DELETE /api/sessions/{sessionId}", ex);
+        return Results.Json(new { error = "API unavailable." }, statusCode: 502);
+    }
+});
+
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
