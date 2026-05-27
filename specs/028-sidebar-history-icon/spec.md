@@ -2,7 +2,7 @@
 
 **Feature Branch**: `028-sidebar-history-icon`  
 **Created**: 2026-05-27  
-**Status**: Draft  
+**Status**: Complete  
 **Input**: User description: "I want to change the icon in the sidebar for History"
 
 ## User Scenarios & Testing *(mandatory)*

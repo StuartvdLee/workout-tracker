@@ -31,4 +31,9 @@
 
 ## Notes
 
-- All items pass. Spec is ready for `/speckit.plan` or `/speckit.implement`.
+- All items pass. Implementation complete as of 2026-05-27.
+  - ✅ SVG icon replaced in `src/WorkoutTracker.Web/wwwroot/index.html`
+  - ✅ All attributes preserved (class, width, height, viewBox, fill, stroke, stroke-width, stroke-linecap, stroke-linejoin, aria-hidden)
+  - ✅ Other sidebar icons unchanged
+  - ✅ All tests pass: TypeScript build (0 errors), Vitest (92 tests), E2E (248 tests)
+  - ✅ PR #105 created and ready for review
