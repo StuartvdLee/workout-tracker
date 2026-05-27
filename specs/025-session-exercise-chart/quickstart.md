@@ -5,7 +5,7 @@
 
 ## What This Feature Adds
 
-A historical line chart on the session detail page. When viewing a completed workout session linked to a planned workout, a chart section appears below the overall effort row. A dropdown selects what to plot: overall session effort, or an individual exercise's weight or effort over time.
+A historical line chart on the session detail page. When viewing a completed workout session linked to a planned workout, a chart section appears below the overall effort row. The dropdown selects either overall session effort or an exercise. Exercise mode renders both weight (blue) and effort (red) together in one chart.
 
 ## Where to Start
 
@@ -47,7 +47,21 @@ app.MapGet("/api/workouts/{workoutId:guid}/session-trends", async (Guid workoutI
     // Reverse to chronological order for left-to-right chart rendering
     sessions.Reverse();
 
-    return Results.Ok(sessions);
+    return Results.Ok(new
+    {
+        dataPoints = sessions.Select(s => new
+        {
+            completedAt = s.CompletedAt,
+            overallEffort = s.OverallEffort,
+            exercises = s.Exercises.Select(e => new
+            {
+                exerciseId = e.ExerciseId,
+                exerciseName = e.ExerciseName,
+                loggedWeight = e.LoggedWeight,
+                effort = e.Effort
+            })
+        })
+    });
 });
 ```
 
@@ -58,8 +72,13 @@ app.MapGet("/api/workouts/{workoutId:guid}/session-trends", async (Guid workoutI
 Add to `src/WorkoutTracker.Web/Program.cs` (alongside other `/api/workouts/*` proxy routes):
 
 ```csharp
-app.MapGet("/api/workouts/{workoutId}/session-trends", async (string workoutId, HttpClient http) =>
-    await http.GetAsync($"/api/workouts/{workoutId}/session-trends"));
+app.MapGet("/api/workouts/{workoutId:guid}/session-trends", async (Guid workoutId, ILogger<Program> logger, IHttpClientFactory httpClientFactory) =>
+{
+    var client = httpClientFactory.CreateClient("api");
+    var response = await client.GetAsync($"/api/workouts/{workoutId}/session-trends");
+    var content = await response.Content.ReadAsStringAsync();
+    return Results.Content(content, "application/json", statusCode: (int)response.StatusCode);
+});
 ```
 
 ### 3. Frontend — New TypeScript Interfaces
@@ -67,18 +86,21 @@ app.MapGet("/api/workouts/{workoutId}/session-trends", async (string workoutId, 
 Add to `session-detail.ts`:
 
 ```typescript
-interface SessionTrendExercise {
+interface SessionTrendsExercise {
   readonly exerciseId: string;
   readonly exerciseName: string;
   readonly loggedWeight: string | null;
   readonly effort: number | null;
 }
 
-interface SessionTrendItem {
-  readonly workoutSessionId: string;
+interface SessionTrendsDataPoint {
   readonly completedAt: string;
   readonly overallEffort: number | null;
-  readonly exercises: SessionTrendExercise[];
+  readonly exercises: SessionTrendsExercise[];
+}
+
+interface SessionTrends {
+  readonly dataPoints: SessionTrendsDataPoint[];
 }
 ```
 
@@ -146,8 +168,8 @@ dotnet test src/WorkoutTracker.E2ETests/WorkoutTracker.E2ETests.csproj
 | `src/WorkoutTracker.Api/Program.cs` | ADD `GET /api/workouts/{workoutId}/session-trends` |
 | `src/WorkoutTracker.Web/Program.cs` | ADD proxy for session-trends |
 | `src/WorkoutTracker.Web/wwwroot/ts/utils.ts` | ADD `normaliseValue`, `buildYTicks`, `buildXLabels` |
-| `src/WorkoutTracker.Web/wwwroot/ts/pages/session-detail.ts` | ADD chart section, dropdown, SVG renderer |
+| `src/WorkoutTracker.Web/wwwroot/ts/pages/session-detail.ts` | ADD chart section, dropdown, SVG renderer (overall mode + combined exercise mode) |
 | `src/WorkoutTracker.Web/wwwroot/css/styles.css` | ADD `.session-chart__*` BEM block |
-| `src/WorkoutTracker.UnitTests/Api/SessionApiTests.cs` | ADD 6 session-trends tests |
-| `src/WorkoutTracker.Web/__tests__/utils.test.ts` | ADD chart math unit tests |
+| `src/WorkoutTracker.UnitTests/Api/SessionApiTests.cs` | ADD session-trends tests |
+| `src/WorkoutTracker.Web/wwwroot/ts/__tests__/utils.test.ts` | ADD chart math unit tests |
 | `src/WorkoutTracker.E2ETests/E2E/WorkoutHistoryTests.cs` | ADD 4 chart E2E tests |

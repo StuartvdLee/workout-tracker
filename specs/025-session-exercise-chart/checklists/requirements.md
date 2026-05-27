@@ -31,6 +31,6 @@
 
 ## Notes
 
-- FR-004 offers the implementation team a choice between two dropdown UX patterns (exercise+metric combined vs separate selectors); this is intentional and noted in assumptions.
-- The "weight aggregation per session" decision (average vs max) is deferred to implementation with a note in Assumptions.
-- All checklist items pass. Spec is ready for `/speckit.plan`.
+- Delivered implementation uses one exercise option per dropdown entry; selecting it renders both weight and effort lines together.
+- `loggedWeight` is treated as a single numeric string (or null), consistent with active-session numeric input.
+- All checklist items pass. Feature is implemented.

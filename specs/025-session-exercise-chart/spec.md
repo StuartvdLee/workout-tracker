@@ -2,7 +2,7 @@
 
 **Feature Branch**: `025-session-exercise-chart`  
 **Created**: 2026-05-26  
-**Status**: Draft  
+**Status**: Implemented  
 **Input**: User description: "I want to display a chart on a previous session's page. The chart should display info about weight and effort of previous individual exercises as well as previous overall session efforts. Not everything should be displayed at once, that would be messy. I want a dropdown for the chart to indicate what data I want to display. I want the graph to display a line chart"
 
 ## User Scenarios & Testing *(mandatory)*
@@ -13,11 +13,11 @@ As a user reviewing a completed workout session, I want to see how the weight li
 
 **Why this priority**: Weight progression is the most fundamental metric for strength training. Seeing trends over time is the primary reason a user visits a past session page.
 
-**Independent Test**: Can be fully tested by selecting an exercise from the dropdown on the session detail page, choosing "Weight" as the data type, and verifying a line chart appears with data points from historical sessions.
+**Independent Test**: Can be fully tested by selecting an exercise from the dropdown on the session detail page and verifying a line chart appears with both weight (blue) and effort (red) lines across historical sessions.
 
 **Acceptance Scenarios**:
 
-1. **Given** I am on a past session's detail page, **When** I open the chart dropdown and select an exercise with "Weight" data, **Then** a line chart appears showing weight values across previous sessions in chronological order.
+1. **Given** I am on a past session's detail page, **When** I open the chart dropdown and select an exercise, **Then** a line chart appears showing weight values across previous sessions in chronological order.
 2. **Given** I have selected an exercise, **When** the chart renders, **Then** each data point corresponds to a session where that exercise was performed, with the date on the x-axis and weight on the y-axis.
 3. **Given** I have selected an exercise, **When** there is only one historical data point, **Then** the chart still renders that single point without errors.
 
@@ -29,12 +29,12 @@ As a user reviewing a completed workout session, I want to see how my effort for
 
 **Why this priority**: Effort is a subjective but important metric that complements objective weight data; it helps users understand if effort and weight are correlated.
 
-**Independent Test**: Can be fully tested by selecting an exercise and choosing "Effort" as the data type, verifying a line chart shows effort scores over time.
+**Independent Test**: Can be fully tested by selecting an exercise and verifying the effort line (red) is shown for that exercise over time.
 
 **Acceptance Scenarios**:
 
-1. **Given** I am on a past session's detail page, **When** I select an exercise and choose "Effort" from the chart dropdown, **Then** a line chart appears showing effort values for that exercise across historical sessions.
-2. **Given** I have selected "Effort" for an exercise, **When** the chart renders, **Then** effort values are plotted on the y-axis with dates on the x-axis.
+1. **Given** I am on a past session's detail page, **When** I select an exercise from the chart dropdown, **Then** the chart includes an effort line (red) for that exercise across historical sessions.
+2. **Given** I have selected an exercise, **When** the chart renders, **Then** effort values are plotted on the right y-axis (0–10) with dates on the x-axis.
 
 ---
 
@@ -64,15 +64,15 @@ As a user, I want to switch what data is displayed in the chart using the dropdo
 **Acceptance Scenarios**:
 
 1. **Given** a chart is displaying data for one exercise/metric, **When** I select a different option from the dropdown, **Then** the chart updates to show the newly selected data without a full page reload.
-2. **Given** the dropdown is open, **When** I view the options, **Then** I can see all exercises from the current session listed individually plus the "Overall Session Effort" option.
+2. **Given** the dropdown is open, **When** I view the options, **Then** I can see all exercises from the current session listed once each, plus the "Overall Session Effort" option.
 
 ---
 
 ### Edge Cases
 
-- What happens when an exercise has never been performed in a previous session? → The chart shows an empty/no-data state with a friendly message.
+- What happens when an exercise has no historical weight and no historical effort? → The chart shows an empty/no-data state with a friendly message.
 - What happens when only the current session exists (no history)? → The chart indicates there is no historical data to display.
-- What happens if weight data is missing for some sessions but present for others? → Only sessions with recorded data are plotted; gaps are shown on the chart.
+- What happens if weight or effort data is missing for some sessions but present for others? → Only sessions with recorded data are plotted; gaps are shown on the chart.
 - How does the chart behave on a slow network or delayed data load? → A loading indicator is shown while data is being fetched; the chart renders once data is available.
 - What happens on a narrow/mobile viewport? → The chart is responsive and remains legible on smaller screens.
 
@@ -81,14 +81,15 @@ As a user, I want to switch what data is displayed in the chart using the dropdo
 ### Functional Requirements
 
 - **FR-001**: The session detail page MUST include a line chart component for displaying historical workout data.
-- **FR-002**: The chart MUST include a dropdown selector that lists all exercises performed in the current session plus an "Overall Session Effort" option.
-- **FR-003**: Only one dataset MUST be displayed on the chart at a time (no multi-series by default).
-- **FR-004**: When an exercise is selected, the chart MUST allow the user to choose between "Weight" and "Effort" as the data dimension, OR the dropdown MUST list each exercise-metric combination as a distinct selectable option (e.g., "Bench Press – Weight", "Bench Press – Effort").
+- **FR-002**: The chart MUST include a dropdown selector that lists all exercises performed in the current session (one option per exercise) plus an "Overall Session Effort" option.
+- **FR-003**: The chart MUST display one selection mode at a time: either (a) overall effort only, or (b) a selected exercise with both weight and effort lines.
+- **FR-004**: When an exercise is selected, the chart MUST render both weight and effort for that exercise together in the same chart (weight in blue, effort in red).
 - **FR-005**: The chart MUST render as a line chart with date/session on the x-axis and the selected metric on the y-axis.
 - **FR-006**: The chart MUST source data from all recorded sessions of the same workout, not only the current session.
-- **FR-007**: When no historical data is available for the selected metric, the chart MUST display an empty state message.
+- **FR-007**: When no historical data is available for the selected series/selection, the chart MUST display an empty state message.
 - **FR-008**: The chart MUST update dynamically when the user changes the dropdown selection without requiring a page reload.
 - **FR-009**: Data points MUST be ordered chronologically on the x-axis.
+- **FR-010**: If trends data cannot be loaded, the chart MUST fall back to rendering from current session data so the dropdown remains enabled and interactive.
 
 ### Security & Privacy Requirements
 
@@ -119,7 +120,7 @@ As a user, I want to switch what data is displayed in the chart using the dropdo
 
 - **SC-001**: Users can switch between chart data options in under 2 seconds without a page reload. The initial chart render (default "Overall Session Effort" series) MUST also complete within 2 seconds of the session detail page loading.
 - **SC-001a**: The chart section is measurably validated against the 2-second budget during implementation (see T020).
-- **SC-002**: The chart correctly displays all historical data points for the selected metric with no missing or duplicated entries.
+- **SC-002**: The chart correctly displays historical data points for the selected option with no missing or duplicated entries.
 - **SC-003**: 100% of chart interactions (dropdown change, page load) handle loading, empty, and error states without unhandled errors.
 - **SC-004**: The chart is fully usable on viewport widths from 320px and above.
 - **SC-005**: No data from other users is ever returned or displayed in the chart.

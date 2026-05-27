@@ -8,7 +8,7 @@
 
 **Decision**: Inline SVG, drawn programmatically in TypeScript — no external library.
 
-**Rationale**: The project has zero external JS runtime dependencies (vanilla TypeScript, no npm runtime packages). Introducing a charting library (Chart.js, etc.) would add bundle weight, a build step change, and a dependency maintenance burden inconsistent with the project's philosophy. SVG is natively supported in all modern browsers, integrates cleanly with the existing CSS token system, is accessible (text labels in DOM), and is fully responsive via `viewBox` + `preserveAspectRatio`. The line chart requirements (single series, line + dots, two axes, date labels) are straightforward enough that hand-authored SVG is proportionate.
+**Rationale**: The project has zero external JS runtime dependencies (vanilla TypeScript, no npm runtime packages). Introducing a charting library (Chart.js, etc.) would add bundle weight, a build step change, and a dependency maintenance burden inconsistent with the project's philosophy. SVG is natively supported in all modern browsers, integrates cleanly with the existing CSS token system, is accessible (text labels in DOM), and is fully responsive via `viewBox` + `preserveAspectRatio`. The chart requirements (overall single-series mode plus exercise combined dual-series mode, with line + dots and date labels) are straightforward enough that hand-authored SVG is proportionate.
 
 **Alternatives considered**:
 - **Chart.js via CDN**: rejected — introduces CDN dependency, versioning risk, inconsistent with project's no-CDN pattern.
@@ -23,18 +23,21 @@
 
 **Rationale**: The session detail page already holds `plannedWorkoutId` from the existing `GET /api/sessions/{sessionId}` response. A dedicated trends endpoint scoped to the planned workout keeps the query bounded, returns exactly what the chart needs, and follows the existing endpoint-per-concern pattern (cf. `GET /api/workouts/{workoutId}/previous-performance`). Reusing `GET /api/sessions` (which returns all sessions) would require client-side filtering and return unnecessary data.
 
-**Response shape** (per item in array):
+**Response shape**:
 ```json
 {
-  "workoutSessionId": "guid",
-  "completedAt": "2026-05-01T10:00:00Z",
-  "overallEffort": 7,
-  "exercises": [
+  "dataPoints": [
     {
-      "exerciseId": "guid",
-      "exerciseName": "Bench Press",
-      "loggedWeight": "80",
-      "effort": 6
+      "completedAt": "2026-05-01T10:00:00Z",
+      "overallEffort": 7,
+      "exercises": [
+        {
+          "exerciseId": "guid",
+          "exerciseName": "Bench Press",
+          "loggedWeight": "80",
+          "effort": 6
+        }
+      ]
     }
   ]
 }
@@ -58,7 +61,7 @@
 
 **Decision**: Populate dropdown from the *current session's exercises* (already loaded with `GET /api/sessions/{sessionId}`).
 
-**Rationale**: The current session is the user's anchor — they are reviewing *this* session and want to understand how each exercise in *this* session has trended. Using the union of all historical exercises would include exercises removed from the workout long ago, producing confusing sparse series. The frontend already has the current session's exercise list; no additional fetch is needed for dropdown population. Sessions in the trends data that lack a given exercise are simply skipped when building that series (producing data gaps, which are acceptable).
+**Rationale**: The current session is the user's anchor — they are reviewing *this* session and want to understand how each exercise in *this* session has trended. Using the union of all historical exercises would include exercises removed from the workout long ago, producing confusing sparse series. The frontend already has the current session's exercise list; no additional fetch is needed for dropdown population. Each exercise appears once in the dropdown; selecting it renders both weight and effort lines together.
 
 ---
 

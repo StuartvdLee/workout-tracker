@@ -40,13 +40,18 @@
 
 ## New API Response Shape
 
-No new database entities. The new endpoint projects existing data into a new read-only DTO shape:
+No new database entities. The endpoint projects existing data into:
 
-### SessionTrendItem (response array element)
+### SessionTrendsResponse
+
+| Field | Type | Notes |
+|---|---|---|
+| dataPoints | SessionTrendItem[] | Chronological trend points |
+
+### SessionTrendItem (nested in `dataPoints`)
 
 | Field              | Type                   | Notes                                   |
 |--------------------|------------------------|-----------------------------------------|
-| workoutSessionId   | string (GUID)          | Session identifier                      |
 | completedAt        | string (ISO 8601)      | Session completion timestamp            |
 | overallEffort      | number \| null         | Overall session effort (1–10)           |
 | exercises          | SessionTrendExercise[] | Exercises logged in this session        |
@@ -63,28 +68,31 @@ No new database entities. The new endpoint projects existing data into a new rea
 ## Frontend Type Interfaces
 
 ```typescript
-interface SessionTrendExercise {
+interface SessionTrendsExercise {
   readonly exerciseId: string;
   readonly exerciseName: string;
   readonly loggedWeight: string | null;
   readonly effort: number | null;
 }
 
-interface SessionTrendItem {
-  readonly workoutSessionId: string;
+interface SessionTrendsDataPoint {
   readonly completedAt: string;
   readonly overallEffort: number | null;
-  readonly exercises: SessionTrendExercise[];
+  readonly exercises: SessionTrendsExercise[];
+}
+
+interface SessionTrends {
+  readonly dataPoints: SessionTrendsDataPoint[];
 }
 ```
 
 ## Chart Data Transformation
 
-The frontend transforms `SessionTrendItem[]` into chart series on demand (when dropdown selection changes):
+The frontend transforms `SessionTrends.dataPoints` into chart series on demand (when dropdown selection changes):
 
 ```
 ChartSeries = {
-  label: string,           // e.g., "Bench Press – Weight"
+  label: string,           // e.g., "Bench Press" or "Overall Session Effort"
   points: ChartPoint[]     // ordered chronologically
 }
 
@@ -94,9 +102,10 @@ ChartPoint = {
 }
 ```
 
+**Exercise mode**: weight and effort are rendered together.  
 **Weight series**: `y = Number(exercise.loggedWeight)` — sessions where result is `NaN` or the exercise is absent are excluded.  
 **Effort series**: `y = exercise.effort` (only sessions where value is non-null).  
-**Overall effort series**: `y = session.overallEffort` (only sessions where value is non-null).
+**Overall mode**: `y = session.overallEffort` (only sessions where value is non-null).
 
 ## Validation Rules (unchanged from existing feature)
 

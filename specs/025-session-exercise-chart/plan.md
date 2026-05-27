@@ -5,7 +5,7 @@
 
 ## Summary
 
-Add a line chart to the session detail page that plots historical workout data for the same planned workout. A dropdown lets the user select one data series at a time: "Overall Session Effort", or per-exercise "ExerciseName – Weight" or "ExerciseName – Effort". The chart renders as an inline SVG (no external library), using data from a new `GET /api/workouts/{workoutId}/session-trends` endpoint that returns up to 50 most-recent sessions. Chart math helpers (coordinate normalisation, tick generation, degenerate-range handling) are extracted into `utils.ts` and unit-tested. The trends fetch starts eagerly as soon as `plannedWorkoutId` is known from the session detail response.
+Add a line chart to the session detail page that plots historical workout data for the same planned workout. A dropdown lets the user select either "Overall Session Effort" or an exercise name. When an exercise is selected, the chart overlays two lines in one chart: weight (blue, left y-axis) and effort (red, right y-axis). The chart renders as inline SVG (no external library), using data from `GET /api/workouts/{workoutId}/session-trends` (up to 50 most-recent sessions). Chart math helpers (coordinate normalisation, tick generation, degenerate-range handling) are extracted into `utils.ts` and unit-tested. Trends are fetched eagerly once `plannedWorkoutId` is known, with current-session fallback data rendered immediately so the dropdown stays enabled if trends loading fails.
 
 ## Technical Context
 
@@ -26,9 +26,9 @@ Add a line chart to the session detail page that plots historical workout data f
 - **Code Quality**: TypeScript strict mode enforced — no `any`, all interfaces explicitly typed. Chart math helpers extracted into `utils.ts` as pure functions (no side-effects, no DOM access). `Number()` used (not `parseFloat`) for weight parsing to catch partial-parse silently wrong inputs. CSS follows BEM: new block is `.session-chart__*`. C# follows existing inline anonymous-type projection pattern. No speculative abstractions or dead code. ✅
 
 - **Testing**:
-  - **Backend integration tests** (`SessionApiTests.cs`): New tests for `GET /api/workouts/{workoutId}/session-trends`: (a) returns 404 when workoutId does not exist; (b) returns empty array when no sessions recorded; (c) returns sessions ordered chronologically (oldest first); (d) returns at most 50 sessions for a workout with many sessions; (e) returns correct overallEffort, loggedWeight, and effort per exercise; (f) returns null for fields that were not recorded.
+  - **Backend integration tests** (`SessionApiTests.cs`): New tests for `GET /api/workouts/{workoutId}/session-trends`: (a) returns 404 when workoutId does not exist; (b) returns empty data points when no sessions recorded; (c) returns sessions ordered chronologically (oldest first); (d) returns at most 50 sessions for a workout with many sessions; (e) returns correct overallEffort, loggedWeight, and effort per exercise; (f) returns null for fields that were not recorded; (g) asserts loggedWeight invariant (single numeric string or null).
   - **Frontend Vitest** (`utils.test.ts`): New unit tests for the extracted chart math functions: `normaliseValue`, `buildYTicks`, `buildXLabels` — covering degenerate range (min === max, all-zero, single point), negative min, and standard multi-point cases.
-  - **E2E (Playwright / `WorkoutHistoryTests.cs`)**: New tests — `SessionDetailPage_ShowsChartSection_WhenWorkoutHasPreviousSession`, `SessionDetailPage_ChartDropdown_SwitchesSeries`, `SessionDetailPage_Chart_ShowsEmptyState_WhenNoHistoricalData`, `SessionDetailPage_NoChartSection_WhenSessionHasNoPlannedWorkout`.
+  - **E2E (Playwright / `WorkoutHistoryTests.cs`)**: New tests — chart section visibility, dropdown switching, empty-state behavior, and overall-effort default rendering.
   - Tests treated as mandatory. ✅
 
 - **Security**: New `GET /api/workouts/{workoutId}/session-trends` uses a GUID workoutId — EF Core parameterises it, preventing SQL injection. Response data originates from DB (previously validated on write). Single-user app; cross-user leakage structurally impossible consistent with features 008, 013, 014, 016 (SR-002 exception documented). No new secrets, integrations, or trust boundaries. All exercise names rendered into the SVG via `escapeHtml()` / `textContent` assignment — no innerHTML for user-supplied strings. ✅
@@ -50,7 +50,7 @@ specs/025-session-exercise-chart/
 ├── contracts/
 │   ├── api-contract.md  # New GET /api/workouts/{workoutId}/session-trends endpoint
 │   └── ui-contract.md   # Chart section HTML/CSS/ARIA contract
-└── tasks.md             # Phase 2 output (/speckit.tasks — NOT created by /speckit.plan)
+└── tasks.md             # Delivered task status
 ```
 
 ### Source Code (repository root)
@@ -72,7 +72,7 @@ src/WorkoutTracker.Web/
 
 src/WorkoutTracker.UnitTests/
 └── Api/
-    └── SessionApiTests.cs                  # MODIFIED: add session-trends endpoint tests (6 new tests)
+    └── SessionApiTests.cs                  # MODIFIED: add session-trends endpoint tests
 
 src/WorkoutTracker.Web/
 └── __tests__/
@@ -80,7 +80,7 @@ src/WorkoutTracker.Web/
 
 src/WorkoutTracker.E2ETests/
 └── E2E/
-    └── WorkoutHistoryTests.cs              # MODIFIED: add chart section E2E tests (4 new tests)
+    └── WorkoutHistoryTests.cs              # MODIFIED: add chart section E2E tests
 ```
 
 **Structure Decision**: Existing .NET Aspire solution structure preserved. No new projects. The chart is rendered inline in `session-detail.ts` using SVG — no new page module needed. Chart math helpers are pure functions extracted into the existing `utils.ts`, keeping them testable without DOM dependencies. The new API endpoint follows the established inline projection pattern in `Program.cs`.
@@ -99,4 +99,4 @@ src/WorkoutTracker.E2ETests/
 - **User Experience Consistency** ✅ — Existing `<select>` styling reused. Existing CSS tokens for all colours. All four states (loading, success, empty, error) defined. No chart section rendered for ad-hoc sessions.
 - **Performance** ✅ — `Take(50)` cap. Eager post-session-load fetch. Single bounded EF query. SVG is in-memory DOM — no layout thrashing.
 
-No violations. Plan is ready for `/speckit.tasks`.
+No violations. Implementation has been completed.
