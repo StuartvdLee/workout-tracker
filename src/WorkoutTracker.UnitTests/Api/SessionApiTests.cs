@@ -769,6 +769,7 @@ public class SessionApiTests : IAsyncLifetime
         Assert.Equal("Push Day", detail.WorkoutName);
         Assert.NotEqual(default, detail.CompletedAt);
         Assert.Single(detail.Exercises);
+        Assert.Equal(exerciseId, detail.Exercises[0].ExerciseId);
         Assert.Equal("Bench Press", detail.Exercises[0].ExerciseName);
         Assert.Equal("80 KG", detail.Exercises[0].LoggedWeight);
         Assert.Equal(7, detail.Exercises[0].Effort);
@@ -1041,6 +1042,127 @@ public class SessionApiTests : IAsyncLifetime
         Assert.Null(detail.PreviousOverallEffort);
     }
 
+    // --- T001: GET /api/workouts/{workoutId}/session-trends ---
+
+    [Fact]
+    public async Task GetSessionTrends_ReturnsNotFound_WhenWorkoutDoesNotExist()
+    {
+        var nonExistentId = Guid.NewGuid();
+        var response = await _client.GetAsync($"/api/workouts/{nonExistentId}/session-trends");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetSessionTrends_ReturnsEmptyDataPoints_WhenWorkoutHasNoSessions()
+    {
+        var (workoutId, _) = await CreateWorkoutWithExerciseAsync("No Sessions Workout", "No Sessions Exercise");
+
+        var response = await _client.GetAsync($"/api/workouts/{workoutId}/session-trends");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var result = await response.Content.ReadFromJsonAsync<SessionTrendsDto>();
+        Assert.NotNull(result);
+        Assert.Empty(result.DataPoints);
+    }
+
+    [Fact]
+    public async Task GetSessionTrends_ReturnsSingleDataPoint_WhenWorkoutHasOneSession()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("One Session Workout", "One Session Exercise");
+        await CreateSessionAsync(workoutId, exerciseId, "80", 7);
+
+        var response = await _client.GetAsync($"/api/workouts/{workoutId}/session-trends");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var result = await response.Content.ReadFromJsonAsync<SessionTrendsDto>();
+        Assert.NotNull(result);
+        Assert.Single(result.DataPoints);
+        Assert.Equal(7, result.DataPoints[0].OverallEffort);
+        Assert.NotNull(result.DataPoints[0].Exercises);
+        Assert.Single(result.DataPoints[0].Exercises);
+        Assert.Equal("80", result.DataPoints[0].Exercises[0].LoggedWeight);
+    }
+
+    [Fact]
+    public async Task GetSessionTrends_ReturnsDataPointsInChronologicalOrder()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Ordered Sessions Workout", "Ordered Sessions Exercise");
+        var session1 = await CreateSessionWithOverallEffortAsync(workoutId, exerciseId, "60", 5, 5);
+        var session2 = await CreateSessionWithOverallEffortAsync(workoutId, exerciseId, "70", 6, 6);
+        var session3 = await CreateSessionWithOverallEffortAsync(workoutId, exerciseId, "80", 7, 7);
+
+        var response = await _client.GetAsync($"/api/workouts/{workoutId}/session-trends");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var result = await response.Content.ReadFromJsonAsync<SessionTrendsDto>();
+        Assert.NotNull(result);
+        Assert.Equal(3, result.DataPoints.Count);
+
+        // Data points should be in ascending CompletedAt order
+        for (int i = 1; i < result.DataPoints.Count; i++)
+        {
+            Assert.True(result.DataPoints[i].CompletedAt >= result.DataPoints[i - 1].CompletedAt);
+        }
+    }
+
+    [Fact]
+    public async Task GetSessionTrends_ReturnsCappedAt50Sessions_WhenMoreThan50SessionsExist()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Many Sessions Workout", "Many Sessions Exercise");
+        for (int i = 0; i < 55; i++)
+        {
+            await CreateSessionAsync(workoutId, exerciseId, $"{50 + i}", null);
+        }
+
+        var response = await _client.GetAsync($"/api/workouts/{workoutId}/session-trends");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var result = await response.Content.ReadFromJsonAsync<SessionTrendsDto>();
+        Assert.NotNull(result);
+        Assert.Equal(50, result.DataPoints.Count);
+    }
+
+    [Fact]
+    public async Task GetSessionTrends_ReturnsNullOverallEffort_WhenSessionHasNoOverallEffort()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("No Effort Workout", "No Effort Exercise");
+        await CreateSessionAsync(workoutId, exerciseId, "75", null);
+
+        var response = await _client.GetAsync($"/api/workouts/{workoutId}/session-trends");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var result = await response.Content.ReadFromJsonAsync<SessionTrendsDto>();
+        Assert.NotNull(result);
+        Assert.Single(result.DataPoints);
+        Assert.Null(result.DataPoints[0].OverallEffort);
+    }
+
+    [Fact]
+    public async Task GetSessionTrends_LoggedWeightIsAlwaysSingleNumericStringOrNull()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Weight Invariant Workout", "Weight Invariant Exercise");
+        await CreateSessionAsync(workoutId, exerciseId, "82.5", null);
+        await CreateSessionAsync(workoutId, exerciseId, null, null);
+
+        var response = await _client.GetAsync($"/api/workouts/{workoutId}/session-trends");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var result = await response.Content.ReadFromJsonAsync<SessionTrendsDto>();
+        Assert.NotNull(result);
+        foreach (var dp in result.DataPoints)
+        {
+            foreach (var ex in dp.Exercises)
+            {
+                // loggedWeight must be null or parseable as a double — never a compound string
+                if (ex.LoggedWeight is not null)
+                {
+                    Assert.True(double.TryParse(ex.LoggedWeight, out _),
+                        $"loggedWeight '{ex.LoggedWeight}' is not a single numeric string");
+                }
+            }
+        }
+    }
+
     // --- Helpers ---
 
     private async Task<(Guid WorkoutId, Guid ExerciseId)> CreateWorkoutWithExerciseAsync(
@@ -1119,9 +1241,20 @@ public class SessionApiTests : IAsyncLifetime
         List<SessionExerciseWithPreviousDto> Exercises);
     private sealed record SessionExerciseWithPreviousDto(
         Guid LoggedExerciseId,
+        Guid ExerciseId,
         string ExerciseName,
         string? LoggedWeight,
         int? Effort,
         string? PreviousWeight,
         int? PreviousEffort);
+    private sealed record SessionTrendsDto(List<SessionTrendsDataPointDto> DataPoints);
+    private sealed record SessionTrendsDataPointDto(
+        DateTime CompletedAt,
+        int? OverallEffort,
+        List<SessionTrendsExerciseDto> Exercises);
+    private sealed record SessionTrendsExerciseDto(
+        Guid ExerciseId,
+        string ExerciseName,
+        string? LoggedWeight,
+        int? Effort);
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { reorder, shuffle, applyOrder, getEffortColour } from '../utils';
+import { reorder, shuffle, applyOrder, getEffortColour, normaliseValue, buildYTicks, buildXLabels } from '../utils';
 
 describe('getEffortColour', () => {
   it('returns #22C55E for value 1 (Easy)', () => {
@@ -180,5 +180,98 @@ describe('applyOrder', () => {
   it('preserves the full exercise object (not just the ID)', () => {
     const result = applyOrder(exercises, ['b', 'a', 'c']);
     expect(result[0]).toEqual({ exerciseId: 'b', name: 'B' });
+  });
+});
+
+describe('normaliseValue', () => {
+  it('returns 120 when min === max (flat line case)', () => {
+    expect(normaliseValue(5, 5, 5)).toBe(120);
+  });
+
+  it('returns 220 (bottom) when value === min', () => {
+    expect(normaliseValue(0, 0, 10)).toBe(220);
+  });
+
+  it('returns 20 (top) when value === max', () => {
+    expect(normaliseValue(10, 0, 10)).toBe(20);
+  });
+
+  it('returns correct midpoint for value halfway between min and max', () => {
+    expect(normaliseValue(5, 0, 10)).toBe(120);
+  });
+
+  it('handles negative min correctly', () => {
+    // value=-5, min=-10, max=0 → fraction=0.5 → 220 - 0.5*200 = 120
+    expect(normaliseValue(-5, -10, 0)).toBe(120);
+  });
+
+  it('returns 220 at min when min is negative', () => {
+    expect(normaliseValue(-10, -10, 0)).toBe(220);
+  });
+
+  it('returns 20 at max when min is negative', () => {
+    expect(normaliseValue(0, -10, 0)).toBe(20);
+  });
+});
+
+describe('buildYTicks', () => {
+  it('returns [min, max] for tickCount 2', () => {
+    expect(buildYTicks(0, 10, 2)).toEqual([0, 10]);
+  });
+
+  it('returns 6 evenly spaced ticks for effort axis: [0,2,4,6,8,10]', () => {
+    expect(buildYTicks(0, 10, 6)).toEqual([0, 2, 4, 6, 8, 10]);
+  });
+
+  it('returns [min] for tickCount < 2', () => {
+    expect(buildYTicks(0, 10, 1)).toEqual([0]);
+    expect(buildYTicks(0, 10, 0)).toEqual([0]);
+  });
+
+  it('returns 3 evenly spaced ticks', () => {
+    expect(buildYTicks(0, 100, 3)).toEqual([0, 50, 100]);
+  });
+});
+
+describe('buildXLabels', () => {
+  it('returns empty array for empty input', () => {
+    expect(buildXLabels([], 5)).toEqual([]);
+  });
+
+  it('returns all non-null labels when dates.length <= maxLabels', () => {
+    const dates = ['2026-04-01T00:00:00Z', '2026-04-08T00:00:00Z'];
+    const result = buildXLabels(dates, 5);
+    expect(result).toHaveLength(2);
+    expect(result.every(l => l !== null)).toBe(true);
+  });
+
+  it('always includes the last date as non-null', () => {
+    const dates = ['2026-01-01T00:00:00Z', '2026-02-01T00:00:00Z', '2026-03-01T00:00:00Z',
+                   '2026-04-01T00:00:00Z', '2026-05-01T00:00:00Z'];
+    const result = buildXLabels(dates, 2);
+    expect(result[4]).not.toBeNull();
+  });
+
+  it('returns null for intermediate dates when dates.length > maxLabels', () => {
+    const dates = ['2026-01-01T00:00:00Z', '2026-02-01T00:00:00Z', '2026-03-01T00:00:00Z',
+                   '2026-04-01T00:00:00Z', '2026-05-01T00:00:00Z'];
+    const result = buildXLabels(dates, 2);
+    expect(result).toHaveLength(5);
+    const nonNullCount = result.filter(l => l !== null).length;
+    expect(nonNullCount).toBeLessThanOrEqual(2);
+  });
+
+  it('formats dates as DD MMM', () => {
+    const dates = ['2026-04-01T00:00:00Z'];
+    const result = buildXLabels(dates, 5);
+    // Should be like "01 Apr"
+    expect(result[0]).toMatch(/\d{2}\s[A-Za-z]{3}/);
+  });
+
+  it('returns array of same length as input with single date', () => {
+    const dates = ['2026-04-01T00:00:00Z'];
+    const result = buildXLabels(dates, 5);
+    expect(result).toHaveLength(1);
+    expect(result[0]).not.toBeNull();
   });
 });

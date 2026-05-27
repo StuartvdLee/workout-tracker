@@ -103,7 +103,7 @@ As a user, I want to switch what data is displayed in the chart using the dropdo
 
 ### Performance Requirements
 
-- **PR-001**: The chart MUST load and render within a timeframe that does not disrupt the overall session page load experience.
+- **PR-001**: The chart section MUST be visible and interactive within 2 seconds of the session detail page finishing its initial load on a standard broadband connection. This MUST be validated during implementation.
 - **PR-002**: Switching between dropdown options MUST feel immediate to the user; data already loaded for the page MUST be used where possible to avoid repeated network requests.
 - **PR-003**: The chart MUST remain responsive and usable when a workout has been performed many times (high volume of historical data points).
 
@@ -117,7 +117,8 @@ As a user, I want to switch what data is displayed in the chart using the dropdo
 
 ### Measurable Outcomes
 
-- **SC-001**: Users can switch between chart data options in under 2 seconds without a page reload.
+- **SC-001**: Users can switch between chart data options in under 2 seconds without a page reload. The initial chart render (default "Overall Session Effort" series) MUST also complete within 2 seconds of the session detail page loading.
+- **SC-001a**: The chart section is measurably validated against the 2-second budget during implementation (see T020).
 - **SC-002**: The chart correctly displays all historical data points for the selected metric with no missing or duplicated entries.
 - **SC-003**: 100% of chart interactions (dropdown change, page load) handle loading, empty, and error states without unhandled errors.
 - **SC-004**: The chart is fully usable on viewport widths from 320px and above.
@@ -128,5 +129,6 @@ As a user, I want to switch what data is displayed in the chart using the dropdo
 - The session detail page already exists (feature 014-workout-history-detail-page) and this chart is added to it.
 - Weight and effort data are already being recorded and stored per session exercise (features 005, 016).
 - The number of distinct exercises per session is small enough that listing them individually in the dropdown remains practical (no pagination needed for the dropdown).
-- A suitable charting library is already available in the project or can be added without significant dependency overhead; if not, the implementation team will select the lightest available option.
-- "Weight" refers to the weight lifted per set; if multiple sets exist, the average or maximum weight per session will be used — the implementation team should decide and apply consistently.
+- **No external charting library is used.** The chart is rendered as inline SVG with vanilla TypeScript. This decision was made during planning to avoid new dependencies (see plan.md).
+- **`loggedWeight` is always a single numeric string (or null).** Weight is entered via `<input type="number" step="0.5">` in the active session UI — compound strings such as "80/85/90" are not possible. `Number(loggedWeight)` is the correct parse; any `NaN` result indicates invalid data, not a multi-set format. An integration test asserts this invariant.
+- **The currently-viewed session IS included as the rightmost data point** in the chart. This is consistent with the `GET /api/workouts/{workoutId}/previous-performance` endpoint which returns all sessions without filtering the current one. Showing the current session's position in the trend gives the user context for where they stand "right now."

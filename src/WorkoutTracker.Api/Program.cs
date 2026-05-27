@@ -438,6 +438,55 @@ app.MapGet("/api/workouts/{workoutId:guid}/previous-performance", async (Guid wo
     });
 });
 
+app.MapGet("/api/workouts/{workoutId:guid}/session-trends", async (Guid workoutId, WorkoutTrackerDbContext db) =>
+{
+    var workoutExists = await db.PlannedWorkouts
+        .AnyAsync(pw => pw.PlannedWorkoutId == workoutId);
+
+    if (!workoutExists)
+    {
+        return Results.Json(new { error = "Workout not found." }, statusCode: 404);
+    }
+
+    var sessions = await db.WorkoutSessions
+        .Where(ws => ws.PlannedWorkoutId == workoutId)
+        .OrderByDescending(ws => EF.Property<DateTime>(ws, "CompletedAt"))
+        .ThenByDescending(ws => ws.WorkoutSessionId)
+        .Take(50)
+        .Select(ws => new
+        {
+            CompletedAt = EF.Property<DateTime>(ws, "CompletedAt"),
+            ws.OverallEffort,
+            Exercises = ws.LoggedExercises.Select(le => new
+            {
+                le.ExerciseId,
+                le.Exercise!.Name,
+                le.LoggedWeight,
+                le.Effort,
+            }).ToList(),
+        })
+        .ToListAsync();
+
+    // Reverse to chronological order
+    sessions.Reverse();
+
+    return Results.Ok(new
+    {
+        dataPoints = sessions.Select(s => new
+        {
+            completedAt = s.CompletedAt,
+            overallEffort = s.OverallEffort,
+            exercises = s.Exercises.Select(e => new
+            {
+                exerciseId = e.ExerciseId,
+                exerciseName = e.Name,
+                loggedWeight = e.LoggedWeight,
+                effort = e.Effort,
+            }),
+        }),
+    });
+});
+
 app.MapPost("/api/workouts", async (HttpContext context, WorkoutTrackerDbContext db) =>
 {
     var body = await context.Request.ReadFromJsonAsync<WorkoutCreateRequest>();
@@ -825,6 +874,7 @@ app.MapGet("/api/sessions/{sessionId:guid}", async (Guid sessionId, WorkoutTrack
             return new
             {
                 le.LoggedExerciseId,
+                le.ExerciseId,
                 le.ExerciseName,
                 le.LoggedWeight,
                 le.Effort,

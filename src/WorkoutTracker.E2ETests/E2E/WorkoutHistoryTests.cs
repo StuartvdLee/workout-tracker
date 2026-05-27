@@ -1136,4 +1136,223 @@ public class WorkoutHistoryTests
             await page.CloseAsync();
         }
     }
+
+    // --- T007: Chart section renders for a planned workout session ---
+
+    [Fact]
+    public async Task SessionDetailPage_ShowsChartSection_WhenWorkoutHasPreviousSession()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await SeedExerciseAsync(page, "Squat");
+            var exercisesResponse = await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/exercises");
+            var exercisesJson = await exercisesResponse.JsonAsync();
+            var exerciseId = exercisesJson?.EnumerateArray()
+                .First(e => e.GetProperty("name").GetString() == "Squat")
+                .GetProperty("exerciseId").GetString()!;
+
+            var createResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts", new()
+            {
+                DataObject = new { name = "Leg Day Chart", exercises = new[] { new { exerciseId } } },
+            });
+            var workoutData = await createResponse.JsonAsync();
+            var workoutId = workoutData?.GetProperty("plannedWorkoutId").GetString()!;
+
+            // First session (provides historical data)
+            await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new { overallEffort = 6, loggedExercises = new[] { new { exerciseId, loggedWeight = "100" } } },
+            });
+
+            // Second session (the one we navigate to)
+            var sessionResp = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new { overallEffort = 7, loggedExercises = new[] { new { exerciseId, loggedWeight = "105" } } },
+            });
+            var sessionData = await sessionResp.JsonAsync();
+            var sessionId = sessionData?.GetProperty("workoutSessionId").GetString()!;
+
+            await page.GotoAsync($"{_webApp.BaseUrl}/history/session?id={sessionId}");
+            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+            // Chart section must be visible
+            await Expect(page.Locator(".session-chart")).ToBeVisibleAsync();
+            // Dropdown must exist and be enabled
+            await Expect(page.Locator("#session-chart-select")).ToBeVisibleAsync();
+            await Expect(page.Locator("#session-chart-select")).ToBeEnabledAsync();
+            // SVG chart must be rendered
+            await Expect(page.Locator(".session-chart__svg")).ToBeVisibleAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    // --- T008: No chart section for ad-hoc sessions ---
+    // NOTE: No POST /api/sessions endpoint exists (sessions are always linked to a planned workout).
+    // Ad-hoc session (plannedWorkoutId == null) path cannot be tested via E2E.
+    // This case is covered by the unit-level guard in session-detail.ts:
+    //   if (session.plannedWorkoutId === null) return;
+
+    // --- T011: Dropdown switches between series ---
+
+    [Fact]
+    public async Task SessionDetailPage_ChartDropdown_SwitchesSeriesAndRendersNewSvg()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await SeedExerciseAsync(page, "Deadlift");
+            var exercisesResponse = await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/exercises");
+            var exercisesJson = await exercisesResponse.JsonAsync();
+            var exerciseId = exercisesJson?.EnumerateArray()
+                .First(e => e.GetProperty("name").GetString() == "Deadlift")
+                .GetProperty("exerciseId").GetString()!;
+
+            var createResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts", new()
+            {
+                DataObject = new { name = "Pull Day Chart", exercises = new[] { new { exerciseId } } },
+            });
+            var workoutData = await createResponse.JsonAsync();
+            var workoutId = workoutData?.GetProperty("plannedWorkoutId").GetString()!;
+
+            await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new { overallEffort = 5, loggedExercises = new[] { new { exerciseId, loggedWeight = "80", effort = 5 } } },
+            });
+            var sessionResp = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new { overallEffort = 7, loggedExercises = new[] { new { exerciseId, loggedWeight = "90", effort = 7 } } },
+            });
+            var sessionData = await sessionResp.JsonAsync();
+            var sessionId = sessionData?.GetProperty("workoutSessionId").GetString()!;
+
+            await page.GotoAsync($"{_webApp.BaseUrl}/history/session?id={sessionId}");
+            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+            var selectEl = page.Locator("#session-chart-select");
+            await Expect(selectEl).ToBeEnabledAsync();
+
+            // Default is "overall" — SVG should already be present
+            await Expect(page.Locator(".session-chart__svg")).ToBeVisibleAsync();
+
+            // Switch to exercise combined series (weight + effort)
+            await selectEl.SelectOptionAsync(new SelectOptionValue { Value = $"exercise:{exerciseId}" });
+            await Expect(page.Locator(".session-chart__svg")).ToBeVisibleAsync();
+
+            // Switch back to overall
+            await selectEl.SelectOptionAsync(new SelectOptionValue { Value = "overall" });
+            await Expect(page.Locator(".session-chart__svg")).ToBeVisibleAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    // --- T013: Empty state when exercise has no data ---
+
+    [Fact]
+    public async Task SessionDetailPage_Chart_ShowsEmptyState_WhenExerciseHasNoWeightData()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await SeedExerciseAsync(page, "Plank");
+            var exercisesResponse = await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/exercises");
+            var exercisesJson = await exercisesResponse.JsonAsync();
+            var exerciseId = exercisesJson?.EnumerateArray()
+                .First(e => e.GetProperty("name").GetString() == "Plank")
+                .GetProperty("exerciseId").GetString()!;
+
+            var createResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts", new()
+            {
+                DataObject = new { name = "Core Day Chart", exercises = new[] { new { exerciseId } } },
+            });
+            var workoutData = await createResponse.JsonAsync();
+            var workoutId = workoutData?.GetProperty("plannedWorkoutId").GetString()!;
+
+            // Log sessions with no weight
+            await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new { loggedExercises = new[] { new { exerciseId, loggedWeight = (string?)null } } },
+            });
+            var sessionResp = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new { loggedExercises = new[] { new { exerciseId, loggedWeight = (string?)null } } },
+            });
+            var sessionData = await sessionResp.JsonAsync();
+            var sessionId = sessionData?.GetProperty("workoutSessionId").GetString()!;
+
+            await page.GotoAsync($"{_webApp.BaseUrl}/history/session?id={sessionId}");
+            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+            var selectEl = page.Locator("#session-chart-select");
+            await Expect(selectEl).ToBeEnabledAsync();
+
+            // Switch to exercise combined series (no weight/effort data logged)
+            await selectEl.SelectOptionAsync(new SelectOptionValue { Value = $"exercise:{exerciseId}" });
+
+            // No SVG — empty message shown
+            await Expect(page.Locator(".session-chart__svg")).ToHaveCountAsync(0);
+            await Expect(page.Locator(".session-chart__empty")).ToBeVisibleAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    // --- T015: Overall effort renders on load ---
+
+    [Fact]
+    public async Task SessionDetailPage_Chart_RendersOverallEffortByDefault()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await SeedExerciseAsync(page, "Row");
+            var exercisesResponse = await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/exercises");
+            var exercisesJson = await exercisesResponse.JsonAsync();
+            var exerciseId = exercisesJson?.EnumerateArray()
+                .First(e => e.GetProperty("name").GetString() == "Row")
+                .GetProperty("exerciseId").GetString()!;
+
+            var createResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts", new()
+            {
+                DataObject = new { name = "Back Chart Default", exercises = new[] { new { exerciseId } } },
+            });
+            var workoutData = await createResponse.JsonAsync();
+            var workoutId = workoutData?.GetProperty("plannedWorkoutId").GetString()!;
+
+            await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new { overallEffort = 4, loggedExercises = new[] { new { exerciseId } } },
+            });
+            var sessionResp = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new { overallEffort = 6, loggedExercises = new[] { new { exerciseId } } },
+            });
+            var sessionData = await sessionResp.JsonAsync();
+            var sessionId = sessionData?.GetProperty("workoutSessionId").GetString()!;
+
+            await page.GotoAsync($"{_webApp.BaseUrl}/history/session?id={sessionId}");
+            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+            // Default selection should be "overall"
+            var selectEl = page.Locator("#session-chart-select");
+            await Expect(selectEl).ToBeEnabledAsync();
+            var selectedValue = await selectEl.InputValueAsync();
+            Assert.Equal("overall", selectedValue);
+
+            // SVG chart is rendered immediately (no interaction needed)
+            await Expect(page.Locator(".session-chart__svg")).ToBeVisibleAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
 }
