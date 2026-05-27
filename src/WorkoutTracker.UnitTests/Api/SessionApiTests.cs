@@ -1069,7 +1069,7 @@ public class SessionApiTests : IAsyncLifetime
     public async Task GetSessionTrends_ReturnsSingleDataPoint_WhenWorkoutHasOneSession()
     {
         var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("One Session Workout", "One Session Exercise");
-        await CreateSessionAsync(workoutId, exerciseId, "80", 7);
+        await CreateSessionWithOverallEffortAsync(workoutId, exerciseId, "80", 7, 7);
 
         var response = await _client.GetAsync($"/api/workouts/{workoutId}/session-trends");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
