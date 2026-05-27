@@ -2415,21 +2415,21 @@ body.is-dragging .workout-selected__drag-handle {
 }
 
 .session-chart__line--weight {
-  stroke: #2563eb;
+  stroke: var(--color-primary);
 }
 
 .session-chart__point--weight {
-  fill: #2563eb;
-  stroke: #2563eb;
+  fill: var(--color-primary);
+  stroke: var(--color-primary);
 }
 
 .session-chart__line--effort {
-  stroke: #dc2626;
+  stroke: var(--color-error);
 }
 
 .session-chart__point--effort {
-  fill: #dc2626;
-  stroke: #dc2626;
+  fill: var(--color-error);
+  stroke: var(--color-error);
 }
 
 .session-chart__legend {
@@ -2453,11 +2453,11 @@ body.is-dragging .workout-selected__drag-handle {
 }
 
 .session-chart__legend-swatch--weight {
-  background: #2563eb;
+  background: var(--color-primary);
 }
 
 .session-chart__legend-swatch--effort {
-  background: #dc2626;
+  background: var(--color-error);
 }
 
 /* =============================================

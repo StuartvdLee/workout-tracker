@@ -457,13 +457,15 @@ app.MapGet("/api/workouts/{workoutId:guid}/session-trends", async (Guid workoutI
         {
             CompletedAt = EF.Property<DateTime>(ws, "CompletedAt"),
             ws.OverallEffort,
-            Exercises = ws.LoggedExercises.Select(le => new
-            {
-                le.ExerciseId,
-                le.Exercise!.Name,
-                le.LoggedWeight,
-                le.Effort,
-            }).ToList(),
+            Exercises = ws.LoggedExercises
+                .OrderBy(le => le.Sequence)
+                .Select(le => new
+                {
+                    le.ExerciseId,
+                    le.Exercise!.Name,
+                    le.LoggedWeight,
+                    le.Effort,
+                }).ToList(),
         })
         .ToListAsync();
 

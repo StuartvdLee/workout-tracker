@@ -118,7 +118,9 @@ async function loadSessionDetail(sessionId: string): Promise<void> {
     if (contentEl) {
       contentEl.innerHTML = renderDetailTable(session);
       contentEl.style.display = "";
-      await initChartSection(session, contentEl);
+      void initChartSection(session, contentEl).catch(() => {
+        // Chart loading is non-critical; keep the session details visible even if it fails.
+      });
     }
   } catch {
     if (loadingEl) loadingEl.style.display = "none";
@@ -301,8 +303,8 @@ function renderChartForSelection(selection: string, trends: SessionTrends, bodyE
       values,
       yMin,
       yMax,
-      "session-chart__line--weight",
-      "session-chart__point--weight"
+      "session-chart__line--effort",
+      "session-chart__point--effort"
     );
     return;
   }
