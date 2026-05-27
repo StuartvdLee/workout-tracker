@@ -857,6 +857,24 @@ public class WebAppFixture : WebApplicationFactory<Program>
             });
         });
 
+        // Mock API endpoint to delete a session
+        app.MapDelete("/api/sessions/{sessionId}", (string sessionId) =>
+        {
+            lock (_sessionsLock)
+            {
+                var session = _sessions.FirstOrDefault(s =>
+                    string.Equals(s.SessionId, sessionId, StringComparison.OrdinalIgnoreCase));
+
+                if (session is null)
+                {
+                    return Results.Json(new { error = "Session not found." }, statusCode: 404);
+                }
+
+                _sessions.Remove(session);
+                return Results.NoContent();
+            }
+        });
+
         app.UseDefaultFiles();
         app.UseStaticFiles();
         app.MapFallbackToFile("index.html");
