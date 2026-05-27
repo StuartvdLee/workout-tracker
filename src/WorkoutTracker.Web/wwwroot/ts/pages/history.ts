@@ -21,9 +21,17 @@ const historyTimeFormatter = new Intl.DateTimeFormat("en-US", {
 });
 
 export async function render(container: HTMLElement): Promise<void> {
+  const params = new URLSearchParams(window.location.search);
+  const showDeletedBanner = params.get("deleted") === "1";
+
+  if (showDeletedBanner) {
+    history.replaceState(null, "", "/history");
+  }
+
   container.innerHTML = `
     <div class="history-page">
       <h1 class="history-page__title">Workout History</h1>
+      ${showDeletedBanner ? `<p class="history-page__banner" role="status">Session deleted.</p>` : ""}
       <div class="history-page__loading" id="history-loading">Loading...</div>
       <div class="history-page__empty" id="history-empty" style="display:none;">
         No workouts logged yet. Complete your first workout and it will appear here!

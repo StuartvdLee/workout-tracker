@@ -1,6 +1,8 @@
 import { navigate } from "../router.js";
 import { getEffortLabel, normaliseValue, buildYTicks, buildXLabels } from "../utils.js";
 
+let isDeleting = false;
+
 interface SessionExerciseWithPrevious {
   readonly loggedExerciseId: string;
   readonly exerciseId: string;
@@ -121,6 +123,7 @@ async function loadSessionDetail(sessionId: string): Promise<void> {
       void initChartSection(session, contentEl).catch(() => {
         // Chart loading is non-critical; keep the session details visible even if it fails.
       });
+      appendDeleteSection(contentEl, sessionId);
     }
   } catch {
     if (loadingEl) loadingEl.style.display = "none";
@@ -517,4 +520,127 @@ function buildPointCircles(
         ? `<circle class="session-chart__point ${pointModifierClass}" cx="${xOf(i).toFixed(1)}" cy="${normaliseValue(v, yMin, yMax).toFixed(1)}" r="3"/>`
         : "")
     .join("");
+}
+
+function appendDeleteSection(contentEl: HTMLElement, sessionId: string): void {
+  const deleteSection = document.createElement("div");
+  deleteSection.className = "session-detail__delete-section";
+  deleteSection.innerHTML = `
+    <button class="session-detail__delete" id="session-detail-delete" type="button">Delete session</button>
+    <div class="session-detail__delete-error" id="session-detail-delete-error"
+         role="alert" aria-live="polite" style="display:none;"></div>
+  `;
+  contentEl.appendChild(deleteSection);
+
+  if (!document.getElementById("session-delete-confirm-backdrop")) {
+    const backdrop = document.createElement("div");
+    backdrop.className = "discard-modal-backdrop";
+    backdrop.id = "session-delete-confirm-backdrop";
+    backdrop.style.display = "none";
+    backdrop.innerHTML = `
+      <div class="discard-modal" role="alertdialog" aria-modal="true"
+           aria-labelledby="session-delete-confirm-title"
+           aria-describedby="session-delete-confirm-desc">
+        <h2 class="discard-modal__title" id="session-delete-confirm-title">Delete session?</h2>
+        <p class="discard-modal__desc" id="session-delete-confirm-desc">
+          This will permanently remove this session and cannot be undone.
+        </p>
+        <div class="discard-modal__actions">
+          <button class="discard-modal__discard" type="button" id="session-delete-confirm-ok">Delete</button>
+          <button class="discard-modal__continue" type="button" id="session-delete-confirm-cancel">Keep session</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(backdrop);
+  }
+
+  wireDeleteHandlers(sessionId);
+}
+
+function openDeleteModal(): void {
+  const backdrop = document.getElementById("session-delete-confirm-backdrop");
+  if (backdrop) {
+    backdrop.style.display = "";
+    document.getElementById("session-delete-confirm-ok")?.focus();
+  }
+}
+
+function closeDeleteModal(): void {
+  const backdrop = document.getElementById("session-delete-confirm-backdrop");
+  if (backdrop) {
+    backdrop.style.display = "none";
+  }
+  document.getElementById("session-detail-delete")?.focus();
+}
+
+function wireDeleteHandlers(sessionId: string): void {
+  const deleteBtn = document.getElementById("session-detail-delete") as HTMLButtonElement | null;
+  const confirmOk = document.getElementById("session-delete-confirm-ok") as HTMLButtonElement | null;
+  const confirmCancel = document.getElementById("session-delete-confirm-cancel") as HTMLButtonElement | null;
+  const backdrop = document.getElementById("session-delete-confirm-backdrop");
+
+  deleteBtn?.addEventListener("click", () => {
+    openDeleteModal();
+  });
+
+  confirmCancel?.addEventListener("click", () => {
+    closeDeleteModal();
+  });
+
+  confirmOk?.addEventListener("click", () => {
+    closeDeleteModal();
+    void handleDeleteConfirmed(sessionId);
+  });
+
+  backdrop?.addEventListener("keydown", (e: KeyboardEvent) => {
+    if (e.key === "Escape") {
+      closeDeleteModal();
+      return;
+    }
+    if (e.key === "Tab") {
+      const focusable = [confirmOk, confirmCancel].filter((el): el is HTMLButtonElement => el !== null);
+      if (focusable.length < 2) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+  });
+}
+
+async function handleDeleteConfirmed(sessionId: string): Promise<void> {
+  if (isDeleting) return;
+  isDeleting = true;
+
+  const deleteBtn = document.getElementById("session-detail-delete") as HTMLButtonElement | null;
+  const errorEl = document.getElementById("session-detail-delete-error") as HTMLElement | null;
+
+  if (deleteBtn) deleteBtn.disabled = true;
+  if (errorEl) errorEl.style.display = "none";
+
+  try {
+    const response = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}`, { method: "DELETE" });
+    if (response.ok || response.status === 404) {
+      navigate("/history?deleted=1");
+      return;
+    }
+    throw new Error(`Delete failed: ${response.status}`);
+  } catch {
+    if (errorEl) {
+      errorEl.textContent = "Failed to delete session. Please try again.";
+      errorEl.style.display = "";
+    }
+    if (deleteBtn) deleteBtn.disabled = false;
+  } finally {
+    isDeleting = false;
+  }
 }
