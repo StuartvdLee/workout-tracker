@@ -2803,27 +2803,25 @@ html[data-theme-pref="system"] .topbar__theme-icon--system {
 
 .session-detail__delete-section {
   margin-top: var(--spacing-lg);
-  padding-top: var(--spacing-lg);
-  border-top: 1px solid var(--color-border);
 }
 
 .session-detail__delete {
+  width: 100%;
   min-height: var(--min-touch-target);
   padding: var(--spacing-sm) var(--spacing-md);
   font-size: var(--font-size-base);
   font-weight: 500;
   font-family: var(--font-family);
-  color: var(--color-error);
-  background-color: transparent;
-  border: 1px solid var(--color-error);
+  color: var(--color-white);
+  background-color: var(--color-error);
+  border: none;
   border-radius: var(--radius);
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition: background-color 0.15s ease;
 }
 
 .session-detail__delete:hover {
-  color: var(--color-white);
-  background-color: var(--color-error);
+  background-color: #b91c1c;
 }
 
 .session-detail__delete:focus-visible {
