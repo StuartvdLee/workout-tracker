@@ -3,6 +3,7 @@
   <Project Path="WorkoutTracker.AppHost/WorkoutTracker.AppHost.csproj" />
   <Project Path="WorkoutTracker.Infrastructure/WorkoutTracker.Infrastructure.csproj" />
   <Project Path="WorkoutTracker.ServiceDefaults/WorkoutTracker.ServiceDefaults.csproj" />
-  <Project Path="WorkoutTracker.Tests/WorkoutTracker.Tests.csproj" />
+  <Project Path="WorkoutTracker.UnitTests/WorkoutTracker.UnitTests.csproj" />
+  <Project Path="WorkoutTracker.E2ETests/WorkoutTracker.E2ETests.csproj" />
   <Project Path="WorkoutTracker.Web/WorkoutTracker.Web.csproj" />
 </Solution>

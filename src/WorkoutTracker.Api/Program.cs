@@ -2,6 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using WorkoutTracker.Infrastructure.Data;
 using WorkoutTracker.Infrastructure.Data.Models;
 
+// Stable advisory lock key used to serialize muscle name duplicate checks + inserts in POST /api/muscles.
+const long MuscleNameAdvisoryLockId = 610871121330421911;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
@@ -38,6 +41,139 @@ app.MapGet("/api/muscles", async (WorkoutTrackerDbContext db) =>
         .ToListAsync();
 
     return Results.Ok(muscles);
+});
+
+app.MapPost("/api/muscles", async (HttpContext context, WorkoutTrackerDbContext db) =>
+{
+    var body = await context.Request.ReadFromJsonAsync<MuscleCreateRequest>();
+    var name = body?.Name?.Trim() ?? "";
+
+    if (string.IsNullOrWhiteSpace(name))
+        return Results.Json(new { error = "Muscle name is required." }, statusCode: 400);
+
+    if (name.Length > 100)
+        return Results.Json(new { error = "Muscle name must be 100 characters or fewer." }, statusCode: 400);
+
+    var normalizedName = ExerciseQueryHelper.EscapeLike(name);
+    var muscleId = Guid.NewGuid();
+    Muscle? muscle = null;
+
+    var strategy = db.Database.CreateExecutionStrategy();
+    var duplicate = false;
+
+    await strategy.ExecuteInTransactionAsync(
+        async () =>
+        {
+            await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock({0});", MuscleNameAdvisoryLockId);
+
+            duplicate = await db.Muscles
+                .AnyAsync(m => EF.Functions.ILike(m.Name, normalizedName, "\\"));
+
+            if (!duplicate)
+            {
+                muscle = new Muscle { MuscleId = muscleId, Name = name };
+                db.Muscles.Add(muscle);
+                await db.SaveChangesAsync();
+            }
+        },
+        async () =>
+        {
+            muscle = await db.Muscles.SingleOrDefaultAsync(m => m.MuscleId == muscleId);
+            if (muscle is not null)
+            {
+                duplicate = false;
+                return true;
+            }
+
+            if (duplicate)
+                return true;
+
+            return false;
+        });
+
+    if (duplicate)
+        return Results.Json(new { error = "A muscle with this name already exists." }, statusCode: 400);
+
+    var createdMuscle = muscle!;
+    return Results.Json(new { createdMuscle.MuscleId, createdMuscle.Name }, statusCode: 201);
+});
+
+app.MapPatch("/api/muscles/{muscleId:guid}", async (Guid muscleId, HttpContext context, WorkoutTrackerDbContext db) =>
+{
+    var body = await context.Request.ReadFromJsonAsync<MuscleUpdateRequest>();
+    var name = body?.Name?.Trim() ?? "";
+
+    if (string.IsNullOrWhiteSpace(name))
+        return Results.Json(new { error = "Muscle name is required." }, statusCode: 400);
+
+    if (name.Length > 100)
+        return Results.Json(new { error = "Muscle name must be 100 characters or fewer." }, statusCode: 400);
+
+    var normalizedName = ExerciseQueryHelper.EscapeLike(name);
+    var strategy = db.Database.CreateExecutionStrategy();
+    var duplicate = false;
+    var notFound = false;
+
+    await strategy.ExecuteInTransactionAsync(
+        async () =>
+        {
+            db.ChangeTracker.Clear();
+            await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock({0});", MuscleNameAdvisoryLockId);
+
+            var muscle = await db.Muscles.FirstOrDefaultAsync(m => m.MuscleId == muscleId);
+            if (muscle is null)
+            {
+                notFound = true;
+                return;
+            }
+
+            notFound = false;
+            duplicate = await db.Muscles
+                .AnyAsync(m => m.MuscleId != muscleId && EF.Functions.ILike(m.Name, normalizedName, "\\"));
+
+            if (!duplicate)
+            {
+                muscle.Name = name;
+                await db.SaveChangesAsync();
+            }
+        },
+        async () =>
+        {
+            var current = await db.Muscles.AsNoTracking().SingleOrDefaultAsync(m => m.MuscleId == muscleId);
+            if (current is null)
+                return notFound;
+
+            if (string.Equals(current.Name, name, StringComparison.OrdinalIgnoreCase))
+            {
+                duplicate = false;
+                notFound = false;
+                return true;
+            }
+
+            if (duplicate)
+                return true;
+
+            return false;
+        });
+
+    if (notFound)
+        return Results.Json(new { error = "Muscle not found." }, statusCode: 404);
+
+    if (duplicate)
+        return Results.Json(new { error = "A muscle with this name already exists." }, statusCode: 400);
+
+    return Results.Ok(new { MuscleId = muscleId, Name = name });
+});
+
+app.MapDelete("/api/muscles/{muscleId:guid}", async (Guid muscleId, WorkoutTrackerDbContext db) =>
+{
+    var muscle = await db.Muscles.FirstOrDefaultAsync(m => m.MuscleId == muscleId);
+    if (muscle is null)
+        return Results.Json(new { error = "Muscle not found." }, statusCode: 404);
+
+    db.Muscles.Remove(muscle);
+    await db.SaveChangesAsync();
+    return Results.NoContent();
 });
 
 app.MapGet("/api/exercises", async (WorkoutTrackerDbContext db) =>
@@ -257,6 +393,102 @@ app.MapGet("/api/workouts/{workoutId:guid}", async (Guid workoutId, WorkoutTrack
     });
 });
 
+app.MapGet("/api/workouts/{workoutId:guid}/previous-performance", async (Guid workoutId, WorkoutTrackerDbContext db) =>
+{
+    var workoutExists = await db.PlannedWorkouts
+        .AnyAsync(pw => pw.PlannedWorkoutId == workoutId);
+
+    if (!workoutExists)
+    {
+        return Results.Json(new { error = "Workout not found." }, statusCode: 404);
+    }
+
+    var lastSession = await db.WorkoutSessions
+        .Where(ws => ws.PlannedWorkoutId == workoutId)
+        .OrderByDescending(ws => EF.Property<DateTime>(ws, "CompletedAt"))
+        .ThenByDescending(ws => ws.WorkoutSessionId)
+        .Select(ws => new
+        {
+            CompletedAt = EF.Property<DateTime>(ws, "CompletedAt"),
+            LoggedExercises = ws.LoggedExercises.Select(le => new
+            {
+                le.ExerciseId,
+                le.LoggedWeight,
+                le.Effort,
+                le.Sequence,
+            }).ToList(),
+        })
+        .FirstOrDefaultAsync();
+
+    if (lastSession is null)
+    {
+        return Results.Ok(new
+        {
+            hasPreviousSession = false,
+            completedAt = (DateTime?)null,
+            exercises = Array.Empty<object>(),
+        });
+    }
+
+    return Results.Ok(new
+    {
+        hasPreviousSession = true,
+        completedAt = (DateTime?)lastSession.CompletedAt,
+        exercises = lastSession.LoggedExercises,
+    });
+});
+
+app.MapGet("/api/workouts/{workoutId:guid}/session-trends", async (Guid workoutId, WorkoutTrackerDbContext db) =>
+{
+    var workoutExists = await db.PlannedWorkouts
+        .AnyAsync(pw => pw.PlannedWorkoutId == workoutId);
+
+    if (!workoutExists)
+    {
+        return Results.Json(new { error = "Workout not found." }, statusCode: 404);
+    }
+
+    var sessions = await db.WorkoutSessions
+        .Where(ws => ws.PlannedWorkoutId == workoutId)
+        .OrderByDescending(ws => EF.Property<DateTime>(ws, "CompletedAt"))
+        .ThenByDescending(ws => ws.WorkoutSessionId)
+        .Take(50)
+        .Select(ws => new
+        {
+            CompletedAt = EF.Property<DateTime>(ws, "CompletedAt"),
+            ws.OverallEffort,
+            Exercises = ws.LoggedExercises
+                .OrderBy(le => le.Sequence)
+                .Select(le => new
+                {
+                    le.ExerciseId,
+                    le.Exercise!.Name,
+                    le.LoggedWeight,
+                    le.Effort,
+                }).ToList(),
+        })
+        .ToListAsync();
+
+    // Reverse to chronological order
+    sessions.Reverse();
+
+    return Results.Ok(new
+    {
+        dataPoints = sessions.Select(s => new
+        {
+            completedAt = s.CompletedAt,
+            overallEffort = s.OverallEffort,
+            exercises = s.Exercises.Select(e => new
+            {
+                exerciseId = e.ExerciseId,
+                exerciseName = e.Name,
+                loggedWeight = e.LoggedWeight,
+                effort = e.Effort,
+            }),
+        }),
+    });
+});
+
 app.MapPost("/api/workouts", async (HttpContext context, WorkoutTrackerDbContext db) =>
 {
     var body = await context.Request.ReadFromJsonAsync<WorkoutCreateRequest>();
@@ -457,6 +689,18 @@ app.MapPost("/api/workouts/{workoutId:guid}/sessions", async (Guid workoutId, Ht
     var body = await context.Request.ReadFromJsonAsync<SessionCreateRequest>();
     var loggedExercises = body?.LoggedExercises ?? [];
 
+    foreach (var item in loggedExercises)
+    {
+        if (item.LoggedWeight is { Length: > 100 })
+            return Results.Json(new { error = "Logged weight must not exceed 100 characters." }, statusCode: 400);
+
+        if (item.Effort is not null && (item.Effort < 1 || item.Effort > 10))
+            return Results.Json(new { error = "Effort must be between 1 and 10." }, statusCode: 400);
+    }
+
+    if (body?.OverallEffort is not null && (body.OverallEffort < 1 || body.OverallEffort > 10))
+        return Results.Json(new { error = "Overall effort must be between 1 and 10." }, statusCode: 400);
+
     if (loggedExercises.Length > 0)
     {
         var loggedExerciseIds = loggedExercises.Select(le => le.ExerciseId).Distinct().ToArray();
@@ -477,6 +721,7 @@ app.MapPost("/api/workouts/{workoutId:guid}/sessions", async (Guid workoutId, Ht
         WorkoutSessionId = Guid.NewGuid(),
         PlannedWorkoutId = workoutId,
         WorkoutName = workout.Name,
+        OverallEffort = body?.OverallEffort,
     };
 
     foreach (var item in loggedExercises)
@@ -486,9 +731,10 @@ app.MapPost("/api/workouts/{workoutId:guid}/sessions", async (Guid workoutId, Ht
             LoggedExerciseId = Guid.NewGuid(),
             WorkoutSessionId = session.WorkoutSessionId,
             ExerciseId = item.ExerciseId,
-            LoggedReps = item.LoggedReps,
             LoggedWeight = item.LoggedWeight,
             Notes = item.Notes,
+            Effort = item.Effort,
+            Sequence = item.Sequence,
         });
     }
 
@@ -500,13 +746,15 @@ app.MapPost("/api/workouts/{workoutId:guid}/sessions", async (Guid workoutId, Ht
         session.WorkoutSessionId,
         session.PlannedWorkoutId,
         session.WorkoutName,
+        session.OverallEffort,
         LoggedExercises = session.LoggedExercises.Select(le => new
         {
             le.LoggedExerciseId,
             le.ExerciseId,
-            le.LoggedReps,
             le.LoggedWeight,
             le.Notes,
+            le.Effort,
+            le.Sequence,
         }).ToList(),
     }, statusCode: 201);
 });
@@ -524,19 +772,135 @@ app.MapGet("/api/sessions", async (WorkoutTrackerDbContext db) =>
             ws.PlannedWorkoutId,
             WorkoutName = ws.WorkoutName ?? (ws.PlannedWorkout != null ? ws.PlannedWorkout.Name : null),
             CompletedAt = EF.Property<DateTime>(ws, "CompletedAt"),
+            OverallEffort = ws.OverallEffort,
             LoggedExercises = ws.LoggedExercises.Select(le => new
             {
                 le.LoggedExerciseId,
                 le.ExerciseId,
                 ExerciseName = le.Exercise.Name,
-                le.LoggedReps,
                 le.LoggedWeight,
                 le.Notes,
+                le.Effort,
             }).ToList(),
         })
         .ToListAsync();
 
     return Results.Ok(sessions);
+});
+
+app.MapGet("/api/sessions/latest", async (WorkoutTrackerDbContext db) =>
+{
+    var latest = await db.WorkoutSessions
+        .Include(ws => ws.PlannedWorkout)
+        .OrderByDescending(ws => EF.Property<DateTime>(ws, "CompletedAt"))
+        .ThenByDescending(ws => ws.WorkoutSessionId)
+        .Select(ws => new
+        {
+            WorkoutName = ws.WorkoutName ?? (ws.PlannedWorkout != null ? ws.PlannedWorkout.Name : null),
+            CompletedAt = EF.Property<DateTime>(ws, "CompletedAt"),
+        })
+        .FirstOrDefaultAsync();
+
+    if (latest is null)
+    {
+        return Results.Ok(new { hasSession = false });
+    }
+
+    return Results.Ok(new
+    {
+        hasSession = true,
+        workoutName = latest.WorkoutName,
+        completedAt = (DateTime?)latest.CompletedAt,
+    });
+});
+
+app.MapGet("/api/sessions/{sessionId:guid}", async (Guid sessionId, WorkoutTrackerDbContext db) =>
+{
+    var session = await db.WorkoutSessions
+        .Where(ws => ws.WorkoutSessionId == sessionId)
+        .Select(ws => new
+        {
+            ws.WorkoutSessionId,
+            ws.PlannedWorkoutId,
+            WorkoutName = ws.WorkoutName ?? (ws.PlannedWorkout != null ? ws.PlannedWorkout.Name : null),
+            CompletedAt = EF.Property<DateTime>(ws, "CompletedAt"),
+            ws.OverallEffort,
+            Exercises = ws.LoggedExercises
+                .OrderBy(le => le.Sequence)
+                .Select(le => new
+                {
+                    le.LoggedExerciseId,
+                    le.ExerciseId,
+                    ExerciseName = le.Exercise.Name,
+                    le.LoggedWeight,
+                    le.Effort,
+                }).ToList(),
+        })
+        .FirstOrDefaultAsync();
+
+    if (session is null)
+    {
+        return Results.Json(new { error = "Session not found." }, statusCode: 404);
+    }
+
+    var priorSession = session.PlannedWorkoutId is null
+        ? null
+        : await db.WorkoutSessions
+            .Where(ws =>
+                ws.PlannedWorkoutId == session.PlannedWorkoutId &&
+                (
+                    EF.Property<DateTime>(ws, "CompletedAt") < session.CompletedAt ||
+                    (EF.Property<DateTime>(ws, "CompletedAt") == session.CompletedAt &&
+                     ws.WorkoutSessionId.CompareTo(sessionId) < 0)
+                ))
+            .OrderByDescending(ws => EF.Property<DateTime>(ws, "CompletedAt"))
+            .ThenByDescending(ws => ws.WorkoutSessionId)
+            .Select(ws => new { ws.OverallEffort, LoggedExercises = ws.LoggedExercises
+                .Select(le => new { le.ExerciseId, le.LoggedWeight, le.Effort })
+                .ToList() })
+            .FirstOrDefaultAsync();
+
+    return Results.Ok(new
+    {
+        session.WorkoutSessionId,
+        session.PlannedWorkoutId,
+        session.WorkoutName,
+        session.CompletedAt,
+        session.OverallEffort,
+        PreviousOverallEffort = priorSession?.OverallEffort,
+        Exercises = session.Exercises.Select(le =>
+        {
+            // First-match by ExerciseId — accepted strategy per research.md R-007
+            // Single-user app: no cross-user access control needed (consistent with features 008 and 013)
+            var prior = priorSession?.LoggedExercises?.FirstOrDefault(p => p.ExerciseId == le.ExerciseId);
+            return new
+            {
+                le.LoggedExerciseId,
+                le.ExerciseId,
+                le.ExerciseName,
+                le.LoggedWeight,
+                le.Effort,
+                PreviousWeight = prior?.LoggedWeight,
+                PreviousEffort = prior?.Effort,
+            };
+        }).ToList(),
+    });
+});
+
+app.MapDelete("/api/sessions/{sessionId:guid}", async (Guid sessionId, WorkoutTrackerDbContext db) =>
+{
+    var session = await db.WorkoutSessions
+        .FirstOrDefaultAsync(ws => ws.WorkoutSessionId == sessionId);
+
+    if (session is null)
+    {
+        return Results.Json(new { error = "Session not found." }, statusCode: 404);
+    }
+
+    db.WorkoutSessions.Remove(session);
+    await db.SaveChangesAsync();
+
+    return Results.NoContent();
 });
 
 app.Run();
@@ -559,21 +923,33 @@ internal sealed class WorkoutExerciseItem
 
 internal sealed class SessionCreateRequest
 {
+    public int? OverallEffort { get; set; }
     public SessionLoggedExerciseItem[] LoggedExercises { get; set; } = [];
 }
 
 internal sealed class SessionLoggedExerciseItem
 {
     public Guid ExerciseId { get; set; }
-    public int? LoggedReps { get; set; }
     public string? LoggedWeight { get; set; }
     public string? Notes { get; set; }
+    public int? Effort { get; set; }
+    public int? Sequence { get; set; }
 }
 
 internal sealed class ExerciseCreateRequest
 {
     public string? Name { get; set; }
     public Guid[] MuscleIds { get; set; } = [];
+}
+
+internal sealed class MuscleCreateRequest
+{
+    public string? Name { get; set; }
+}
+
+internal sealed class MuscleUpdateRequest
+{
+    public string? Name { get; set; }
 }
 
 internal static class ExerciseQueryHelper

@@ -50,7 +50,8 @@ public class WorkoutTrackerDbContext(DbContextOptions<WorkoutTrackerDbContext> o
         modelBuilder.Entity<Muscle>(entity =>
         {
             entity.HasKey(e => e.MuscleId);
-            entity.Property(e => e.Name).IsRequired();
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.ToTable(t => t.HasCheckConstraint("ck_muscles_name_length", "length(name) <= 100"));
 
             entity.HasData(
                 new Muscle { MuscleId = Guid.Parse("a1000000-0000-0000-0000-00000000000c"), Name = "Adductors" },
@@ -140,6 +141,10 @@ public class WorkoutTrackerDbContext(DbContextOptions<WorkoutTrackerDbContext> o
                 .OnDelete(DeleteBehavior.SetNull);
 
             entity.Property<DateTime>("CompletedAt").HasDefaultValueSql("now()");
+
+            entity.ToTable(t => t.HasCheckConstraint(
+                "ck_workout_session_overall_effort_range",
+                "overall_effort IS NULL OR (overall_effort >= 1 AND overall_effort <= 10)"));
         });
 
         modelBuilder.Entity<LoggedExercise>(entity =>
@@ -155,6 +160,10 @@ public class WorkoutTrackerDbContext(DbContextOptions<WorkoutTrackerDbContext> o
                 .WithMany(ex => ex.LoggedExercises)
                 .HasForeignKey(e => e.ExerciseId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            entity.ToTable(t => t.HasCheckConstraint(
+                "ck_logged_exercise_effort_range",
+                "effort IS NULL OR (effort >= 1 AND effort <= 10)"));
         });
     }
 }

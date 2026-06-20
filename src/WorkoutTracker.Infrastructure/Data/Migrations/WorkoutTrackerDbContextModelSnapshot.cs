@@ -18,7 +18,7 @@ namespace WorkoutTracker.Infrastructure.Data.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("workout_tracker")
-                .HasAnnotation("ProductVersion", "10.0.5")
+                .HasAnnotation("ProductVersion", "10.0.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -84,6 +84,10 @@ namespace WorkoutTracker.Infrastructure.Data.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("logged_exercise_id");
 
+                    b.Property<int?>("Effort")
+                        .HasColumnType("integer")
+                        .HasColumnName("effort");
+
                     b.Property<Guid>("ExerciseId")
                         .HasColumnType("uuid")
                         .HasColumnName("exercise_id");
@@ -100,6 +104,10 @@ namespace WorkoutTracker.Infrastructure.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("notes");
 
+                    b.Property<int?>("Sequence")
+                        .HasColumnType("integer")
+                        .HasColumnName("sequence");
+
                     b.Property<Guid>("WorkoutSessionId")
                         .HasColumnType("uuid")
                         .HasColumnName("workout_session_id");
@@ -113,7 +121,10 @@ namespace WorkoutTracker.Infrastructure.Data.Migrations
                     b.HasIndex("WorkoutSessionId")
                         .HasDatabaseName("ix_logged_exercises_workout_session_id");
 
-                    b.ToTable("logged_exercises", "workout_tracker");
+                    b.ToTable("logged_exercises", "workout_tracker", t =>
+                        {
+                            t.HasCheckConstraint("ck_logged_exercise_effort_range", "effort IS NULL OR (effort >= 1 AND effort <= 10)");
+                        });
                 });
 
             modelBuilder.Entity("WorkoutTracker.Infrastructure.Data.Models.Muscle", b =>
@@ -125,15 +136,24 @@ namespace WorkoutTracker.Infrastructure.Data.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
                         .HasColumnName("name");
 
                     b.HasKey("MuscleId")
                         .HasName("pk_muscles");
 
-                    b.ToTable("muscles", "workout_tracker");
+                    b.ToTable("muscles", "workout_tracker", t =>
+                        {
+                            t.HasCheckConstraint("ck_muscles_name_length", "length(name) <= 100");
+                        });
 
                     b.HasData(
+                        new
+                        {
+                            MuscleId = new Guid("a1000000-0000-0000-0000-00000000000c"),
+                            Name = "Adductors"
+                        },
                         new
                         {
                             MuscleId = new Guid("a1000000-0000-0000-0000-000000000001"),
@@ -188,11 +208,6 @@ namespace WorkoutTracker.Infrastructure.Data.Migrations
                         {
                             MuscleId = new Guid("a1000000-0000-0000-0000-00000000000b"),
                             Name = "Triceps"
-                        },
-                        new
-                        {
-                            MuscleId = new Guid("a1000000-0000-0000-0000-00000000000c"),
-                            Name = "Adductors"
                         });
                 });
 
@@ -350,6 +365,10 @@ namespace WorkoutTracker.Infrastructure.Data.Migrations
                         .HasColumnName("completed_at")
                         .HasDefaultValueSql("now()");
 
+                    b.Property<int?>("OverallEffort")
+                        .HasColumnType("integer")
+                        .HasColumnName("overall_effort");
+
                     b.Property<Guid?>("PlannedWorkoutId")
                         .HasColumnType("uuid")
                         .HasColumnName("planned_workout_id");
@@ -365,7 +384,10 @@ namespace WorkoutTracker.Infrastructure.Data.Migrations
                     b.HasIndex("PlannedWorkoutId")
                         .HasDatabaseName("ix_workout_sessions_planned_workout_id");
 
-                    b.ToTable("workout_sessions", "workout_tracker");
+                    b.ToTable("workout_sessions", "workout_tracker", t =>
+                        {
+                            t.HasCheckConstraint("ck_workout_session_overall_effort_range", "overall_effort IS NULL OR (overall_effort >= 1 AND overall_effort <= 10)");
+                        });
                 });
 
             modelBuilder.Entity("WorkoutTracker.Infrastructure.Data.Models.WorkoutType", b =>

@@ -1,0 +1,198 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths: ['src/**']
+  pull_request:
+    paths: ['src/**']
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: workout_tracker_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.2
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5.2.0
+        with:
+          dotnet-version: '10.0.x'
+
+      # Node.js is required by the MSBuild TypeScript build target in WorkoutTracker.Web
+      - name: Set up Node.js
+        uses: actions/setup-node@v6.4.0
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+          cache-dependency-path: src/WorkoutTracker.Web/package-lock.json
+
+      - name: Restore .NET dependencies
+        run: dotnet restore src/WorkoutTracker.slnx
+
+      - name: Build solution
+        run: dotnet build src/WorkoutTracker.slnx --no-restore --configuration Release
+
+      - name: Run unit tests
+        if: github.event_name == 'pull_request'
+        env:
+          TEST_DB_CONNECTION: "Host=localhost;Port=5432;Database=workout_tracker_test;Username=postgres;Password=postgres"
+        run: dotnet test src/WorkoutTracker.UnitTests/WorkoutTracker.UnitTests.csproj --no-build --configuration Release --logger "trx;LogFileName=test-results.trx"
+
+      - name: Upload unit test results
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: unit-test-results
+          path: src/WorkoutTracker.UnitTests/TestResults/
+
+  e2e-tests:
+    name: E2E Tests
+    needs: build
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.2
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5.2.0
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6.4.0
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+          cache-dependency-path: src/WorkoutTracker.Web/package-lock.json
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('src/WorkoutTracker.E2ETests/WorkoutTracker.E2ETests.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Build and test TypeScript
+        working-directory: src/WorkoutTracker.Web
+        run: |
+          npm ci
+          npm run build
+          npm test
+
+      - name: Restore .NET dependencies
+        run: dotnet restore src/WorkoutTracker.E2ETests/WorkoutTracker.E2ETests.csproj
+
+      - name: Build
+        run: dotnet build src/WorkoutTracker.E2ETests/WorkoutTracker.E2ETests.csproj --no-restore --configuration Release
+
+      - name: Install Playwright browsers
+        run: pwsh src/WorkoutTracker.E2ETests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+
+      - name: Run E2E tests
+        run: dotnet test src/WorkoutTracker.E2ETests/WorkoutTracker.E2ETests.csproj --no-build --configuration Release --logger "trx;LogFileName=test-results.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: e2e-test-results
+          path: src/WorkoutTracker.E2ETests/TestResults/
+
+  deploy:
+    name: Deploy
+    needs: build
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: Prd
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+
+    env:
+      POSTGRES_SERVER: workouttracker-psql
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.2
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5.2.0
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Log in to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Restore .NET dependencies
+        run: dotnet restore src/WorkoutTracker.slnx
+
+      - name: Install EF Core tools
+        run: dotnet tool install --global dotnet-ef --version '10.0.*'
+
+      - name: Run database migrations
+        run: |
+          dotnet ef database update \
+            --project src/WorkoutTracker.Infrastructure \
+            --connection "Host=${{ env.POSTGRES_SERVER }}.postgres.database.azure.com;Database=workouttracker_db;Username=${{ secrets.POSTGRES_ADMIN_USER }};Password=${{ secrets.POSTGRES_ADMIN_PASSWORD }};SSL Mode=Require"
+
+      - name: Log in to Azure Container Registry
+        run: az acr login --name workouttrackercr
+
+      - name: Build and push API Docker image
+        run: |
+          IMAGE=workouttrackercr.azurecr.io/workouttracker-api:${{ github.sha }}
+          docker build -f src/WorkoutTracker.Api/Dockerfile -t "$IMAGE" .
+          docker push "$IMAGE"
+
+      - name: Build and push web Docker image
+        run: |
+          IMAGE=workouttrackercr.azurecr.io/workouttracker-web:${{ github.sha }}
+          docker build -f src/WorkoutTracker.Web/Dockerfile -t "$IMAGE" .
+          docker push "$IMAGE"
+
+      - name: Deploy to API Container App
+        run: |
+          az containerapp update \
+            --name workouttracker-api-ca \
+            --resource-group workouttracker-rg \
+            --image workouttrackercr.azurecr.io/workouttracker-api:${{ github.sha }}
+
+      - name: Deploy to Web Container App
+        run: |
+          az containerapp update \
+            --name workouttracker-web-ca \
+            --resource-group workouttracker-rg \
+            --image workouttrackercr.azurecr.io/workouttracker-web:${{ github.sha }}

@@ -1,0 +1,64 @@
+name: Deploy Infrastructure
+
+on:
+  workflow_dispatch:
+
+env:
+  resourceGroupName: workouttracker-rg
+
+permissions:
+  id-token: write   # Required for OIDC login to Azure
+  contents: read
+
+jobs:
+  deploy-infra:
+    name: Deploy Infrastructure
+    runs-on: ubuntu-latest
+    environment: Prd
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.2
+
+      - name: Log in to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Create resource group if it doesn't exist
+        run: |
+          LOCATION="westeurope"
+
+          if az group show --name $resourceGroupName &>/dev/null; then
+            echo "Resource group '$resourceGroupName' already exists."
+          else
+            echo "Creating resource group '$resourceGroupName' in $LOCATION..."
+            az group create --name $resourceGroupName --location $LOCATION
+          fi
+
+      - name: Deploy Bicep template
+        run: |
+          az deployment group create \
+          --resource-group $resourceGroupName \
+          --template-file bicep/main.bicep \
+          --parameters \
+            postgresqlAdministratorLogin='${{ secrets.POSTGRES_ADMIN_USER }}' \
+            postgresqlAdministratorLoginPassword='${{ secrets.POSTGRES_ADMIN_PASSWORD }}'
+      # RESULT=$(az deployment group create \
+      #   --resource-group "$resourceGroupName" \
+      #   --template-file bicep/main.bicep \
+      #   --parameters bicep/main.bicepparam \
+      #   --parameters containerRegistryName="${{ secrets.AZURE_CONTAINER_REGISTRY }}" \
+      #   --parameters postgresAdminPassword="${{ secrets.POSTGRES_ADMIN_PASSWORD }}" \
+      #   --parameters aadClientId="${{ secrets.AZURE_AD_CLIENT_ID }}" \
+      #   --parameters aadClientSecret="${{ secrets.AZURE_AD_CLIENT_SECRET }}" \
+      #   --parameters aadTenantId="${{ secrets.AZURE_TENANT_ID }}" \
+      #   --output json)
+
+      # WEB_URL=$(echo "$RESULT"  | jq -r '.properties.outputs.webAppUrl.value')
+      # REDIRECT=$(echo "$RESULT" | jq -r '.properties.outputs.aadRedirectUri.value')
+
+      # echo "Web app URL: $WEB_URL"
+      # echo "⚠️  Add this redirect URI to your Entra ID App Registration: $REDIRECT"

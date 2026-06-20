@@ -10,5 +10,7 @@ public class WorkoutSession
 
     public string? WorkoutName { get; set; }
 
+    public int? OverallEffort { get; set; }
+
     public ICollection<LoggedExercise> LoggedExercises { get; set; } = [];
 }

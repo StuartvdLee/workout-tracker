@@ -1,4 +1,6 @@
 import { navigate } from "../router.js";
+import { trapModalTabKey } from "../prestart-modal.js";
+import { reorder, shuffle } from "../utils.js";
 
 interface WorkoutExercise {
   readonly exerciseId: string;
@@ -21,17 +23,23 @@ interface Exercise {
 
 let workouts: Workout[] = [];
 let availableExercises: Exercise[] = [];
-let selectedExercises: Set<string> = new Set();
+let selectedExercises: string[] = [];
 let isSubmitting = false;
 
 // Edit modal state
 let editingWorkoutId: string | null = null;
-let editSelectedExercises: Set<string> = new Set();
+let editSelectedExercises: string[] = [];
 let isEditSubmitting = false;
+let originalEditName: string = "";
+let originalEditExerciseIds: string[] = [];
 
 // Delete confirmation state
 let deletingWorkoutId: string | null = null;
 let isDeleting = false;
+
+// Pre-start modal state
+let prestartWorkout: Workout | null = null;
+let prestartTriggerBtn: HTMLButtonElement | null = null;
 
 export async function render(container: HTMLElement): Promise<void> {
   container.innerHTML = `
@@ -57,6 +65,7 @@ export async function render(container: HTMLElement): Promise<void> {
         </div>
         <div id="workout-selected-section" style="display:none;">
           <h3 class="workout-selected__heading">Selected exercises</h3>
+          <div class="sr-only" aria-live="polite" aria-atomic="true" id="workout-reorder-announce"></div>
           <ul class="workout-selected__list" id="workout-selected-list"></ul>
         </div>
         <div class="workout-form__error" id="workout-error" role="alert" aria-live="polite"></div>
@@ -88,6 +97,7 @@ export async function render(container: HTMLElement): Promise<void> {
             </div>
             <div id="edit-selected-section" style="display:none;">
               <h3 class="workout-selected__heading">Selected exercises</h3>
+              <div class="sr-only" aria-live="polite" aria-atomic="true" id="edit-reorder-announce"></div>
               <ul class="workout-selected__list" id="edit-selected-list"></ul>
             </div>
             <div class="workout-form__error" id="edit-workout-error" role="alert" aria-live="polite"></div>
@@ -97,6 +107,17 @@ export async function render(container: HTMLElement): Promise<void> {
             </div>
             <div class="workout-form__api-error" id="edit-workout-api-error" role="alert" aria-live="polite"></div>
           </form>
+          <button class="edit-modal__close" id="workout-edit-close" type="button" aria-label="Close">&#x2715;</button>
+        </div>
+      </div>
+      <div class="discard-modal-backdrop" id="workout-edit-discard-backdrop" style="display:none;">
+        <div class="discard-modal" role="alertdialog" aria-modal="true" aria-labelledby="workout-edit-discard-title" aria-describedby="workout-edit-discard-desc">
+          <h2 class="discard-modal__title" id="workout-edit-discard-title">Discard changes?</h2>
+          <p class="discard-modal__desc" id="workout-edit-discard-desc">You have unsaved changes. Are you sure you want to discard them?</p>
+          <div class="discard-modal__actions">
+            <button class="discard-modal__discard" type="button" id="workout-edit-discard-confirm">Discard</button>
+            <button class="discard-modal__continue" type="button" id="workout-edit-discard-cancel">Keep editing</button>
+          </div>
         </div>
       </div>
       <div class="delete-modal-backdrop" id="workout-delete-backdrop" style="display:none;">
@@ -110,20 +131,35 @@ export async function render(container: HTMLElement): Promise<void> {
           <div class="delete-modal__error" id="workout-delete-error" role="alert" aria-live="polite"></div>
         </div>
       </div>
+      <div class="prestart-modal-backdrop" id="workout-prestart-backdrop" style="display:none;">
+        <div class="prestart-modal" role="dialog" aria-modal="true" aria-labelledby="prestart-modal-title">
+          <h2 class="prestart-modal__title" id="prestart-modal-title">Randomise exercise order?</h2>
+          <div class="prestart-modal__actions">
+            <button class="prestart-modal__no-btn" type="button" id="prestart-no">No</button>
+            <button class="prestart-modal__yes-btn" type="button" id="prestart-yes">Yes</button>
+          </div>
+          <button class="edit-modal__close" id="prestart-close" type="button" aria-label="Close">&#x2715;</button>
+        </div>
+      </div>
     </div>
   `;
 
   editingWorkoutId = null;
-  selectedExercises = new Set();
-  editSelectedExercises = new Set();
+  selectedExercises = [];
+  editSelectedExercises = [];
   isSubmitting = false;
   isEditSubmitting = false;
+  originalEditName = "";
+  originalEditExerciseIds = [];
   deletingWorkoutId = null;
   isDeleting = false;
+  prestartWorkout = null;
+  prestartTriggerBtn = null;
 
   initForm();
   initEditModal();
   initDeleteModal();
+  initPreStartModal();
   await loadData();
 }
 
@@ -139,17 +175,24 @@ function initForm(): void {
 
   exerciseSelect?.addEventListener("change", () => {
     const exerciseId = exerciseSelect.value;
-    if (exerciseId) {
-      selectedExercises.add(exerciseId);
+    if (exerciseId && !selectedExercises.includes(exerciseId)) {
+      selectedExercises.push(exerciseId);
       renderExerciseDropdown();
     }
   });
+
+  initDragAndDrop("workout-selected-list", "workout-reorder-announce", () => selectedExercises, renderExerciseDropdown);
 }
 
 function initEditModal(): void {
   const form = document.getElementById("workout-edit-form") as HTMLFormElement | null;
   const cancelBtn = document.getElementById("workout-edit-cancel") as HTMLButtonElement | null;
+  const closeBtn = document.getElementById("workout-edit-close") as HTMLButtonElement | null;
   const backdrop = document.getElementById("workout-edit-backdrop") as HTMLElement | null;
+  const discardBackdrop = document.getElementById("workout-edit-discard-backdrop") as HTMLElement | null;
+  const discardConfirmBtn = document.getElementById("workout-edit-discard-confirm") as HTMLButtonElement | null;
+  const discardCancelBtn = document.getElementById("workout-edit-discard-cancel") as HTMLButtonElement | null;
+  const discardModal = discardBackdrop?.querySelector(".discard-modal") as HTMLElement | null;
 
   if (!form || !backdrop) return;
 
@@ -159,18 +202,22 @@ function initEditModal(): void {
   });
 
   cancelBtn?.addEventListener("click", () => {
-    closeEditModal();
+    requestCloseEditModal();
+  });
+
+  closeBtn?.addEventListener("click", () => {
+    requestCloseEditModal();
   });
 
   backdrop.addEventListener("click", (event: Event) => {
     if (event.target === backdrop) {
-      closeEditModal();
+      requestCloseEditModal();
     }
   });
 
   backdrop.addEventListener("keydown", (event: KeyboardEvent) => {
     if (event.key === "Escape") {
-      closeEditModal();
+      requestCloseEditModal();
       return;
     }
 
@@ -180,7 +227,7 @@ function initEditModal(): void {
       if (!modal) return;
 
       const focusable = modal.querySelectorAll<HTMLElement>(
-        'input, button, [tabindex]:not([tabindex="-1"])'
+        'input:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])'
       );
       if (focusable.length === 0) return;
 
@@ -198,6 +245,30 @@ function initEditModal(): void {
           first.focus();
         }
       }
+    }
+  });
+
+  discardConfirmBtn?.addEventListener("click", () => {
+    closeEditModal();
+  });
+
+  discardCancelBtn?.addEventListener("click", () => {
+    closeEditDiscardModal();
+  });
+
+  discardBackdrop?.addEventListener("click", (event: Event) => {
+    if (event.target === discardBackdrop) {
+      closeEditDiscardModal();
+    }
+  });
+
+  discardBackdrop?.addEventListener("keydown", (event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      closeEditDiscardModal();
+      return;
+    }
+    if (discardModal) {
+      trapModalTabKey(event, discardModal);
     }
   });
 }
@@ -282,7 +353,7 @@ function renderExerciseDropdown(): void {
   while (select.options.length > 1) select.remove(1);
 
   for (const exercise of availableExercises) {
-    if (!selectedExercises.has(exercise.exerciseId)) {
+    if (!selectedExercises.includes(exercise.exerciseId)) {
       const option = document.createElement("option");
       option.value = exercise.exerciseId;
       option.textContent = exercise.name;
@@ -300,13 +371,14 @@ function renderSelectedExercisesList(): void {
   if (!list || !section) return;
 
   list.innerHTML = "";
-  section.style.display = selectedExercises.size > 0 ? "" : "none";
+  section.style.display = selectedExercises.length > 0 ? "" : "none";
 
   for (const exerciseId of selectedExercises) {
     const exercise = availableExercises.find(e => e.exerciseId === exerciseId);
     if (!exercise) continue;
-    list.appendChild(buildSelectedExerciseItem(exercise.name, () => {
-      selectedExercises.delete(exerciseId);
+    const index = selectedExercises.indexOf(exerciseId);
+    list.appendChild(buildSelectedExerciseItem(exercise.name, exerciseId, index, selectedExercises.length, () => {
+      selectedExercises = selectedExercises.filter(id => id !== exerciseId);
       renderExerciseDropdown();
     }));
   }
@@ -374,7 +446,7 @@ function renderWorkoutList(): void {
     startBtn.setAttribute("data-workout-id", workout.plannedWorkoutId);
     startBtn.textContent = "Start";
     startBtn.addEventListener("click", () => {
-      navigate(`/active-session?id=${workout.plannedWorkoutId}`);
+      openPreStartModal(workout, startBtn);
     });
 
     actionsDiv.appendChild(editBtn);
@@ -412,7 +484,7 @@ async function handleSubmit(): Promise<void> {
     return;
   }
 
-  if (selectedExercises.size === 0) {
+  if (selectedExercises.length === 0) {
     errorEl.textContent = "At least one exercise is required.";
     return;
   }
@@ -425,7 +497,7 @@ async function handleSubmit(): Promise<void> {
   submitBtn.classList.add("workout-form__submit--loading");
 
   try {
-    const exercises = Array.from(selectedExercises).map(exerciseId => ({
+    const exercises = selectedExercises.map(exerciseId => ({
       exerciseId,
       targetReps: null as string | null,
       targetWeight: null as string | null,
@@ -488,13 +560,16 @@ async function fetchAndPopulateEditModal(workoutId: string, nameInput: HTMLInput
 
     const fullWorkout: Workout = await response.json();
 
+    if (editingWorkoutId !== workoutId) return;
+
     nameInput.value = fullWorkout.name;
 
-    // Populate selected exercises from the workout
-    editSelectedExercises = new Set();
-    for (const ex of fullWorkout.exercises) {
-      editSelectedExercises.add(ex.exerciseId);
-    }
+    // Populate selected exercises from the workout in persisted sequence order
+    editSelectedExercises = fullWorkout.exercises.map(ex => ex.exerciseId);
+    originalEditName = fullWorkout.name;
+    originalEditExerciseIds = [...editSelectedExercises];
+
+    initDragAndDrop("edit-selected-list", "edit-reorder-announce", () => editSelectedExercises, renderEditExerciseDropdown);
 
     renderEditExerciseDropdown();
 
@@ -509,7 +584,48 @@ function closeEditModal(): void {
   const backdrop = document.getElementById("workout-edit-backdrop") as HTMLElement | null;
   if (backdrop) backdrop.style.display = "none";
   editingWorkoutId = null;
-  editSelectedExercises = new Set();
+  editSelectedExercises = [];
+  originalEditName = "";
+  originalEditExerciseIds = [];
+
+  const discardBackdrop = document.getElementById("workout-edit-discard-backdrop") as HTMLElement | null;
+  if (discardBackdrop) {
+    discardBackdrop.style.display = "none";
+  }
+}
+
+function hasEditChanges(): boolean {
+  const nameInput = document.getElementById("edit-workout-name") as HTMLInputElement | null;
+  if (!nameInput) return false;
+  if (nameInput.value.trim() !== originalEditName) return true;
+  return JSON.stringify(editSelectedExercises) !== JSON.stringify(originalEditExerciseIds);
+}
+
+function openEditDiscardModal(): void {
+  const backdrop = document.getElementById("workout-edit-discard-backdrop") as HTMLElement | null;
+  const confirmBtn = document.getElementById("workout-edit-discard-confirm") as HTMLButtonElement | null;
+  if (backdrop) {
+    backdrop.style.display = "";
+  }
+  confirmBtn?.focus();
+}
+
+function closeEditDiscardModal(): void {
+  const backdrop = document.getElementById("workout-edit-discard-backdrop") as HTMLElement | null;
+  const nameInput = document.getElementById("edit-workout-name") as HTMLInputElement | null;
+  if (backdrop) {
+    backdrop.style.display = "none";
+  }
+  nameInput?.focus();
+}
+
+function requestCloseEditModal(): void {
+  if (isEditSubmitting) return;
+  if (hasEditChanges()) {
+    openEditDiscardModal();
+  } else {
+    closeEditModal();
+  }
 }
 
 function renderEditExerciseDropdown(): void {
@@ -521,8 +637,8 @@ function renderEditExerciseDropdown(): void {
     select.dataset["listenerAttached"] = "1";
     select.addEventListener("change", () => {
       const exerciseId = select.value;
-      if (exerciseId) {
-        editSelectedExercises.add(exerciseId);
+      if (exerciseId && !editSelectedExercises.includes(exerciseId)) {
+        editSelectedExercises.push(exerciseId);
         renderEditExerciseDropdown();
       }
     });
@@ -531,7 +647,7 @@ function renderEditExerciseDropdown(): void {
   while (select.options.length > 1) select.remove(1);
 
   for (const exercise of availableExercises) {
-    if (!editSelectedExercises.has(exercise.exerciseId)) {
+    if (!editSelectedExercises.includes(exercise.exerciseId)) {
       const option = document.createElement("option");
       option.value = exercise.exerciseId;
       option.textContent = exercise.name;
@@ -549,21 +665,45 @@ function renderEditSelectedExercisesList(): void {
   if (!list || !section) return;
 
   list.innerHTML = "";
-  section.style.display = editSelectedExercises.size > 0 ? "" : "none";
+  section.style.display = editSelectedExercises.length > 0 ? "" : "none";
 
   for (const exerciseId of editSelectedExercises) {
     const exercise = availableExercises.find(e => e.exerciseId === exerciseId);
     if (!exercise) continue;
-    list.appendChild(buildSelectedExerciseItem(exercise.name, () => {
-      editSelectedExercises.delete(exerciseId);
+    const index = editSelectedExercises.indexOf(exerciseId);
+    list.appendChild(buildSelectedExerciseItem(exercise.name, exerciseId, index, editSelectedExercises.length, () => {
+      editSelectedExercises = editSelectedExercises.filter(id => id !== exerciseId);
       renderEditExerciseDropdown();
     }));
   }
 }
 
-function buildSelectedExerciseItem(name: string, onRemove: () => void): HTMLLIElement {
+function buildSelectedExerciseItem(
+  name: string,
+  exerciseId: string,
+  index: number,
+  listLength: number,
+  onRemove: () => void
+): HTMLLIElement {
   const li = document.createElement("li");
   li.className = "workout-selected__item";
+  li.setAttribute("data-exercise-id", exerciseId);
+  li.setAttribute("data-index", String(index));
+
+  const showHandle = listLength >= 2;
+
+  if (showHandle) {
+    li.setAttribute("draggable", "true");
+    li.setAttribute("aria-roledescription", "sortable item");
+
+    const handle = document.createElement("button");
+    handle.type = "button";
+    handle.className = "workout-selected__drag-handle";
+    handle.setAttribute("aria-label", `Drag to reorder ${name}`);
+    handle.setAttribute("aria-pressed", "false");
+    handle.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="5" cy="3" r="1.5"/><circle cx="5" cy="8" r="1.5"/><circle cx="5" cy="13" r="1.5"/><circle cx="11" cy="3" r="1.5"/><circle cx="11" cy="8" r="1.5"/><circle cx="11" cy="13" r="1.5"/></svg>`;
+    li.appendChild(handle);
+  }
 
   const nameSpan = document.createElement("span");
   nameSpan.className = "workout-selected__name";
@@ -579,6 +719,263 @@ function buildSelectedExerciseItem(name: string, onRemove: () => void): HTMLLIEl
   li.appendChild(removeBtn);
 
   return li;
+}
+
+function initDragAndDrop(
+  listId: string,
+  announceId: string,
+  getArray: () => string[],
+  onReorder: () => void
+): void {
+  const list = document.getElementById(listId);
+  if (!list) return;
+
+  // Guard: attach listeners only once per list element lifetime
+  if (list.dataset["dndAttached"]) return;
+  list.dataset["dndAttached"] = "1";
+
+  let draggingIndex = -1;
+  let draggingLi: HTMLElement | null = null;
+  let dropHandled = false;
+  // Keyboard reorder state
+  let originalPickupIndex = -1;
+  let snapshotBeforePickup: string[] = [];
+
+  function getAnnounce(): HTMLElement | null {
+    return document.getElementById(announceId);
+  }
+
+  function announce(msg: string): void {
+    const el = getAnnounce();
+    if (el) el.textContent = msg;
+  }
+
+  function getLiAtIndex(idx: number): HTMLElement | null {
+    return list!.querySelector(`li[data-index="${idx}"]`);
+  }
+
+  /** Returns the current 0-based position of li among its siblings in the list. */
+  function getLiveDomIndex(li: HTMLElement): number {
+    return Array.from(list!.children).indexOf(li);
+  }
+
+  // ── HTML5 DnD ──────────────────────────────────────────────────────────────
+
+  list.addEventListener("dragstart", (e: Event) => {
+    const ev = e as DragEvent;
+    const li = (ev.target as HTMLElement).closest("li[data-index]") as HTMLElement | null;
+    if (!li) return;
+    draggingIndex = parseInt(li.dataset["index"] ?? "-1", 10);
+    draggingLi = li;
+    dropHandled = false;
+    ev.dataTransfer?.setData("text/plain", String(draggingIndex)); // Firefox compat
+    if (ev.dataTransfer) ev.dataTransfer.effectAllowed = "move";
+    // Defer the opacity so the drag ghost is captured at full opacity first
+    setTimeout(() => li.classList.add("workout-selected__item--dragging"), 0);
+    document.body.classList.add("is-dragging");
+  });
+
+  list.addEventListener("dragover", (e: Event) => {
+    const ev = e as DragEvent;
+    ev.preventDefault();
+    if (ev.dataTransfer) ev.dataTransfer.dropEffect = "move";
+    if (!draggingLi) return;
+    const targetLi = (ev.target as HTMLElement).closest("li[data-index]") as HTMLElement | null;
+    if (!targetLi || targetLi === draggingLi) return;
+    // Insert before or after target based on cursor position relative to its midpoint
+    const rect = targetLi.getBoundingClientRect();
+    if (ev.clientY < rect.top + rect.height / 2) {
+      list!.insertBefore(draggingLi, targetLi);
+    } else {
+      list!.insertBefore(draggingLi, targetLi.nextSibling);
+    }
+  });
+
+  list.addEventListener("dragenter", (e: Event) => {
+    (e as DragEvent).preventDefault();
+  });
+
+  list.addEventListener("drop", (e: Event) => {
+    const ev = e as DragEvent;
+    ev.preventDefault();
+    document.body.classList.remove("is-dragging");
+    if (!draggingLi) return;
+    const finalIndex = getLiveDomIndex(draggingLi);
+    draggingLi.classList.remove("workout-selected__item--dragging");
+    dropHandled = true;
+    const arr = getArray();
+    if (finalIndex !== -1 && finalIndex !== draggingIndex) {
+      reorder(arr, draggingIndex, finalIndex);
+      announce(`Exercise moved to position ${finalIndex + 1} of ${arr.length}`);
+    }
+    draggingLi = null;
+    draggingIndex = -1;
+    onReorder();
+  });
+
+  list.addEventListener("dragend", () => {
+    document.body.classList.remove("is-dragging");
+    if (draggingLi) {
+      draggingLi.classList.remove("workout-selected__item--dragging");
+      draggingLi = null;
+    }
+    // If the drop didn't fire (e.g. dropped outside the list), restore order
+    if (!dropHandled) {
+      onReorder();
+    }
+    dropHandled = false;
+    draggingIndex = -1;
+  });
+
+  // ── Touch ──────────────────────────────────────────────────────────────────
+
+  let touchDragIndex = -1;
+  let touchClone: HTMLElement | null = null;
+  let touchCloneOffsetX = 0;
+  let touchCloneOffsetY = 0;
+
+  list.addEventListener("touchstart", (e: Event) => {
+    const ev = e as TouchEvent;
+    const handle = (ev.target as HTMLElement).closest(".workout-selected__drag-handle") as HTMLElement | null;
+    if (!handle) return;
+    const li = handle.closest("li[data-index]") as HTMLElement | null;
+    if (!li) return;
+
+    touchDragIndex = parseInt(li.dataset["index"] ?? "-1", 10);
+
+    const touch = ev.touches[0];
+    const rect = li.getBoundingClientRect();
+    touchCloneOffsetX = touch.clientX - rect.left;
+    touchCloneOffsetY = touch.clientY - rect.top;
+
+    touchClone = li.cloneNode(true) as HTMLElement;
+    touchClone.style.cssText = `
+      position: fixed;
+      left: ${rect.left}px;
+      top: ${rect.top}px;
+      width: ${rect.width}px;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.85;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    `;
+    document.body.appendChild(touchClone);
+    li.classList.add("workout-selected__item--dragging");
+    document.body.classList.add("is-dragging");
+  }, { passive: true });
+
+  list.addEventListener("touchmove", (e: Event) => {
+    const ev = e as TouchEvent;
+    if (touchDragIndex === -1 || !touchClone) return;
+    ev.preventDefault();
+
+    const touch = ev.touches[0];
+    touchClone.style.left = `${touch.clientX - touchCloneOffsetX}px`;
+    touchClone.style.top = `${touch.clientY - touchCloneOffsetY}px`;
+
+    // Live-reorder: find the real li under the finger and move the dragged li in the DOM
+    touchClone.style.visibility = "hidden";
+    const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest("li[data-index]") as HTMLElement | null;
+    touchClone.style.visibility = "";
+    const touchLi = getLiAtIndex(touchDragIndex) ?? list!.querySelector(".workout-selected__item--dragging") as HTMLElement | null;
+    if (target && touchLi && target !== touchLi) {
+      const targetRect = target.getBoundingClientRect();
+      if (touch.clientY < targetRect.top + targetRect.height / 2) {
+        list!.insertBefore(touchLi, target);
+      } else {
+        list!.insertBefore(touchLi, target.nextSibling);
+      }
+    }
+  }, { passive: false });
+
+  list.addEventListener("touchend", (_e: Event) => {
+    if (touchDragIndex === -1) return;
+
+    document.body.classList.remove("is-dragging");
+
+    if (touchClone) touchClone.style.visibility = "hidden";
+    const touchLi = list!.querySelector(".workout-selected__item--dragging") as HTMLElement | null;
+    const finalIndex = touchLi ? getLiveDomIndex(touchLi) : -1;
+
+    if (touchClone) {
+      touchClone.remove();
+      touchClone = null;
+    }
+
+    touchLi?.classList.remove("workout-selected__item--dragging");
+
+    const arr = getArray();
+    if (finalIndex !== -1 && finalIndex !== touchDragIndex) {
+      reorder(arr, touchDragIndex, finalIndex);
+      announce(`Exercise moved to position ${finalIndex + 1} of ${arr.length}`);
+    }
+    touchDragIndex = -1;
+    onReorder();
+  });
+
+  // ── Keyboard ───────────────────────────────────────────────────────────────
+
+  list.addEventListener("keydown", (e: Event) => {
+    const ev = e as KeyboardEvent;
+    const handle = (ev.target as HTMLElement).closest(".workout-selected__drag-handle") as HTMLElement | null;
+    if (!handle) return;
+
+    const li = handle.closest("li[data-index]") as HTMLElement | null;
+    if (!li) return;
+
+    const currentIndex = parseInt(li.dataset["index"] ?? "-1", 10);
+    const arr = getArray();
+    const isPickedUp = handle.getAttribute("aria-pressed") === "true";
+
+    if (ev.key === " " || ev.key === "Enter") {
+      ev.preventDefault();
+      if (!isPickedUp) {
+        snapshotBeforePickup = [...arr];
+        originalPickupIndex = currentIndex;
+        handle.setAttribute("aria-pressed", "true");
+        announce(`${li.querySelector(".workout-selected__name")?.textContent ?? "Exercise"} picked up. Use arrow keys to move, Space or Enter to drop, Escape to cancel.`);
+      } else {
+        handle.setAttribute("aria-pressed", "false");
+        originalPickupIndex = -1;
+        snapshotBeforePickup = [];
+        announce(`Exercise dropped at position ${currentIndex + 1} of ${arr.length}`);
+      }
+    } else if ((ev.key === "ArrowUp" || ev.key === "ArrowDown") && isPickedUp) {
+      ev.preventDefault();
+      const direction = ev.key === "ArrowUp" ? -1 : 1;
+      const newIndex = currentIndex + direction;
+      if (newIndex < 0 || newIndex >= arr.length) return;
+      reorder(arr, currentIndex, newIndex);
+      onReorder();
+      // Re-focus the handle at the new index after re-render
+      requestAnimationFrame(() => {
+        const newLi = getLiAtIndex(newIndex);
+        const newHandle = newLi?.querySelector(".workout-selected__drag-handle") as HTMLElement | null;
+        if (newHandle) {
+          newHandle.setAttribute("aria-pressed", "true");
+          newHandle.focus();
+        }
+        announce(`Exercise moved to position ${newIndex + 1} of ${arr.length}`);
+      });
+    } else if (ev.key === "Escape" && isPickedUp) {
+      ev.preventDefault();
+      // Restore snapshot and focus the handle at the original pickup position
+      const restoredIndex = originalPickupIndex;
+      arr.splice(0, arr.length, ...snapshotBeforePickup);
+      originalPickupIndex = -1;
+      snapshotBeforePickup = [];
+      onReorder();
+      requestAnimationFrame(() => {
+        const restoredLi = getLiAtIndex(restoredIndex);
+        const restoredHandle = restoredLi?.querySelector(".workout-selected__drag-handle") as HTMLElement | null;
+        if (restoredHandle) {
+          restoredHandle.setAttribute("aria-pressed", "false");
+          restoredHandle.focus();
+        }
+        announce("Reorder cancelled. Exercise returned to original position.");
+      });
+    }
+  });
 }
 
 async function handleEditSubmit(): Promise<void> {
@@ -606,19 +1003,21 @@ async function handleEditSubmit(): Promise<void> {
     return;
   }
 
-  if (editSelectedExercises.size === 0) {
+  if (editSelectedExercises.length === 0) {
     errorEl.textContent = "At least one exercise is required.";
     return;
   }
 
   isEditSubmitting = true;
+  const closeBtn = document.getElementById("workout-edit-close") as HTMLButtonElement | null;
   submitBtn.setAttribute("aria-disabled", "true");
   const originalText = submitBtn.textContent;
   submitBtn.textContent = "Saving...";
   submitBtn.classList.add("workout-form__submit--loading");
+  if (closeBtn) closeBtn.disabled = true;
 
   try {
-    const exercises = Array.from(editSelectedExercises).map(exerciseId => ({
+    const exercises = editSelectedExercises.map(exerciseId => ({
       exerciseId,
       targetReps: null as string | null,
       targetWeight: null as string | null,
@@ -649,6 +1048,7 @@ async function handleEditSubmit(): Promise<void> {
     submitBtn.removeAttribute("aria-disabled");
     submitBtn.textContent = originalText ?? "Save Changes";
     submitBtn.classList.remove("workout-form__submit--loading");
+    if (closeBtn) closeBtn.disabled = false;
   }
 }
 
@@ -657,7 +1057,7 @@ function resetCreateForm(): void {
   const errorEl = document.getElementById("workout-error") as HTMLElement | null;
   const apiErrorEl = document.getElementById("workout-api-error") as HTMLElement | null;
 
-  selectedExercises = new Set();
+  selectedExercises = [];
 
   if (nameInput) {
     nameInput.value = "";
@@ -748,6 +1148,83 @@ async function handleDelete(): Promise<void> {
     }
   }
 }
+
+// === Pre-start Modal =========================================================
+
+function initPreStartModal(): void {
+  const backdrop = document.getElementById("workout-prestart-backdrop") as HTMLElement | null;
+  if (!backdrop) return;
+
+  const yesBtn = document.getElementById("prestart-yes") as HTMLButtonElement | null;
+  const noBtn = document.getElementById("prestart-no") as HTMLButtonElement | null;
+  const closeBtn = document.getElementById("prestart-close") as HTMLButtonElement | null;
+
+  yesBtn?.addEventListener("click", () => { handleYes(); });
+  noBtn?.addEventListener("click", () => { handleNo(); });
+  closeBtn?.addEventListener("click", () => { closePreStartModal(); });
+
+  backdrop.addEventListener("click", (event: Event) => {
+    if (event.target === backdrop) closePreStartModal();
+  });
+
+  backdrop.addEventListener("keydown", (event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      closePreStartModal();
+      return;
+    }
+
+    const modal = backdrop.querySelector(".prestart-modal") as HTMLElement | null;
+    if (!modal) return;
+
+    trapModalTabKey(event, modal);
+  });
+}
+
+function openPreStartModal(workout: Workout, triggerBtn: HTMLButtonElement): void {
+  const backdrop = document.getElementById("workout-prestart-backdrop") as HTMLElement | null;
+  const yesBtn = document.getElementById("prestart-yes") as HTMLButtonElement | null;
+
+  if (!backdrop) return;
+
+  if (workout.exercises.length < 2) {
+    navigate(`/active-session?id=${workout.plannedWorkoutId}`);
+    return;
+  }
+
+  prestartWorkout = workout;
+  prestartTriggerBtn = triggerBtn;
+
+  backdrop.style.display = "";
+  yesBtn?.focus();
+}
+
+function closePreStartModal(): void {
+  const backdrop = document.getElementById("workout-prestart-backdrop") as HTMLElement | null;
+  if (backdrop) backdrop.style.display = "none";
+
+  const triggerBtn = prestartTriggerBtn;
+  prestartWorkout = null;
+  prestartTriggerBtn = null;
+
+  triggerBtn?.focus();
+}
+
+function handleYes(): void {
+  if (!prestartWorkout) return;
+  const workoutId = prestartWorkout.plannedWorkoutId;
+  const order = shuffle(prestartWorkout.exercises).map((ex) => ex.exerciseId).join(",");
+  closePreStartModal();
+  navigate(`/active-session?id=${workoutId}&order=${order}`);
+}
+
+function handleNo(): void {
+  if (!prestartWorkout) return;
+  const workoutId = prestartWorkout.plannedWorkoutId;
+  closePreStartModal();
+  navigate(`/active-session?id=${workoutId}`);
+}
+
+// =============================================================================
 
 function showValidationError(input: HTMLInputElement, errorEl: HTMLElement, message: string): void {
   errorEl.textContent = message;
