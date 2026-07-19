@@ -612,14 +612,14 @@ public class WebAppFixture : WebApplicationFactory<Program>
         // Mock API endpoint for previous performance (returns no previous session by default)
         app.MapGet("/api/workouts/{workoutId}/previous-performance", (string workoutId) =>
         {
-            bool workoutExists;
+            MockPlannedWorkout? workout;
             lock (_workoutsLock)
             {
-                workoutExists = _workouts.Any(w =>
+                workout = _workouts.FirstOrDefault(w =>
                     string.Equals(w.PlannedWorkoutId, workoutId, StringComparison.OrdinalIgnoreCase));
             }
 
-            if (!workoutExists)
+            if (workout is null)
             {
                 return Results.Json(new { error = "Workout not found." }, statusCode: 404);
             }
@@ -630,12 +630,17 @@ public class WebAppFixture : WebApplicationFactory<Program>
                 sessionSnapshot = [.. _sessions];
             }
 
-            var lastSession = sessionSnapshot
-                .Where(s => string.Equals(s.PlannedWorkoutId, workoutId, StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(s => s.CompletedAt)
-                .FirstOrDefault();
+            var targetExerciseIds = workout.Exercises
+                .Select(e => e.ExerciseId)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var selectedExercises = SelectLatestUsableExercises(
+                sessionSnapshot
+                    .Where(s => string.Equals(s.PlannedWorkoutId, workoutId, StringComparison.OrdinalIgnoreCase))
+                    .OrderByDescending(s => s.CompletedAt)
+                    .ThenByDescending(s => s.SessionId),
+                targetExerciseIds);
 
-            if (lastSession is null)
+            if (selectedExercises.Count == 0)
             {
                 return Results.Ok(new
                 {
@@ -648,9 +653,9 @@ public class WebAppFixture : WebApplicationFactory<Program>
             return Results.Ok(new
             {
                 hasPreviousSession = true,
-                completedAt = (DateTime?)lastSession.CompletedAt,
-                exercises = lastSession.LoggedExercises
-                    .Select(le => new { le.ExerciseId, le.LoggedWeight, le.Effort })
+                completedAt = (DateTime?)selectedExercises.Values.Max(e => e.CompletedAt),
+                exercises = selectedExercises.Values
+                    .Select(e => new { e.ExerciseId, e.LoggedWeight, e.Effort, e.CompletedAt })
                     .ToArray(),
             });
         });
@@ -817,7 +822,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
             }
 
             var currentSessionId = Guid.Parse(session.SessionId);
-            var priorSession = sessionSnapshot
+            var priorSessions = sessionSnapshot
                 .Where(s =>
                     string.Equals(s.PlannedWorkoutId, session.PlannedWorkoutId, StringComparison.OrdinalIgnoreCase) &&
                     Guid.TryParse(s.SessionId, out var candidateSessionId) &&
@@ -828,7 +833,13 @@ public class WebAppFixture : WebApplicationFactory<Program>
                     ))
                 .OrderByDescending(s => s.CompletedAt)
                 .ThenByDescending(s => s.SessionId)
-                .FirstOrDefault();
+                .ToList();
+
+            var targetExerciseIds = session.LoggedExercises
+                .Select(e => e.ExerciseId)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var previousExercises = SelectLatestUsableExercises(priorSessions, targetExerciseIds);
+            var priorSession = priorSessions.FirstOrDefault();
 
             return Results.Ok(new
             {
@@ -842,8 +853,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
                 {
                     var ex = exerciseSnapshot.FirstOrDefault(e =>
                         string.Equals(e.ExerciseId, le.ExerciseId, StringComparison.OrdinalIgnoreCase));
-                    var prior = priorSession?.LoggedExercises.FirstOrDefault(p =>
-                        string.Equals(p.ExerciseId, le.ExerciseId, StringComparison.OrdinalIgnoreCase));
+                    previousExercises.TryGetValue(le.ExerciseId, out var prior);
                     return new
                     {
                         le.LoggedExerciseId,
@@ -914,6 +924,48 @@ public class WebAppFixture : WebApplicationFactory<Program>
         _host?.Dispose();
         base.Dispose(disposing);
     }
+
+    private static Dictionary<string, LatestMockExerciseComparison> SelectLatestUsableExercises(
+        IEnumerable<MockWorkoutSession> sessions,
+        HashSet<string> targetExerciseIds)
+    {
+        var selected = new Dictionary<string, LatestMockExerciseComparison>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var session in sessions)
+        {
+            foreach (var loggedExercise in session.LoggedExercises)
+            {
+                if (!targetExerciseIds.Contains(loggedExercise.ExerciseId) ||
+                    selected.ContainsKey(loggedExercise.ExerciseId) ||
+                    !HasUsableComparisonData(loggedExercise.LoggedWeight, loggedExercise.Effort))
+                {
+                    continue;
+                }
+
+                selected[loggedExercise.ExerciseId] = new LatestMockExerciseComparison(
+                    loggedExercise.ExerciseId,
+                    loggedExercise.LoggedWeight,
+                    loggedExercise.Effort,
+                    session.CompletedAt);
+            }
+
+            if (selected.Count == targetExerciseIds.Count)
+            {
+                break;
+            }
+        }
+
+        return selected;
+    }
+
+    private static bool HasUsableComparisonData(string? loggedWeight, int? effort) =>
+        !string.IsNullOrWhiteSpace(loggedWeight) || effort is not null;
+
+    private sealed record LatestMockExerciseComparison(
+        string ExerciseId,
+        string? LoggedWeight,
+        int? Effort,
+        DateTime CompletedAt);
 
     private sealed class ExerciseRequest
     {

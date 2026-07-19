@@ -41,6 +41,9 @@ bld/
 
 # Node.js
 node_modules/
+dist/
+build/
+*.log
 npm-debug.log*
 
 # TypeScript

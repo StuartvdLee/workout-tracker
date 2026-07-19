@@ -403,24 +403,37 @@ app.MapGet("/api/workouts/{workoutId:guid}/previous-performance", async (Guid wo
         return Results.Json(new { error = "Workout not found." }, statusCode: 404);
     }
 
-    var lastSession = await db.WorkoutSessions
+    var workoutExerciseIds = await db.PlannedWorkoutExercises
+        .Where(pwe => pwe.PlannedWorkoutId == workoutId)
+        .Select(pwe => pwe.ExerciseId)
+        .ToListAsync();
+
+    var targetExerciseIds = workoutExerciseIds.ToHashSet();
+    var sessions = await db.WorkoutSessions
         .Where(ws => ws.PlannedWorkoutId == workoutId)
         .OrderByDescending(ws => EF.Property<DateTime>(ws, "CompletedAt"))
         .ThenByDescending(ws => ws.WorkoutSessionId)
+        .Take(PreviousExerciseDataSelector.MaxSessionsToScan)
         .Select(ws => new
         {
+            ws.WorkoutSessionId,
             CompletedAt = EF.Property<DateTime>(ws, "CompletedAt"),
-            LoggedExercises = ws.LoggedExercises.Select(le => new
-            {
-                le.ExerciseId,
-                le.LoggedWeight,
-                le.Effort,
-                le.Sequence,
-            }).ToList(),
+            LoggedExercises = ws.LoggedExercises
+                .Where(le => workoutExerciseIds.Contains(le.ExerciseId))
+                .Select(le => new HistoricalExerciseData(
+                    le.ExerciseId,
+                    le.LoggedWeight,
+                    le.Effort,
+                    le.Sequence))
+                .ToList(),
         })
-        .FirstOrDefaultAsync();
+        .ToListAsync();
 
-    if (lastSession is null)
+    var latestExercises = PreviousExerciseDataSelector.SelectLatestUsablePerExercise(
+        sessions.Select(s => new HistoricalSessionData(s.WorkoutSessionId, s.CompletedAt, null, s.LoggedExercises)),
+        targetExerciseIds);
+
+    if (latestExercises.Count == 0)
     {
         return Results.Ok(new
         {
@@ -433,8 +446,18 @@ app.MapGet("/api/workouts/{workoutId:guid}/previous-performance", async (Guid wo
     return Results.Ok(new
     {
         hasPreviousSession = true,
-        completedAt = (DateTime?)lastSession.CompletedAt,
-        exercises = lastSession.LoggedExercises,
+        completedAt = (DateTime?)latestExercises.Values.Max(e => e.CompletedAt),
+        exercises = latestExercises.Values
+            .OrderBy(e => e.ExerciseId)
+            .Select(e => new
+            {
+                e.ExerciseId,
+                e.LoggedWeight,
+                e.Effort,
+                e.Sequence,
+                e.CompletedAt,
+            })
+            .ToList(),
     });
 });
 
@@ -843,8 +866,9 @@ app.MapGet("/api/sessions/{sessionId:guid}", async (Guid sessionId, WorkoutTrack
         return Results.Json(new { error = "Session not found." }, statusCode: 404);
     }
 
-    var priorSession = session.PlannedWorkoutId is null
-        ? null
+    var sessionExerciseIds = session.Exercises.Select(e => e.ExerciseId).ToHashSet();
+    var priorSessions = session.PlannedWorkoutId is null
+        ? new List<HistoricalSessionData>()
         : await db.WorkoutSessions
             .Where(ws =>
                 ws.PlannedWorkoutId == session.PlannedWorkoutId &&
@@ -855,10 +879,23 @@ app.MapGet("/api/sessions/{sessionId:guid}", async (Guid sessionId, WorkoutTrack
                 ))
             .OrderByDescending(ws => EF.Property<DateTime>(ws, "CompletedAt"))
             .ThenByDescending(ws => ws.WorkoutSessionId)
-            .Select(ws => new { ws.OverallEffort, LoggedExercises = ws.LoggedExercises
-                .Select(le => new { le.ExerciseId, le.LoggedWeight, le.Effort })
-                .ToList() })
-            .FirstOrDefaultAsync();
+            .Take(PreviousExerciseDataSelector.MaxSessionsToScan)
+            .Select(ws => new HistoricalSessionData(
+                ws.WorkoutSessionId,
+                EF.Property<DateTime>(ws, "CompletedAt"),
+                ws.OverallEffort,
+                ws.LoggedExercises
+                    .Where(le => sessionExerciseIds.Contains(le.ExerciseId))
+                    .Select(le => new HistoricalExerciseData(
+                        le.ExerciseId,
+                        le.LoggedWeight,
+                        le.Effort,
+                        le.Sequence))
+                    .ToList()))
+            .ToListAsync();
+
+    var priorSession = priorSessions.FirstOrDefault();
+    var previousExercises = PreviousExerciseDataSelector.SelectLatestUsablePerExercise(priorSessions, sessionExerciseIds);
 
     return Results.Ok(new
     {
@@ -870,9 +907,8 @@ app.MapGet("/api/sessions/{sessionId:guid}", async (Guid sessionId, WorkoutTrack
         PreviousOverallEffort = priorSession?.OverallEffort,
         Exercises = session.Exercises.Select(le =>
         {
-            // First-match by ExerciseId — accepted strategy per research.md R-007
             // Single-user app: no cross-user access control needed (consistent with features 008 and 013)
-            var prior = priorSession?.LoggedExercises?.FirstOrDefault(p => p.ExerciseId == le.ExerciseId);
+            previousExercises.TryGetValue(le.ExerciseId, out var prior);
             return new
             {
                 le.LoggedExerciseId,
@@ -950,6 +986,63 @@ internal sealed class MuscleCreateRequest
 internal sealed class MuscleUpdateRequest
 {
     public string? Name { get; set; }
+}
+
+internal sealed record HistoricalExerciseData(Guid ExerciseId, string? LoggedWeight, int? Effort, int? Sequence);
+
+internal sealed record HistoricalSessionData(
+    Guid WorkoutSessionId,
+    DateTime CompletedAt,
+    int? OverallEffort,
+    List<HistoricalExerciseData> LoggedExercises);
+
+internal sealed record LatestExerciseComparison(
+    Guid ExerciseId,
+    string? LoggedWeight,
+    int? Effort,
+    int? Sequence,
+    DateTime CompletedAt);
+
+internal static class PreviousExerciseDataSelector
+{
+    internal const int MaxSessionsToScan = 200;
+
+    internal static Dictionary<Guid, LatestExerciseComparison> SelectLatestUsablePerExercise(
+        IEnumerable<HistoricalSessionData> sessions,
+        ISet<Guid> targetExerciseIds)
+    {
+        var selected = new Dictionary<Guid, LatestExerciseComparison>();
+
+        foreach (var session in sessions)
+        {
+            foreach (var loggedExercise in session.LoggedExercises)
+            {
+                if (!targetExerciseIds.Contains(loggedExercise.ExerciseId) ||
+                    selected.ContainsKey(loggedExercise.ExerciseId) ||
+                    !HasUsableComparisonData(loggedExercise.LoggedWeight, loggedExercise.Effort))
+                {
+                    continue;
+                }
+
+                selected[loggedExercise.ExerciseId] = new LatestExerciseComparison(
+                    loggedExercise.ExerciseId,
+                    loggedExercise.LoggedWeight,
+                    loggedExercise.Effort,
+                    loggedExercise.Sequence,
+                    session.CompletedAt);
+            }
+
+            if (selected.Count == targetExerciseIds.Count)
+            {
+                break;
+            }
+        }
+
+        return selected;
+    }
+
+    internal static bool HasUsableComparisonData(string? loggedWeight, int? effort) =>
+        !string.IsNullOrWhiteSpace(loggedWeight) || effort is not null;
 }
 
 internal static class ExerciseQueryHelper
