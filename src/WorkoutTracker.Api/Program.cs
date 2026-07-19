@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using WorkoutTracker.Infrastructure.Data;
 using WorkoutTracker.Infrastructure.Data.Models;
@@ -838,89 +839,79 @@ app.MapGet("/api/sessions/latest", async (WorkoutTrackerDbContext db) =>
 });
 
 app.MapGet("/api/sessions/{sessionId:guid}", async (Guid sessionId, WorkoutTrackerDbContext db) =>
+    await SessionDetailResponseBuilder.BuildAsync(sessionId, db));
+
+app.MapPut("/api/sessions/{sessionId:guid}", async (Guid sessionId, HttpContext context, WorkoutTrackerDbContext db) =>
 {
     var session = await db.WorkoutSessions
-        .Where(ws => ws.WorkoutSessionId == sessionId)
-        .Select(ws => new
-        {
-            ws.WorkoutSessionId,
-            ws.PlannedWorkoutId,
-            WorkoutName = ws.WorkoutName ?? (ws.PlannedWorkout != null ? ws.PlannedWorkout.Name : null),
-            CompletedAt = EF.Property<DateTime>(ws, "CompletedAt"),
-            ws.OverallEffort,
-            Exercises = ws.LoggedExercises
-                .OrderBy(le => le.Sequence)
-                .Select(le => new
-                {
-                    le.LoggedExerciseId,
-                    le.ExerciseId,
-                    ExerciseName = le.Exercise.Name,
-                    le.LoggedWeight,
-                    le.Effort,
-                }).ToList(),
-        })
-        .FirstOrDefaultAsync();
+        .Include(ws => ws.LoggedExercises)
+        .FirstOrDefaultAsync(ws => ws.WorkoutSessionId == sessionId);
 
     if (session is null)
     {
         return Results.Json(new { error = "Session not found." }, statusCode: 404);
     }
 
-    var sessionExerciseIds = session.Exercises.Select(e => e.ExerciseId).ToHashSet();
-    var priorSessions = session.PlannedWorkoutId is null
-        ? new List<HistoricalSessionData>()
-        : await db.WorkoutSessions
-            .Where(ws =>
-                ws.PlannedWorkoutId == session.PlannedWorkoutId &&
-                (
-                    EF.Property<DateTime>(ws, "CompletedAt") < session.CompletedAt ||
-                    (EF.Property<DateTime>(ws, "CompletedAt") == session.CompletedAt &&
-                     ws.WorkoutSessionId.CompareTo(sessionId) < 0)
-                ))
-            .OrderByDescending(ws => EF.Property<DateTime>(ws, "CompletedAt"))
-            .ThenByDescending(ws => ws.WorkoutSessionId)
-            .Take(PreviousExerciseDataSelector.MaxSessionsToScan)
-            .Select(ws => new HistoricalSessionData(
-                ws.WorkoutSessionId,
-                EF.Property<DateTime>(ws, "CompletedAt"),
-                ws.OverallEffort,
-                ws.LoggedExercises
-                    .Where(le => sessionExerciseIds.Contains(le.ExerciseId))
-                    .Select(le => new HistoricalExerciseData(
-                        le.ExerciseId,
-                        le.LoggedWeight,
-                        le.Effort,
-                        le.Sequence))
-                    .ToList()))
-            .ToListAsync();
-
-    var priorSession = priorSessions.FirstOrDefault();
-    var previousExercises = PreviousExerciseDataSelector.SelectLatestUsablePerExercise(priorSessions, sessionExerciseIds);
-
-    return Results.Ok(new
+    SessionUpdateRequest? body;
+    try
     {
-        session.WorkoutSessionId,
-        session.PlannedWorkoutId,
-        session.WorkoutName,
-        session.CompletedAt,
-        session.OverallEffort,
-        PreviousOverallEffort = priorSession?.OverallEffort,
-        Exercises = session.Exercises.Select(le =>
-        {
-            // Single-user app: no cross-user access control needed (consistent with features 008 and 013)
-            previousExercises.TryGetValue(le.ExerciseId, out var prior);
-            return new
-            {
-                le.LoggedExerciseId,
-                le.ExerciseId,
-                le.ExerciseName,
-                le.LoggedWeight,
-                le.Effort,
-                PreviousWeight = prior?.LoggedWeight,
-                PreviousEffort = prior?.Effort,
-            };
-        }).ToList(),
-    });
+        body = await context.Request.ReadFromJsonAsync<SessionUpdateRequest>();
+    }
+    catch (JsonException)
+    {
+        return Results.Json(new { error = "A JSON request body is required." }, statusCode: 400);
+    }
+    catch (BadHttpRequestException)
+    {
+        return Results.Json(new { error = "A JSON request body is required." }, statusCode: 400);
+    }
+    catch (InvalidOperationException)
+    {
+        return Results.Json(new { error = "A JSON request body is required." }, statusCode: 400);
+    }
+
+    if (body is null)
+    {
+        return Results.Json(new { error = "A JSON request body is required." }, statusCode: 400);
+    }
+
+    var loggedExercises = body.LoggedExercises ?? [];
+
+    if (body.OverallEffort is not null && (body.OverallEffort < 1 || body.OverallEffort > 10))
+        return Results.Json(new { error = "Overall effort must be between 1 and 10." }, statusCode: 400);
+
+    foreach (var item in loggedExercises)
+    {
+        if (item.LoggedWeight is { Length: > 100 })
+            return Results.Json(new { error = "Logged weight must not exceed 100 characters." }, statusCode: 400);
+
+        if (item.Effort is not null && (item.Effort < 1 || item.Effort > 10))
+            return Results.Json(new { error = "Effort must be between 1 and 10." }, statusCode: 400);
+    }
+
+    var requestedLoggedExerciseIds = loggedExercises.Select(le => le.LoggedExerciseId).ToArray();
+    if (requestedLoggedExerciseIds.Distinct().Count() != requestedLoggedExerciseIds.Length)
+    {
+        return Results.Json(new { error = "Each logged exercise may only be included once." }, statusCode: 400);
+    }
+
+    var sessionLoggedExercises = session.LoggedExercises.ToDictionary(le => le.LoggedExerciseId);
+    if (requestedLoggedExerciseIds.Any(id => !sessionLoggedExercises.ContainsKey(id)))
+    {
+        return Results.Json(new { error = "One or more logged exercises are not part of this session." }, statusCode: 400);
+    }
+
+    session.OverallEffort = body.OverallEffort;
+    foreach (var item in loggedExercises)
+    {
+        var loggedExercise = sessionLoggedExercises[item.LoggedExerciseId];
+        loggedExercise.LoggedWeight = string.IsNullOrWhiteSpace(item.LoggedWeight) ? null : item.LoggedWeight;
+        loggedExercise.Effort = item.Effort;
+    }
+
+    await db.SaveChangesAsync();
+
+    return await SessionDetailResponseBuilder.BuildAsync(sessionId, db);
 });
 
 app.MapDelete("/api/sessions/{sessionId:guid}", async (Guid sessionId, WorkoutTrackerDbContext db) =>
@@ -970,6 +961,19 @@ internal sealed class SessionLoggedExerciseItem
     public string? Notes { get; set; }
     public int? Effort { get; set; }
     public int? Sequence { get; set; }
+}
+
+internal sealed class SessionUpdateRequest
+{
+    public int? OverallEffort { get; set; }
+    public SessionUpdateLoggedExerciseItem[] LoggedExercises { get; set; } = [];
+}
+
+internal sealed class SessionUpdateLoggedExerciseItem
+{
+    public Guid LoggedExerciseId { get; set; }
+    public string? LoggedWeight { get; set; }
+    public int? Effort { get; set; }
 }
 
 internal sealed class ExerciseCreateRequest
@@ -1043,6 +1047,95 @@ internal static class PreviousExerciseDataSelector
 
     internal static bool HasUsableComparisonData(string? loggedWeight, int? effort) =>
         !string.IsNullOrWhiteSpace(loggedWeight) || effort is not null;
+}
+
+internal static class SessionDetailResponseBuilder
+{
+    internal static async Task<IResult> BuildAsync(Guid sessionId, WorkoutTrackerDbContext db)
+    {
+        var session = await db.WorkoutSessions
+            .Where(ws => ws.WorkoutSessionId == sessionId)
+            .Select(ws => new
+            {
+                ws.WorkoutSessionId,
+                ws.PlannedWorkoutId,
+                WorkoutName = ws.WorkoutName ?? (ws.PlannedWorkout != null ? ws.PlannedWorkout.Name : null),
+                CompletedAt = EF.Property<DateTime>(ws, "CompletedAt"),
+                ws.OverallEffort,
+                Exercises = ws.LoggedExercises
+                    .OrderBy(le => le.Sequence)
+                    .Select(le => new
+                    {
+                        le.LoggedExerciseId,
+                        le.ExerciseId,
+                        ExerciseName = le.Exercise.Name,
+                        le.LoggedWeight,
+                        le.Effort,
+                    }).ToList(),
+            })
+            .FirstOrDefaultAsync();
+
+        if (session is null)
+        {
+            return Results.Json(new { error = "Session not found." }, statusCode: 404);
+        }
+
+        var sessionExerciseIds = session.Exercises.Select(e => e.ExerciseId).ToHashSet();
+        var priorSessions = session.PlannedWorkoutId is null
+            ? new List<HistoricalSessionData>()
+            : await db.WorkoutSessions
+                .Where(ws =>
+                    ws.PlannedWorkoutId == session.PlannedWorkoutId &&
+                    (
+                        EF.Property<DateTime>(ws, "CompletedAt") < session.CompletedAt ||
+                        (EF.Property<DateTime>(ws, "CompletedAt") == session.CompletedAt &&
+                         ws.WorkoutSessionId.CompareTo(sessionId) < 0)
+                    ))
+                .OrderByDescending(ws => EF.Property<DateTime>(ws, "CompletedAt"))
+                .ThenByDescending(ws => ws.WorkoutSessionId)
+                .Take(PreviousExerciseDataSelector.MaxSessionsToScan)
+                .Select(ws => new HistoricalSessionData(
+                    ws.WorkoutSessionId,
+                    EF.Property<DateTime>(ws, "CompletedAt"),
+                    ws.OverallEffort,
+                    ws.LoggedExercises
+                        .Where(le => sessionExerciseIds.Contains(le.ExerciseId))
+                        .Select(le => new HistoricalExerciseData(
+                            le.ExerciseId,
+                            le.LoggedWeight,
+                            le.Effort,
+                            le.Sequence))
+                        .ToList()))
+                .ToListAsync();
+
+        var priorSession = priorSessions.FirstOrDefault();
+        var previousExercises = PreviousExerciseDataSelector.SelectLatestUsablePerExercise(priorSessions, sessionExerciseIds);
+
+        return Results.Ok(new
+        {
+            session.WorkoutSessionId,
+            session.PlannedWorkoutId,
+            session.WorkoutName,
+            session.CompletedAt,
+            session.OverallEffort,
+            PreviousOverallEffort = priorSession?.OverallEffort,
+            Exercises = session.Exercises.Select(le =>
+            {
+                // Single-user app: no cross-user access control needed (consistent with features 008 and 013)
+                previousExercises.TryGetValue(le.ExerciseId, out var prior);
+                return new
+                {
+                    le.LoggedExerciseId,
+                    le.ExerciseId,
+                    le.ExerciseName,
+                    le.LoggedWeight,
+                    le.Effort,
+                    PreviousWeight = prior?.LoggedWeight,
+                    PreviousEffort = prior?.Effort,
+                };
+            }).ToList(),
+        });
+    }
 }
 
 internal static class ExerciseQueryHelper

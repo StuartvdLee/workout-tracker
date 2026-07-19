@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
 using Xunit;
 using WorkoutTracker.UnitTests.Infrastructure;
 
@@ -1172,6 +1173,186 @@ public class SessionApiTests : IAsyncLifetime
         Assert.NotNull(detail);
         Assert.Equal(9, detail.OverallEffort);
         Assert.Null(detail.PreviousOverallEffort);
+    }
+
+    // --- PUT /api/sessions/{sessionId} ---
+
+    [Fact]
+    public async Task UpdateSession_UpdatesLoggedExerciseAndOverallEffort()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Edit Session Workout", "Bench Press");
+        var session = await CreateSessionWithOverallEffortAsync(workoutId, exerciseId, "80 KG", 7, 6);
+        var loggedExercise = session.LoggedExercises.Single();
+
+        var response = await _client.PutAsJsonAsync($"/api/sessions/{session.WorkoutSessionId}", new
+        {
+            OverallEffort = 8,
+            LoggedExercises = new[]
+            {
+                new { loggedExercise.LoggedExerciseId, LoggedWeight = "82.5 KG", Effort = (int?)9 },
+            },
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var detail = await response.Content.ReadFromJsonAsync<SessionDetailWithPreviousDto>();
+        Assert.NotNull(detail);
+        Assert.Equal(session.WorkoutSessionId, detail.WorkoutSessionId);
+        Assert.Equal(workoutId, detail.PlannedWorkoutId);
+        Assert.Equal(8, detail.OverallEffort);
+        var updatedExercise = Assert.Single(detail.Exercises);
+        Assert.Equal(loggedExercise.LoggedExerciseId, updatedExercise.LoggedExerciseId);
+        Assert.Equal(exerciseId, updatedExercise.ExerciseId);
+        Assert.Equal("82.5 KG", updatedExercise.LoggedWeight);
+        Assert.Equal(9, updatedExercise.Effort);
+    }
+
+    [Fact]
+    public async Task UpdateSession_ClearsOptionalExerciseValuesAndOverallEffort()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Clear Session Workout", "Squat");
+        var session = await CreateSessionWithOverallEffortAsync(workoutId, exerciseId, "100 KG", 8, 9);
+        var loggedExercise = session.LoggedExercises.Single();
+
+        var response = await _client.PutAsJsonAsync($"/api/sessions/{session.WorkoutSessionId}", new
+        {
+            OverallEffort = (int?)null,
+            LoggedExercises = new[]
+            {
+                new { loggedExercise.LoggedExerciseId, LoggedWeight = "", Effort = (int?)null },
+            },
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var detail = await response.Content.ReadFromJsonAsync<SessionDetailWithPreviousDto>();
+        Assert.NotNull(detail);
+        Assert.Null(detail.OverallEffort);
+        var updatedExercise = Assert.Single(detail.Exercises);
+        Assert.Null(updatedExercise.LoggedWeight);
+        Assert.Null(updatedExercise.Effort);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task UpdateSession_RejectsMissingOrEmptyJsonBody(bool includeEmptyJsonContent)
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Missing Body Workout", "Press");
+        var session = await CreateSessionWithOverallEffortAsync(workoutId, exerciseId, "55 KG", 7, 8);
+
+        using var request = new HttpRequestMessage(HttpMethod.Put, $"/api/sessions/{session.WorkoutSessionId}");
+        if (includeEmptyJsonContent)
+        {
+            request.Content = new StringContent("", Encoding.UTF8, "application/json");
+        }
+
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var error = await response.Content.ReadFromJsonAsync<ErrorDto>();
+        Assert.Equal("A JSON request body is required.", error?.Error);
+
+        var detailResponse = await _client.GetAsync($"/api/sessions/{session.WorkoutSessionId}");
+        var detail = await detailResponse.Content.ReadFromJsonAsync<SessionDetailWithPreviousDto>();
+        Assert.NotNull(detail);
+        Assert.Equal(8, detail.OverallEffort);
+        var exercise = Assert.Single(detail.Exercises);
+        Assert.Equal("55 KG", exercise.LoggedWeight);
+        Assert.Equal(7, exercise.Effort);
+    }
+
+    [Theory]
+    [InlineData(0, "Overall effort must be between 1 and 10.")]
+    [InlineData(11, "Overall effort must be between 1 and 10.")]
+    public async Task UpdateSession_RejectsInvalidOverallEffort(int overallEffort, string expectedError)
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Invalid Overall Effort", "Row");
+        var session = await CreateSessionAsync(workoutId, exerciseId);
+
+        var response = await _client.PutAsJsonAsync($"/api/sessions/{session.WorkoutSessionId}", new
+        {
+            OverallEffort = overallEffort,
+            LoggedExercises = Array.Empty<object>(),
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var error = await response.Content.ReadFromJsonAsync<ErrorDto>();
+        Assert.NotNull(error);
+        Assert.Equal(expectedError, error.Error);
+    }
+
+    [Fact]
+    public async Task UpdateSession_RejectsInvalidLoggedExerciseValues()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Invalid Exercise Values", "Row");
+        var session = await CreateSessionAsync(workoutId, exerciseId);
+        var loggedExercise = session.LoggedExercises.Single();
+
+        var response = await _client.PutAsJsonAsync($"/api/sessions/{session.WorkoutSessionId}", new
+        {
+            OverallEffort = (int?)null,
+            LoggedExercises = new[]
+            {
+                new { loggedExercise.LoggedExerciseId, LoggedWeight = new string('x', 101), Effort = (int?)5 },
+            },
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var error = await response.Content.ReadFromJsonAsync<ErrorDto>();
+        Assert.NotNull(error);
+        Assert.Equal("Logged weight must not exceed 100 characters.", error.Error);
+
+        response = await _client.PutAsJsonAsync($"/api/sessions/{session.WorkoutSessionId}", new
+        {
+            OverallEffort = (int?)null,
+            LoggedExercises = new[]
+            {
+                new { loggedExercise.LoggedExerciseId, LoggedWeight = (string?)null, Effort = (int?)11 },
+            },
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        error = await response.Content.ReadFromJsonAsync<ErrorDto>();
+        Assert.NotNull(error);
+        Assert.Equal("Effort must be between 1 and 10.", error.Error);
+    }
+
+    [Fact]
+    public async Task UpdateSession_RejectsDuplicateOrForeignLoggedExercises()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Duplicate Edit Workout", "Curl");
+        var session = await CreateSessionAsync(workoutId, exerciseId);
+        var otherSession = await CreateSessionAsync(workoutId, exerciseId);
+        var loggedExercise = session.LoggedExercises.Single();
+        var otherLoggedExercise = otherSession.LoggedExercises.Single();
+
+        var duplicateResponse = await _client.PutAsJsonAsync($"/api/sessions/{session.WorkoutSessionId}", new
+        {
+            OverallEffort = (int?)null,
+            LoggedExercises = new[]
+            {
+                new { loggedExercise.LoggedExerciseId, LoggedWeight = "20 KG", Effort = (int?)5 },
+                new { loggedExercise.LoggedExerciseId, LoggedWeight = "22 KG", Effort = (int?)6 },
+            },
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, duplicateResponse.StatusCode);
+        var error = await duplicateResponse.Content.ReadFromJsonAsync<ErrorDto>();
+        Assert.NotNull(error);
+        Assert.Equal("Each logged exercise may only be included once.", error.Error);
+
+        var foreignResponse = await _client.PutAsJsonAsync($"/api/sessions/{session.WorkoutSessionId}", new
+        {
+            OverallEffort = (int?)null,
+            LoggedExercises = new[]
+            {
+                new { otherLoggedExercise.LoggedExerciseId, LoggedWeight = "20 KG", Effort = (int?)5 },
+            },
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, foreignResponse.StatusCode);
+        error = await foreignResponse.Content.ReadFromJsonAsync<ErrorDto>();
+        Assert.NotNull(error);
+        Assert.Equal("One or more logged exercises are not part of this session.", error.Error);
     }
 
     // --- T001: GET /api/workouts/{workoutId}/session-trends ---

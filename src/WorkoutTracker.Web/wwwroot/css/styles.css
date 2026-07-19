@@ -2328,6 +2328,71 @@ body.is-dragging .workout-selected__drag-handle {
   color: var(--color-text-light);
 }
 
+.session-detail__toolbar {
+  margin-top: var(--spacing-lg);
+}
+
+.session-detail__edit {
+  min-height: var(--min-touch-target);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.session-detail__edit {
+  color: var(--color-white);
+  background-color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+}
+
+.session-detail__edit:hover {
+  background-color: var(--color-primary-dark, #1d4ed8);
+}
+
+.session-detail__edit:focus-visible,
+.session-detail__input:focus-visible,
+.session-detail__select:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.session-detail__edit:disabled,
+.session-detail__save:disabled,
+.session-detail__cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.session-detail__input,
+.session-detail__select {
+  width: 100%;
+  min-height: var(--min-touch-target);
+  padding: var(--spacing-xs);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  background-color: var(--color-white);
+}
+
+.session-detail__select--overall {
+  min-width: 10rem;
+}
+
+.session-detail__edit-error {
+  margin-bottom: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius);
+  color: var(--color-error);
+  background-color: var(--color-error-bg);
+  font-size: var(--font-size-sm);
+}
+
 .session-detail__overall-effort-row {
   display: flex;
   align-items: center;
@@ -2840,7 +2905,17 @@ html[data-theme-pref="system"] .topbar__theme-icon--system {
    ============================================= */
 
 .session-detail__delete-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
   margin-top: var(--spacing-lg);
+}
+
+.session-detail__delete-section .session-detail__edit {
+  width: 100%;
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  font-family: var(--font-family);
 }
 
 .session-detail__delete {

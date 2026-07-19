@@ -327,6 +327,326 @@ public class WorkoutHistoryTests
     }
 
     [Fact]
+    public async Task SessionDetailPage_EditSession_SavesExerciseAndOverallEffort()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await CreateWorkoutAndSessionViaApiAsync(page, exerciseName: "Bench Press", workoutName: "Edit Push Day");
+            await NavigateToHistoryAsync(page);
+            await page.Locator(".history-session__header").First.ClickAsync();
+            await page.WaitForSelectorAsync(".session-detail__table");
+
+            await page.Locator("#session-detail-edit").ClickAsync();
+            await page.Locator(".session-detail__input").First.FillAsync("82.5");
+            await page.Locator("[data-session-edit-effort]").First.SelectOptionAsync("9");
+            await page.Locator("#session-edit-overall-effort").SelectOptionAsync("8");
+            await page.Locator("#session-detail-save").ClickAsync();
+
+            await Expect(page.Locator("#session-detail-edit")).ToBeVisibleAsync();
+            var cells = page.Locator(".session-detail__row").First.Locator(".session-detail__cell");
+            await Expect(cells.Nth(1)).ToContainTextAsync("82.5");
+            await Expect(cells.Nth(3)).ToContainTextAsync("9");
+            await Expect(page.Locator(".session-detail__overall-effort-value")).ToContainTextAsync("8");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task SessionApi_EditSession_RejectsMissingJsonBody()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await SeedExerciseAsync(page, "Missing Body Press");
+            var exercisesResponse = await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/exercises");
+            var exercisesJson = await exercisesResponse.JsonAsync();
+            var exerciseId = exercisesJson?.EnumerateArray().First().GetProperty("exerciseId").GetString()!;
+
+            var workoutResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts", new()
+            {
+                DataObject = new
+                {
+                    name = "Missing Body Workout",
+                    exercises = new[] { new { exerciseId } },
+                },
+            });
+            var workout = await workoutResponse.JsonAsync();
+            var workoutId = workout?.GetProperty("plannedWorkoutId").GetString()!;
+
+            var sessionResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new { overallEffort = 8, loggedExercises = new[] { new { exerciseId, loggedWeight = "55 KG", effort = 7 } } },
+            });
+            var session = await sessionResponse.JsonAsync();
+            var sessionId = session?.GetProperty("workoutSessionId").GetString()!;
+
+            var response = await page.APIRequest.PutAsync($"{_webApp.BaseUrl}/api/sessions/{sessionId}");
+
+            Assert.Equal(400, response.Status);
+            var error = await response.JsonAsync();
+            Assert.Equal("A JSON request body is required.", error?.GetProperty("error").GetString());
+
+            var detailResponse = await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/sessions/{sessionId}");
+            var detail = await detailResponse.JsonAsync();
+            Assert.Equal(8, detail?.GetProperty("overallEffort").GetInt32());
+            var exercise = detail?.GetProperty("exercises").EnumerateArray().Single();
+            Assert.Equal("55 KG", exercise?.GetProperty("loggedWeight").GetString());
+            Assert.Equal(7, exercise?.GetProperty("effort").GetInt32());
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task SessionDetailPage_EditSession_PersistsAfterReopen()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await CreateWorkoutAndSessionViaApiAsync(page, exerciseName: "Squat", workoutName: "Edit Legs Day");
+            await NavigateToHistoryAsync(page);
+            await page.Locator(".history-session__header").First.ClickAsync();
+            await page.WaitForSelectorAsync(".session-detail__table");
+
+            await page.Locator("#session-detail-edit").ClickAsync();
+            await page.Locator(".session-detail__input").First.FillAsync("120");
+            await page.Locator("[data-session-edit-effort]").First.SelectOptionAsync("7");
+            await page.Locator("#session-edit-overall-effort").SelectOptionAsync("6");
+            await page.Locator("#session-detail-save").ClickAsync();
+            await Expect(page.Locator("#session-detail-edit")).ToBeVisibleAsync();
+
+            await page.Locator(".session-detail__back").ClickAsync();
+            await page.WaitForSelectorAsync(".history-page");
+            await page.Locator(".history-session__header").First.ClickAsync();
+            await page.WaitForSelectorAsync(".session-detail__table");
+
+            var cells = page.Locator(".session-detail__row").First.Locator(".session-detail__cell");
+            await Expect(cells.Nth(1)).ToContainTextAsync("120");
+            await Expect(cells.Nth(3)).ToContainTextAsync("7");
+            await Expect(page.Locator(".session-detail__overall-effort-value")).ToContainTextAsync("6");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task SessionDetailPage_EditSession_PreviousOverallEffortUsesCorrectedSourceData()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await SeedExerciseAsync(page, "Deadlift");
+            var exercisesResponse = await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/exercises");
+            var exercisesJson = await exercisesResponse.JsonAsync();
+            var exerciseId = exercisesJson?.EnumerateArray().First().GetProperty("exerciseId").GetString()!;
+
+            var createResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts", new()
+            {
+                DataObject = new
+                {
+                    name = "Overall Comparison Day",
+                    exercises = new[] { new { exerciseId } },
+                },
+            });
+            var workoutData = await createResponse.JsonAsync();
+            var workoutId = workoutData?.GetProperty("plannedWorkoutId").GetString()!;
+
+            var firstResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new { overallEffort = 8, loggedExercises = new[] { new { exerciseId, loggedWeight = "100" } } },
+            });
+            var firstSession = await firstResponse.JsonAsync();
+            var firstSessionId = firstSession?.GetProperty("workoutSessionId").GetString()!;
+
+            var secondResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new { overallEffort = 6, loggedExercises = new[] { new { exerciseId, loggedWeight = "105" } } },
+            });
+            var secondSession = await secondResponse.JsonAsync();
+            var secondSessionId = secondSession?.GetProperty("workoutSessionId").GetString()!;
+
+            await page.GotoAsync($"{_webApp.BaseUrl}/history/session?id={firstSessionId}");
+            await page.WaitForSelectorAsync(".session-detail__table");
+            await page.Locator("#session-detail-edit").ClickAsync();
+            await page.Locator("#session-edit-overall-effort").SelectOptionAsync("4");
+            await page.Locator("#session-detail-save").ClickAsync();
+            await Expect(page.Locator("#session-detail-edit")).ToBeVisibleAsync();
+
+            await page.GotoAsync($"{_webApp.BaseUrl}/history/session?id={secondSessionId}");
+            await page.WaitForSelectorAsync(".session-detail__table");
+            await Expect(page.Locator(".session-detail__overall-effort-prev-value")).ToContainTextAsync("4");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task SessionDetailPage_EditSession_CancelWithChanges_ShowsDiscardModal()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await CreateWorkoutAndSessionViaApiAsync(page);
+            await NavigateToHistoryAsync(page);
+            await page.Locator(".history-session__header").First.ClickAsync();
+            await page.WaitForSelectorAsync(".session-detail__table");
+
+            await page.Locator("#session-detail-edit").ClickAsync();
+            await page.Locator(".session-detail__input").First.FillAsync("90");
+            await page.Locator("#session-detail-cancel").ClickAsync();
+
+            await Expect(page.Locator("#session-edit-discard-backdrop")).ToBeVisibleAsync();
+            await page.Locator("#session-edit-discard-cancel").ClickAsync();
+            await Expect(page.Locator("#session-edit-discard-backdrop")).ToBeHiddenAsync();
+            await Expect(page.Locator(".session-detail__input").First).ToHaveValueAsync("90");
+
+            await page.Locator("#session-detail-cancel").ClickAsync();
+            await page.Locator("#session-edit-discard-confirm").ClickAsync();
+            await Expect(page.Locator("#session-detail-edit")).ToBeVisibleAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task SessionDetailPage_EditSession_CancelWithoutChanges_ExitsEditModeWithoutDiscardPrompt()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await CreateWorkoutAndSessionViaApiAsync(page);
+            await NavigateToHistoryAsync(page);
+            await page.Locator(".history-session__header").First.ClickAsync();
+            await page.WaitForSelectorAsync(".session-detail__table");
+
+            await page.Locator("#session-detail-edit").ClickAsync();
+            await page.Locator("#session-detail-cancel").ClickAsync();
+
+            await Expect(page.Locator("#session-edit-discard-backdrop")).ToHaveCountAsync(0);
+            await Expect(page.Locator("#session-detail-edit")).ToBeVisibleAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task SessionDetailPage_EditSession_BackWithChanges_UsesDiscardModalBeforeLeaving()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await CreateWorkoutAndSessionViaApiAsync(page);
+            await NavigateToHistoryAsync(page);
+            await page.Locator(".history-session__header").First.ClickAsync();
+            await page.WaitForSelectorAsync(".session-detail__table");
+
+            await page.Locator("#session-detail-edit").ClickAsync();
+            await page.Locator(".session-detail__input").First.FillAsync("88");
+            await page.Locator(".session-detail__back").ClickAsync();
+
+            await Expect(page.Locator("#session-edit-discard-backdrop")).ToBeVisibleAsync();
+            await page.Locator("#session-edit-discard-cancel").ClickAsync();
+            await Expect(page).ToHaveURLAsync(new Regex(@"/history/session\?id="));
+            await Expect(page.Locator(".session-detail__input").First).ToHaveValueAsync("88");
+
+            await page.Locator(".session-detail__back").ClickAsync();
+            await page.Locator("#session-edit-discard-confirm").ClickAsync();
+            await page.WaitForSelectorAsync(".history-page");
+            await Expect(page.Locator(".history-page")).ToBeVisibleAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task SessionDetailPage_EditSession_DiscardModal_TrapsKeyboardFocus()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await CreateWorkoutAndSessionViaApiAsync(page);
+            await NavigateToHistoryAsync(page);
+            await page.Locator(".history-session__header").First.ClickAsync();
+            await page.WaitForSelectorAsync(".session-detail__table");
+
+            await page.Locator("#session-detail-edit").ClickAsync();
+            await page.Locator(".session-detail__input").First.FillAsync("90");
+            await page.Locator("#session-detail-cancel").ClickAsync();
+
+            await Expect(page.Locator("#session-edit-discard-confirm")).ToBeFocusedAsync();
+            await page.Keyboard.PressAsync("Tab");
+            await Expect(page.Locator("#session-edit-discard-cancel")).ToBeFocusedAsync();
+            await page.Keyboard.PressAsync("Tab");
+            await Expect(page.Locator("#session-edit-discard-confirm")).ToBeFocusedAsync();
+            await page.Keyboard.PressAsync("Shift+Tab");
+            await Expect(page.Locator("#session-edit-discard-cancel")).ToBeFocusedAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task SessionDetailPage_EditSession_SaveFailure_KeepsEditValues()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await CreateWorkoutAndSessionViaApiAsync(page);
+            await NavigateToHistoryAsync(page);
+            await page.Locator(".history-session__header").First.ClickAsync();
+            await page.WaitForSelectorAsync(".session-detail__table");
+
+            await page.RouteAsync("**/api/sessions/*", async route =>
+            {
+                if (route.Request.Method.Equals("PUT", StringComparison.OrdinalIgnoreCase))
+                {
+                    await route.FulfillAsync(new()
+                    {
+                        Status = 500,
+                        ContentType = "application/json",
+                        Body = """{"error":"Unable to save."}""",
+                    });
+                    return;
+                }
+
+                await route.FallbackAsync();
+            });
+
+            await page.Locator("#session-detail-edit").ClickAsync();
+            await page.Locator(".session-detail__input").First.FillAsync("95");
+            await page.Locator("[data-session-edit-effort]").First.SelectOptionAsync("10");
+            await page.Locator("#session-detail-save").ClickAsync();
+
+            await Expect(page.Locator("#session-detail-edit-error")).ToContainTextAsync("Unable to save.");
+            await Expect(page.Locator(".session-detail__input").First).ToHaveValueAsync("95");
+            await Expect(page.Locator("[data-session-edit-effort]").First).ToHaveValueAsync("10");
+        }
+        finally
+        {
+            await page.UnrouteAsync("**/api/sessions/*");
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
     public async Task HistoryPage_NoGroupHeaders_FlatList()
     {
         var page = await CreatePageAsync();
