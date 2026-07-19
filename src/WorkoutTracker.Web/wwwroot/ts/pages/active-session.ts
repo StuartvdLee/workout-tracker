@@ -1,4 +1,5 @@
 import { navigate } from "../router.js";
+import { initSortableList } from "../sortable-list.js";
 import { getEffortLabel, getEffortColour, applyOrder } from "../utils.js";
 
 interface WorkoutExercise {
@@ -39,6 +40,10 @@ let isSaving = false;
 let hasChanges = false;
 let exerciseOrder: string[] | null = null;
 let pendingOverallEffort: number | null = null;
+let isOrderEditing = false;
+let orderBeforeEditing: WorkoutExercise[] | null = null;
+let hasOrderChanges = false;
+let currentPreviousData: Map<string, PreviousExerciseData> | "error" | null = null;
 const MODAL_FOCUSABLE_SELECTOR =
   'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [contenteditable="true"], [tabindex]:not([tabindex="-1"])';
 
@@ -62,6 +67,10 @@ export async function render(container: HTMLElement): Promise<void> {
   hasChanges = false;
   exerciseOrder = null;
   pendingOverallEffort = null;
+  isOrderEditing = false;
+  orderBeforeEditing = null;
+  hasOrderChanges = false;
+  currentPreviousData = null;
 
   const orderParam = params.get("order");
   exerciseOrder = orderParam ? orderParam.split(",").map(id => id.trim()).filter(id => id.length > 0) : null;
@@ -70,6 +79,7 @@ export async function render(container: HTMLElement): Promise<void> {
     <div class="active-session">
       <div class="active-session__header">
         <h1 class="active-session__title" id="session-title">Loading...</h1>
+        <button class="active-session__edit-order-btn" type="button" id="session-edit-order" style="display:none;">Edit order</button>
       </div>
       <div class="active-session__exercises" id="session-exercises" role="form" aria-label="Log workout exercises"></div>
       <div class="active-session__error" id="session-error" role="alert" aria-live="polite"></div>
@@ -84,7 +94,7 @@ export async function render(container: HTMLElement): Promise<void> {
           <p class="discard-modal__desc" id="discard-desc">You have unsaved changes. Are you sure you want to discard this workout?</p>
           <div class="discard-modal__actions">
             <button class="discard-modal__discard" type="button" id="discard-confirm">Discard</button>
-            <button class="discard-modal__continue" type="button" id="discard-cancel">Continue</button>
+            <button class="discard-modal__continue" type="button" id="discard-cancel">Continue workout</button>
           </div>
         </div>
       </div>
@@ -123,13 +133,22 @@ export async function render(container: HTMLElement): Promise<void> {
 function initEventListeners(): void {
   const saveBtn = document.getElementById("session-save") as HTMLButtonElement | null;
   const cancelBtn = document.getElementById("session-cancel") as HTMLButtonElement | null;
+  const editOrderBtn = document.getElementById("session-edit-order") as HTMLButtonElement | null;
 
   saveBtn?.addEventListener("click", () => {
-    openEffortModal();
+    if (isOrderEditing) {
+      finishOrderEditing();
+    } else {
+      openEffortModal();
+    }
   });
 
   cancelBtn?.addEventListener("click", () => {
     handleCancel();
+  });
+
+  editOrderBtn?.addEventListener("click", () => {
+    toggleOrderEditing();
   });
 }
 
@@ -141,7 +160,11 @@ function initDiscardModal(): void {
   if (!backdrop) return;
 
   confirmBtn?.addEventListener("click", () => {
-    navigate("/workouts");
+    if (isOrderEditing) {
+      discardOrderChanges();
+    } else {
+      navigate("/workouts");
+    }
   });
 
   cancelBtn?.addEventListener("click", () => {
@@ -322,7 +345,20 @@ function handleEffortSkip(): void {
 function openDiscardModal(): void {
   const backdrop = document.getElementById("discard-backdrop") as HTMLElement | null;
   const confirmBtn = document.getElementById("discard-confirm") as HTMLButtonElement | null;
+  const titleEl = document.getElementById("discard-title") as HTMLElement | null;
+  const descEl = document.getElementById("discard-desc") as HTMLElement | null;
+  const continueBtn = document.getElementById("discard-cancel") as HTMLButtonElement | null;
   if (!backdrop) return;
+
+  if (isOrderEditing) {
+    if (titleEl) titleEl.textContent = "Discard changes?";
+    if (descEl) descEl.textContent = "You have unsaved order changes. Are you sure you want to discard them?";
+    if (continueBtn) continueBtn.textContent = "Keep editing";
+  } else {
+    if (titleEl) titleEl.textContent = "Discard Workout?";
+    if (descEl) descEl.textContent = "You have unsaved changes. Are you sure you want to discard this workout?";
+    if (continueBtn) continueBtn.textContent = "Continue workout";
+  }
 
   backdrop.style.display = "";
   confirmBtn?.focus();
@@ -365,6 +401,7 @@ async function loadWorkout(workoutId: string): Promise<void> {
   if (titleEl && workout) {
     titleEl.textContent = workout.name;
   }
+  updateEditOrderButton();
 
   // Determine previous-performance data to pass to renderer
   let previousData: Map<string, PreviousExerciseData> | "error" | null = null;
@@ -383,10 +420,11 @@ async function loadWorkout(workoutId: string): Promise<void> {
     previousData = "error";
   }
 
-  renderExerciseInputs(previousData);
+  currentPreviousData = previousData;
+  renderExerciseInputs();
 }
 
-function renderExerciseInputs(previousData: Map<string, PreviousExerciseData> | "error" | null): void {
+function renderExerciseInputs(): void {
   const exercisesEl = document.getElementById("session-exercises") as HTMLElement | null;
   if (!exercisesEl || !workout) return;
 
@@ -425,13 +463,13 @@ function renderExerciseInputs(previousData: Map<string, PreviousExerciseData> | 
     previousDiv.className = "active-session__exercise-previous";
     previousDiv.id = `previous-${exercise.exerciseId}`;
 
-    if (previousData === "error") {
+    if (currentPreviousData === "error") {
       const errorSpan = document.createElement("span");
       errorSpan.className = "active-session__previous-error";
       errorSpan.textContent = "Could not load previous data";
       previousDiv.appendChild(errorSpan);
     } else {
-      const entry = previousData !== null ? previousData.get(exercise.exerciseId) : undefined;
+      const entry = currentPreviousData !== null ? currentPreviousData.get(exercise.exerciseId) : undefined;
 
       if (entry !== undefined) {
         // Build value string from non-null fields
@@ -486,6 +524,7 @@ function renderExerciseInputs(previousData: Map<string, PreviousExerciseData> | 
     weightInput.placeholder = "KG";
     weightInput.min = "0";
     weightInput.step = "0.5";
+    weightInput.value = existingEntry?.loggedWeight ?? "";
     weightInput.setAttribute("aria-label", `Weight in KG for ${exercise.name}`);
     weightInput.addEventListener("input", () => {
       hasChanges = true;
@@ -579,6 +618,123 @@ function renderExerciseInputs(previousData: Map<string, PreviousExerciseData> | 
   }
 }
 
+function toggleOrderEditing(): void {
+  if (!workout || workout.exercises.length === 0) return;
+  if (isOrderEditing) return;
+
+  orderBeforeEditing = [...workout.exercises];
+  hasOrderChanges = false;
+  isOrderEditing = true;
+  updateOrderEditingControls();
+  renderOrderEditor();
+}
+
+function finishOrderEditing(): void {
+  if (!isOrderEditing) return;
+
+  isOrderEditing = false;
+  orderBeforeEditing = null;
+  hasOrderChanges = false;
+  updateOrderEditingControls();
+  renderExerciseInputs();
+}
+
+function discardOrderChanges(): void {
+  if (!workout || !orderBeforeEditing) return;
+
+  workout = { ...workout, exercises: [...orderBeforeEditing] };
+  closeDiscardModal();
+  finishOrderEditing();
+}
+
+function hasCurrentOrderChanged(): boolean {
+  if (!workout || !orderBeforeEditing) return false;
+  const originalOrder = orderBeforeEditing;
+  return workout.exercises.some((exercise, index) => exercise.exerciseId !== originalOrder[index]?.exerciseId);
+}
+
+function updateEditOrderButton(): void {
+  const btn = document.getElementById("session-edit-order") as HTMLButtonElement | null;
+  if (!btn || !workout) return;
+
+  btn.style.display = workout.exercises.length > 0 && !isOrderEditing ? "" : "none";
+  btn.disabled = workout.exercises.length === 0 || isOrderEditing;
+}
+
+function updateOrderEditingControls(): void {
+  const saveBtn = document.getElementById("session-save") as HTMLButtonElement | null;
+  const cancelBtn = document.getElementById("session-cancel") as HTMLButtonElement | null;
+  updateEditOrderButton();
+
+  if (saveBtn) {
+    saveBtn.textContent = isOrderEditing ? "Done" : "Save Workout";
+  }
+
+  if (cancelBtn) {
+    cancelBtn.textContent = "Cancel";
+  }
+}
+
+function renderOrderEditor(): void {
+  const exercisesEl = document.getElementById("session-exercises") as HTMLElement | null;
+  if (!exercisesEl || !workout) return;
+
+  exercisesEl.innerHTML = "";
+
+  const announce = document.createElement("div");
+  announce.className = "sr-only";
+  announce.id = "session-reorder-announce";
+  announce.setAttribute("aria-live", "polite");
+  announce.setAttribute("aria-atomic", "true");
+  exercisesEl.appendChild(announce);
+
+  const list = document.createElement("ul");
+  list.className = "workout-selected__list active-session__order-list";
+  list.id = "session-order-list";
+  exercisesEl.appendChild(list);
+
+  for (const [index, exercise] of workout.exercises.entries()) {
+    list.appendChild(buildOrderExerciseItem(exercise, index, workout.exercises.length));
+  }
+
+  initSortableList({
+    listId: "session-order-list",
+    announceId: "session-reorder-announce",
+    getArray: () => workout?.exercises ?? [],
+    onReorder: () => {
+      hasOrderChanges = hasCurrentOrderChanged();
+      renderOrderEditor();
+    },
+  });
+}
+
+function buildOrderExerciseItem(exercise: WorkoutExercise, index: number, listLength: number): HTMLLIElement {
+  const li = document.createElement("li");
+  li.className = "workout-selected__item active-session__order-item";
+  li.setAttribute("data-exercise-id", exercise.exerciseId);
+  li.setAttribute("data-index", String(index));
+
+  if (listLength >= 2) {
+    li.setAttribute("draggable", "true");
+    li.setAttribute("aria-roledescription", "sortable item");
+
+    const handle = document.createElement("button");
+    handle.type = "button";
+    handle.className = "workout-selected__drag-handle";
+    handle.setAttribute("aria-label", `Drag to reorder ${exercise.name}`);
+    handle.setAttribute("aria-pressed", "false");
+    handle.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="5" cy="3" r="1.5"/><circle cx="5" cy="8" r="1.5"/><circle cx="5" cy="13" r="1.5"/><circle cx="11" cy="3" r="1.5"/><circle cx="11" cy="8" r="1.5"/><circle cx="11" cy="13" r="1.5"/></svg>`;
+    li.appendChild(handle);
+  }
+
+  const name = document.createElement("span");
+  name.className = "workout-selected__name active-session__order-name";
+  name.textContent = exercise.name;
+  li.appendChild(name);
+
+  return li;
+}
+
 async function handleSave(overallEffort: number | null): Promise<void> {
   if (isSaving || !workout) return;
 
@@ -649,6 +805,15 @@ async function handleSave(overallEffort: number | null): Promise<void> {
 }
 
 function handleCancel(): void {
+  if (isOrderEditing) {
+    if (hasOrderChanges) {
+      openDiscardModal();
+    } else {
+      finishOrderEditing();
+    }
+    return;
+  }
+
   if (hasChanges) {
     openDiscardModal();
   } else {
