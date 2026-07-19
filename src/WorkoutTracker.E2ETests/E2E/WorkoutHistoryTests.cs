@@ -356,6 +356,54 @@ public class WorkoutHistoryTests
     }
 
     [Fact]
+    public async Task SessionApi_EditSession_RejectsMissingJsonBody()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await SeedExerciseAsync(page, "Missing Body Press");
+            var exercisesResponse = await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/exercises");
+            var exercisesJson = await exercisesResponse.JsonAsync();
+            var exerciseId = exercisesJson?.EnumerateArray().First().GetProperty("exerciseId").GetString()!;
+
+            var workoutResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts", new()
+            {
+                DataObject = new
+                {
+                    name = "Missing Body Workout",
+                    exercises = new[] { new { exerciseId } },
+                },
+            });
+            var workout = await workoutResponse.JsonAsync();
+            var workoutId = workout?.GetProperty("plannedWorkoutId").GetString()!;
+
+            var sessionResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new { overallEffort = 8, loggedExercises = new[] { new { exerciseId, loggedWeight = "55 KG", effort = 7 } } },
+            });
+            var session = await sessionResponse.JsonAsync();
+            var sessionId = session?.GetProperty("workoutSessionId").GetString()!;
+
+            var response = await page.APIRequest.PutAsync($"{_webApp.BaseUrl}/api/sessions/{sessionId}");
+
+            Assert.Equal(400, response.Status);
+            var error = await response.JsonAsync();
+            Assert.Equal("A JSON request body is required.", error?.GetProperty("error").GetString());
+
+            var detailResponse = await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/sessions/{sessionId}");
+            var detail = await detailResponse.JsonAsync();
+            Assert.Equal(8, detail?.GetProperty("overallEffort").GetInt32());
+            var exercise = detail?.GetProperty("exercises").EnumerateArray().Single();
+            Assert.Equal("55 KG", exercise?.GetProperty("loggedWeight").GetString());
+            Assert.Equal(7, exercise?.GetProperty("effort").GetInt32());
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
     public async Task SessionDetailPage_EditSession_PersistsAfterReopen()
     {
         var page = await CreatePageAsync();

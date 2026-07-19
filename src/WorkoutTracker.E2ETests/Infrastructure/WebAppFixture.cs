@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -870,7 +871,28 @@ public class WebAppFixture : WebApplicationFactory<Program>
         // Mock API endpoint to edit completed session values
         app.MapPut("/api/sessions/{sessionId}", async (string sessionId, HttpRequest request) =>
         {
-            var body = await request.ReadFromJsonAsync<SessionRequest>();
+            SessionRequest? body;
+            try
+            {
+                body = await request.ReadFromJsonAsync<SessionRequest>();
+            }
+            catch (JsonException)
+            {
+                return Results.Json(new { error = "A JSON request body is required." }, statusCode: 400);
+            }
+            catch (BadHttpRequestException)
+            {
+                return Results.Json(new { error = "A JSON request body is required." }, statusCode: 400);
+            }
+            catch (InvalidOperationException)
+            {
+                return Results.Json(new { error = "A JSON request body is required." }, statusCode: 400);
+            }
+
+            if (body is null)
+            {
+                return Results.Json(new { error = "A JSON request body is required." }, statusCode: 400);
+            }
 
             MockWorkoutSession? session;
             lock (_sessionsLock)
@@ -883,12 +905,12 @@ public class WebAppFixture : WebApplicationFactory<Program>
                     return Results.Json(new { error = "Session not found." }, statusCode: 404);
                 }
 
-                if (body?.OverallEffort is not null && (body.OverallEffort < 1 || body.OverallEffort > 10))
+                if (body.OverallEffort is not null && (body.OverallEffort < 1 || body.OverallEffort > 10))
                 {
                     return Results.Json(new { error = "Overall effort must be between 1 and 10." }, statusCode: 400);
                 }
 
-                var edits = body?.LoggedExercises ?? [];
+                var edits = body.LoggedExercises ?? [];
                 if (edits.Any(e => e.LoggedWeight is { Length: > 100 }))
                 {
                     return Results.Json(new { error = "Logged weight must not exceed 100 characters." }, statusCode: 400);
@@ -911,7 +933,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
                     return Results.Json(new { error = "One or more logged exercises are not part of this session." }, statusCode: 400);
                 }
 
-                session.OverallEffort = body?.OverallEffort;
+                session.OverallEffort = body.OverallEffort;
                 session.LoggedExercises = session.LoggedExercises
                     .Select(le =>
                     {

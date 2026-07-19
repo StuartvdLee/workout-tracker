@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
 using Xunit;
 using WorkoutTracker.UnitTests.Infrastructure;
 
@@ -1228,6 +1229,35 @@ public class SessionApiTests : IAsyncLifetime
         var updatedExercise = Assert.Single(detail.Exercises);
         Assert.Null(updatedExercise.LoggedWeight);
         Assert.Null(updatedExercise.Effort);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task UpdateSession_RejectsMissingOrEmptyJsonBody(bool includeEmptyJsonContent)
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Missing Body Workout", "Press");
+        var session = await CreateSessionWithOverallEffortAsync(workoutId, exerciseId, "55 KG", 7, 8);
+
+        using var request = new HttpRequestMessage(HttpMethod.Put, $"/api/sessions/{session.WorkoutSessionId}");
+        if (includeEmptyJsonContent)
+        {
+            request.Content = new StringContent("", Encoding.UTF8, "application/json");
+        }
+
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var error = await response.Content.ReadFromJsonAsync<ErrorDto>();
+        Assert.Equal("A JSON request body is required.", error?.Error);
+
+        var detailResponse = await _client.GetAsync($"/api/sessions/{session.WorkoutSessionId}");
+        var detail = await detailResponse.Content.ReadFromJsonAsync<SessionDetailWithPreviousDto>();
+        Assert.NotNull(detail);
+        Assert.Equal(8, detail.OverallEffort);
+        var exercise = Assert.Single(detail.Exercises);
+        Assert.Equal("55 KG", exercise.LoggedWeight);
+        Assert.Equal(7, exercise.Effort);
     }
 
     [Theory]

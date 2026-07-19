@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using WorkoutTracker.Infrastructure.Data;
 using WorkoutTracker.Infrastructure.Data.Models;
@@ -851,10 +852,32 @@ app.MapPut("/api/sessions/{sessionId:guid}", async (Guid sessionId, HttpContext 
         return Results.Json(new { error = "Session not found." }, statusCode: 404);
     }
 
-    var body = await context.Request.ReadFromJsonAsync<SessionUpdateRequest>();
-    var loggedExercises = body?.LoggedExercises ?? [];
+    SessionUpdateRequest? body;
+    try
+    {
+        body = await context.Request.ReadFromJsonAsync<SessionUpdateRequest>();
+    }
+    catch (JsonException)
+    {
+        return Results.Json(new { error = "A JSON request body is required." }, statusCode: 400);
+    }
+    catch (BadHttpRequestException)
+    {
+        return Results.Json(new { error = "A JSON request body is required." }, statusCode: 400);
+    }
+    catch (InvalidOperationException)
+    {
+        return Results.Json(new { error = "A JSON request body is required." }, statusCode: 400);
+    }
 
-    if (body?.OverallEffort is not null && (body.OverallEffort < 1 || body.OverallEffort > 10))
+    if (body is null)
+    {
+        return Results.Json(new { error = "A JSON request body is required." }, statusCode: 400);
+    }
+
+    var loggedExercises = body.LoggedExercises ?? [];
+
+    if (body.OverallEffort is not null && (body.OverallEffort < 1 || body.OverallEffort > 10))
         return Results.Json(new { error = "Overall effort must be between 1 and 10." }, statusCode: 400);
 
     foreach (var item in loggedExercises)
@@ -878,7 +901,7 @@ app.MapPut("/api/sessions/{sessionId:guid}", async (Guid sessionId, HttpContext 
         return Results.Json(new { error = "One or more logged exercises are not part of this session." }, statusCode: 400);
     }
 
-    session.OverallEffort = body?.OverallEffort;
+    session.OverallEffort = body.OverallEffort;
     foreach (var item in loggedExercises)
     {
         var loggedExercise = sessionLoggedExercises[item.LoggedExerciseId];
