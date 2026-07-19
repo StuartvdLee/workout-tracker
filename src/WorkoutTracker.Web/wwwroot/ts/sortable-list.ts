@@ -27,7 +27,7 @@ export function initSortableList<T>(options: SortableListOptions<T>): void {
   }
 
   function getLiAtIndex(idx: number): HTMLElement | null {
-    return list.querySelector(`li[data-index="${idx}"]`);
+    return list.querySelector<HTMLElement>(`li[data-index="${idx}"]`);
   }
 
   function getLiveDomIndex(li: HTMLElement): number {
@@ -155,13 +155,13 @@ export function initSortableList<T>(options: SortableListOptions<T>): void {
     }
   }, { passive: false });
 
-  list.addEventListener("touchend", () => {
+  function finishTouchDrag(commitReorder: boolean): void {
     if (touchDragIndex === -1) return;
 
     document.body.classList.remove("is-dragging");
 
     if (touchClone) touchClone.style.visibility = "hidden";
-    const touchLi = list.querySelector(".workout-selected__item--dragging") as HTMLElement | null;
+    const touchLi = list.querySelector<HTMLElement>(".workout-selected__item--dragging");
     const finalIndex = touchLi ? getLiveDomIndex(touchLi) : -1;
 
     if (touchClone) {
@@ -172,12 +172,20 @@ export function initSortableList<T>(options: SortableListOptions<T>): void {
     touchLi?.classList.remove("workout-selected__item--dragging");
 
     const arr = options.getArray();
-    if (finalIndex !== -1 && finalIndex !== touchDragIndex) {
+    if (commitReorder && finalIndex !== -1 && finalIndex !== touchDragIndex) {
       reorder(arr, touchDragIndex, finalIndex);
       announce(`Exercise moved to position ${finalIndex + 1} of ${arr.length}`);
     }
     touchDragIndex = -1;
     options.onReorder();
+  }
+
+  list.addEventListener("touchend", () => {
+    finishTouchDrag(true);
+  });
+
+  list.addEventListener("touchcancel", () => {
+    finishTouchDrag(false);
   });
 
   list.addEventListener("keydown", (e: Event) => {

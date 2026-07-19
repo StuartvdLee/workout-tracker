@@ -137,6 +137,9 @@ function initEventListeners(): void {
 
   saveBtn?.addEventListener("click", () => {
     if (isOrderEditing) {
+      if (hasOrderChanges) {
+        hasChanges = true;
+      }
       finishOrderEditing();
     } else {
       openEffortModal();

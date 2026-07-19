@@ -56,7 +56,7 @@
 
 ### Implementation for User Story 1
 
-- [X] T011 [US1] Add `isOrderEditing` state and an `#session-edit-order` header button that toggles between "Edit order" and "Done" in `src/WorkoutTracker.Web/wwwroot/ts/pages/active-session.ts`
+- [X] T011 [US1] Add `isOrderEditing` state, show an `#session-edit-order` header button in normal mode, hide it while editing, and relabel the footer `#session-save` button to "Done" while order-editing mode is active in `src/WorkoutTracker.Web/wwwroot/ts/pages/active-session.ts`
 - [X] T012 [US1] Implement order-editing render path that replaces normal exercise cards with `#session-order-list` name-only rows in `src/WorkoutTracker.Web/wwwroot/ts/pages/active-session.ts`
 - [X] T013 [US1] Hide weight inputs, effort sliders, targets, and previous-performance details while order-editing mode is active in `src/WorkoutTracker.Web/wwwroot/ts/pages/active-session.ts`
 - [X] T014 [US1] Add active-session header action, order list, and order row styles that reuse existing sortable classes in `src/WorkoutTracker.Web/wwwroot/css/styles.css`

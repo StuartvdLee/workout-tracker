@@ -13,7 +13,7 @@ Adds an order-editing mode to the current workout (`active-session.ts`) that col
 | Shared sortable behavior | sortable list helper | `sortable-list.ts`, `workouts.ts`, `active-session.ts` |
 | Styles | active-session order mode + existing sortable classes | `styles.css` |
 
-## Header Action
+## Header and Footer Actions
 
 Normal mode:
 
@@ -29,16 +29,35 @@ Normal mode:
 Order-editing mode:
 
 ```html
-<button class="active-session__edit-order-btn active-session__edit-order-btn--active" type="button" id="session-edit-order">
-  Done
-</button>
+<div class="active-session__header">
+  <h1 class="active-session__title" id="session-title">Push Day</h1>
+  <button class="active-session__edit-order-btn" type="button" id="session-edit-order" style="display:none;">
+    Edit order
+  </button>
+</div>
+<div class="active-session__actions">
+  <button class="active-session__save-btn" type="button" id="session-save">
+    Done
+  </button>
+  <button class="active-session__cancel-btn" type="button" id="session-cancel">
+    Cancel
+  </button>
+</div>
 ```
 
 Rules:
 
-- The button is placed in the top-right area of the current workout header.
+- The "Edit order" button is placed in the top-right area of the current workout header in normal mode.
 - Selecting "Edit order" switches to order-editing mode without navigation.
-- Selecting "Done" exits order-editing mode and restores the normal logging view.
+- While order-editing mode is active, `#session-edit-order` is hidden and the footer `#session-save` button text changes to:
+
+```html
+<button class="active-session__save-btn" type="button" id="session-save">
+  Done
+</button>
+```
+
+- Selecting the footer "Done" action exits order-editing mode and restores the normal logging view without saving the workout.
 - For zero exercises, the button may be hidden or disabled.
 - For one exercise, the button may enter name-only mode but no drag handle is rendered.
 
@@ -73,7 +92,7 @@ Rules:
 
 - Only exercise names and reorder affordances are visible.
 - Weight controls, effort sliders, target text, previous-performance text, and exercise-entry controls are not rendered in this mode.
-- The normal Save Workout / Cancel actions remain outside the exercise rows; their behavior is unchanged.
+- The normal Save Workout / Cancel actions remain outside the exercise rows; while order-editing mode is active, the primary action is relabeled "Done" and exits the mode instead of saving.
 - Reordered rows update the in-memory active workout order immediately.
 
 ## Reorder Interaction
