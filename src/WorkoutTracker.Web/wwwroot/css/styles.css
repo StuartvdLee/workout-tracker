@@ -1559,6 +1559,10 @@ body.is-dragging .workout-selected__drag-handle {
 }
 
 .active-session__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
   margin-bottom: var(--spacing-lg);
 }
 
@@ -1566,6 +1570,28 @@ body.is-dragging .workout-selected__drag-handle {
   font-size: var(--font-size-xl);
   font-weight: 700;
   color: var(--color-text);
+  min-width: 0;
+}
+
+.active-session__edit-order-btn {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
+  cursor: pointer;
+  padding: 0;
+  align-self: flex-end;
+}
+
+.active-session__edit-order-btn:hover {
+  text-decoration: underline;
+}
+
+.active-session__edit-order-btn:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
 }
 
 @media (min-width: 768px) {
@@ -1606,6 +1632,18 @@ body.is-dragging .workout-selected__drag-handle {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
+}
+
+.active-session__order-list {
+  gap: var(--spacing-sm);
+}
+
+.active-session__order-item {
+  padding-right: var(--spacing-md);
+}
+
+.active-session__order-name {
+  font-size: var(--font-size-base);
 }
 
 .active-session__exercise-item {
