@@ -437,6 +437,103 @@ public class WorkoutHistoryTests
     }
 
     [Fact]
+    public async Task SessionDetailPage_PreviousColumns_FallBackToOlderUsableData_WhenPriorSessionSkippedExercise()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await SeedExerciseAsync(page, "Bench Press");
+            var exercisesResponse = await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/exercises");
+            var exercisesJson = await exercisesResponse.JsonAsync();
+            var exerciseId = exercisesJson?.EnumerateArray().First().GetProperty("exerciseId").GetString()!;
+
+            var createResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts", new()
+            {
+                DataObject = new
+                {
+                    name = "Review Fallback Push Day",
+                    exercises = new[] { new { exerciseId } },
+                },
+            });
+            var workoutData = await createResponse.JsonAsync();
+            var workoutId = workoutData?.GetProperty("plannedWorkoutId").GetString()!;
+
+            await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new { loggedExercises = new[] { new { exerciseId, loggedWeight = "70 KG", effort = 6 } } },
+            });
+
+            await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new { loggedExercises = new[] { new { exerciseId } } },
+            });
+
+            var currentSessionResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new { loggedExercises = new[] { new { exerciseId, loggedWeight = "75 KG", effort = 7 } } },
+            });
+            var currentSession = await currentSessionResponse.JsonAsync();
+            var sessionId = currentSession?.GetProperty("workoutSessionId").GetString()!;
+
+            await page.GotoAsync($"{_webApp.BaseUrl}/history/session?id={sessionId}");
+            await page.WaitForSelectorAsync(".session-detail__table");
+
+            var cells = page.Locator(".session-detail__row").First.Locator(".session-detail__cell");
+            await Expect(cells.Nth(2)).ToContainTextAsync("70 KG");
+            await Expect(cells.Nth(4)).ToContainTextAsync("6");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task ActiveSession_LastTime_FallsBackToOlderUsableData_WhenLatestSessionSkippedExercise()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await SeedExerciseAsync(page, "Romanian Deadlift");
+            var exercisesResponse = await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/exercises");
+            var exercisesJson = await exercisesResponse.JsonAsync();
+            var exerciseId = exercisesJson?.EnumerateArray().First().GetProperty("exerciseId").GetString()!;
+
+            var createResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts", new()
+            {
+                DataObject = new
+                {
+                    name = "Fallback Pull Day",
+                    exercises = new[] { new { exerciseId } },
+                },
+            });
+            var workoutData = await createResponse.JsonAsync();
+            var workoutId = workoutData?.GetProperty("plannedWorkoutId").GetString()!;
+
+            await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new { loggedExercises = new[] { new { exerciseId, loggedWeight = "70", effort = 6 } } },
+            });
+
+            await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new { loggedExercises = new[] { new { exerciseId } } },
+            });
+
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}");
+            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+            var previousValue = page.Locator(".active-session__previous-value").First;
+            await Expect(previousValue).ToContainTextAsync("70 KG");
+            await Expect(previousValue).ToContainTextAsync("6");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
     public async Task ActiveSession_StartWorkout_NavigatesToSession()
     {
         var page = await CreatePageAsync();

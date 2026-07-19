@@ -3,6 +3,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 var postgresPassword = builder.AddParameter("postgresPassword", secret: true);
 
 var postgres = builder.AddPostgres("postgres", password: postgresPassword)
+    .WithImage("postgres:17")
     .WithLifetime(ContainerLifetime.Persistent)
     .WithDataVolume();
 

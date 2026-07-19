@@ -24,6 +24,7 @@ interface PreviousExerciseData {
   readonly loggedWeight: string | null;
   readonly effort: number | null;
   readonly sequence: number | null;
+  readonly completedAt?: string;
 }
 
 interface PreviousPerformance {
@@ -435,12 +436,11 @@ function renderExerciseInputs(previousData: Map<string, PreviousExerciseData> | 
       if (entry !== undefined) {
         // Build value string from non-null fields
         const parts: string[] = [];
-        if (entry.sequence !== null) parts.push(`#${entry.sequence + 1}`);
         if (entry.loggedWeight !== null) parts.push(`${entry.loggedWeight} KG`);
         if (entry.effort !== null) parts.push(`${entry.effort} — ${getEffortLabel(entry.effort)}`);
+        if (parts.length > 0 && entry.sequence !== null) parts.unshift(`#${entry.sequence + 1}`);
 
         if (parts.length > 0) {
-          // State 2/3/4/5: sequence, weight, effort, or any combination available
           const labelSpan = document.createElement("span");
           labelSpan.className = "active-session__previous-label";
           labelSpan.textContent = "Last time:";
