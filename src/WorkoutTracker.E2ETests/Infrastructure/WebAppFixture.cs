@@ -867,6 +867,70 @@ public class WebAppFixture : WebApplicationFactory<Program>
             });
         });
 
+        // Mock API endpoint to edit completed session values
+        app.MapPut("/api/sessions/{sessionId}", async (string sessionId, HttpRequest request) =>
+        {
+            var body = await request.ReadFromJsonAsync<SessionRequest>();
+
+            MockWorkoutSession? session;
+            lock (_sessionsLock)
+            {
+                session = _sessions.FirstOrDefault(s =>
+                    string.Equals(s.SessionId, sessionId, StringComparison.OrdinalIgnoreCase));
+
+                if (session is null)
+                {
+                    return Results.Json(new { error = "Session not found." }, statusCode: 404);
+                }
+
+                if (body?.OverallEffort is not null && (body.OverallEffort < 1 || body.OverallEffort > 10))
+                {
+                    return Results.Json(new { error = "Overall effort must be between 1 and 10." }, statusCode: 400);
+                }
+
+                var edits = body?.LoggedExercises ?? [];
+                if (edits.Any(e => e.LoggedWeight is { Length: > 100 }))
+                {
+                    return Results.Json(new { error = "Logged weight must not exceed 100 characters." }, statusCode: 400);
+                }
+
+                if (edits.Any(e => e.Effort is not null && (e.Effort < 1 || e.Effort > 10)))
+                {
+                    return Results.Json(new { error = "Effort must be between 1 and 10." }, statusCode: 400);
+                }
+
+                var requestedIds = edits.Select(e => e.LoggedExerciseId).ToArray();
+                if (requestedIds.Distinct(StringComparer.OrdinalIgnoreCase).Count() != requestedIds.Length)
+                {
+                    return Results.Json(new { error = "Each logged exercise may only be included once." }, statusCode: 400);
+                }
+
+                if (requestedIds.Any(id => !session.LoggedExercises.Any(le =>
+                    string.Equals(le.LoggedExerciseId, id, StringComparison.OrdinalIgnoreCase))))
+                {
+                    return Results.Json(new { error = "One or more logged exercises are not part of this session." }, statusCode: 400);
+                }
+
+                session.OverallEffort = body?.OverallEffort;
+                session.LoggedExercises = session.LoggedExercises
+                    .Select(le =>
+                    {
+                        var edit = edits.FirstOrDefault(e =>
+                            string.Equals(e.LoggedExerciseId, le.LoggedExerciseId, StringComparison.OrdinalIgnoreCase));
+                        return edit is null
+                            ? le
+                            : le with
+                            {
+                                LoggedWeight = string.IsNullOrWhiteSpace(edit.LoggedWeight) ? null : edit.LoggedWeight,
+                                Effort = edit.Effort,
+                            };
+                    })
+                    .ToList();
+            }
+
+            return BuildSessionDetailResponse(session);
+        });
+
         // Mock API endpoint to delete a session
         app.MapDelete("/api/sessions/{sessionId}", (string sessionId) =>
         {
@@ -962,6 +1026,67 @@ public class WebAppFixture : WebApplicationFactory<Program>
     private static bool HasUsableComparisonData(string? loggedWeight, int? effort) =>
         !string.IsNullOrWhiteSpace(loggedWeight) || effort is not null;
 
+    private static IResult BuildSessionDetailResponse(MockWorkoutSession session)
+    {
+        List<MockExercise> exerciseSnapshot;
+        lock (_exercisesLock)
+        {
+            exerciseSnapshot = [.. _exercises];
+        }
+
+        List<MockWorkoutSession> sessionSnapshot;
+        lock (_sessionsLock)
+        {
+            sessionSnapshot = [.. _sessions];
+        }
+
+        var currentSessionId = Guid.Parse(session.SessionId);
+        var priorSessions = sessionSnapshot
+            .Where(s =>
+                string.Equals(s.PlannedWorkoutId, session.PlannedWorkoutId, StringComparison.OrdinalIgnoreCase) &&
+                Guid.TryParse(s.SessionId, out var candidateSessionId) &&
+                (
+                    s.CompletedAt < session.CompletedAt ||
+                    (s.CompletedAt == session.CompletedAt &&
+                     candidateSessionId.CompareTo(currentSessionId) < 0)
+                ))
+            .OrderByDescending(s => s.CompletedAt)
+            .ThenByDescending(s => Guid.Parse(s.SessionId))
+            .ToList();
+
+        var targetExerciseIds = session.LoggedExercises
+            .Select(e => e.ExerciseId)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var previousExercises = SelectLatestUsableExercises(priorSessions, targetExerciseIds);
+        var priorSession = priorSessions.FirstOrDefault();
+
+        return Results.Ok(new
+        {
+            WorkoutSessionId = session.SessionId,
+            session.PlannedWorkoutId,
+            session.WorkoutName,
+            session.CompletedAt,
+            OverallEffort = session.OverallEffort,
+            PreviousOverallEffort = priorSession?.OverallEffort,
+            Exercises = session.LoggedExercises.Select(le =>
+            {
+                var ex = exerciseSnapshot.FirstOrDefault(e =>
+                    string.Equals(e.ExerciseId, le.ExerciseId, StringComparison.OrdinalIgnoreCase));
+                previousExercises.TryGetValue(le.ExerciseId, out var prior);
+                return new
+                {
+                    le.LoggedExerciseId,
+                    le.ExerciseId,
+                    ExerciseName = ex?.Name ?? "",
+                    le.LoggedWeight,
+                    le.Effort,
+                    PreviousWeight = prior?.LoggedWeight,
+                    PreviousEffort = prior?.Effort,
+                };
+            }).ToList(),
+        });
+    }
+
     private sealed record LatestMockExerciseComparison(
         string ExerciseId,
         string? LoggedWeight,
@@ -1001,6 +1126,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
 
     private sealed class SessionLoggedExerciseRequest
     {
+        public string LoggedExerciseId { get; set; } = "";
         public string ExerciseId { get; set; } = "";
         public int? LoggedReps { get; set; }
         public string? LoggedWeight { get; set; }

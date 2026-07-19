@@ -2,6 +2,10 @@ import { navigate } from "../router.js";
 import { getEffortLabel, normaliseValue, buildYTicks, buildXLabels } from "../utils.js";
 
 let isDeleting = false;
+let isSavingSessionEdit = false;
+let currentSession: SessionDetailWithPrevious | null = null;
+let originalEditSnapshot: SessionEditSnapshot | null = null;
+let pendingDiscardAction: "back" | "cancel" | null = null;
 
 interface SessionExerciseWithPrevious {
   readonly loggedExerciseId: string;
@@ -40,6 +44,17 @@ interface SessionTrends {
   readonly dataPoints: SessionTrendsDataPoint[];
 }
 
+interface SessionEditSnapshot {
+  readonly overallEffort: number | null;
+  readonly loggedExercises: SessionEditExerciseSnapshot[];
+}
+
+interface SessionEditExerciseSnapshot {
+  readonly loggedExerciseId: string;
+  readonly loggedWeight: string | null;
+  readonly effort: number | null;
+}
+
 const detailDateFormatter = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
   month: "long",
@@ -69,7 +84,7 @@ export async function render(container: HTMLElement): Promise<void> {
   `;
 
   document.getElementById("session-detail-back")?.addEventListener("click", () => {
-    navigate("/history");
+    handleBackNavigation();
   });
 
   const params = new URLSearchParams(window.location.search);
@@ -85,7 +100,6 @@ export async function render(container: HTMLElement): Promise<void> {
 
 async function loadSessionDetail(sessionId: string): Promise<void> {
   const loadingEl = document.getElementById("session-detail-loading") as HTMLElement | null;
-  const contentEl = document.getElementById("session-detail-content") as HTMLElement | null;
   const errorEl = document.getElementById("session-detail-error") as HTMLElement | null;
   const titleGroupEl = document.getElementById("session-detail-title-group") as HTMLElement | null;
   const titleEl = document.getElementById("session-detail-title") as HTMLElement | null;
@@ -117,14 +131,8 @@ async function loadSessionDetail(sessionId: string): Promise<void> {
     if (dateEl) {
       dateEl.textContent = formatDate(session.completedAt);
     }
-    if (contentEl) {
-      contentEl.innerHTML = renderDetailTable(session);
-      contentEl.style.display = "";
-      void initChartSection(session, contentEl).catch(() => {
-        // Chart loading is non-critical; keep the session details visible even if it fails.
-      });
-      appendDeleteSection(contentEl, sessionId);
-    }
+    currentSession = session;
+    renderSessionContent(session, false);
   } catch {
     if (loadingEl) loadingEl.style.display = "none";
     if (errorEl) {
@@ -132,6 +140,26 @@ async function loadSessionDetail(sessionId: string): Promise<void> {
       errorEl.style.display = "";
     }
   }
+}
+
+function renderSessionContent(session: SessionDetailWithPrevious, editMode: boolean): void {
+  const contentEl = document.getElementById("session-detail-content") as HTMLElement | null;
+  if (!contentEl) return;
+
+  contentEl.innerHTML = editMode ? renderEditTable(session) : renderDetailTable(session);
+  contentEl.style.display = "";
+
+  if (editMode) {
+    originalEditSnapshot = createSnapshot(session);
+    wireEditHandlers(session.workoutSessionId);
+    return;
+  }
+
+  originalEditSnapshot = null;
+  void initChartSection(session, contentEl).catch(() => {
+    // Chart loading is non-critical; keep the session details visible even if it fails.
+  });
+  appendDeleteSection(contentEl, session.workoutSessionId);
 }
 
 function formatDate(isoDate: string): string {
@@ -181,6 +209,57 @@ function renderDetailTable(session: SessionDetailWithPrevious): string {
     ${buildOverallEffortRow(session)}`;
 }
 
+function renderEditTable(session: SessionDetailWithPrevious): string {
+  const rows =
+    session.exercises.length === 0
+      ? `<tr><td class="session-detail__empty-cell" colspan="5">No exercises logged</td></tr>`
+      : session.exercises
+          .map((ex) => {
+            const prevWeight = ex.previousWeight !== null ? escapeHtml(ex.previousWeight) : `<span class="session-detail__no-data">—</span>`;
+            const prevEffort = ex.previousEffort !== null ? `${ex.previousEffort}` : `<span class="session-detail__no-data">—</span>`;
+            return `
+            <tr class="session-detail__row" data-logged-exercise-id="${escapeHtml(ex.loggedExerciseId)}">
+              <td class="session-detail__cell session-detail__cell--exercise">${escapeHtml(ex.exerciseName)}</td>
+              <td class="session-detail__cell">
+                <input class="session-detail__input" data-session-edit-weight="${escapeHtml(ex.loggedExerciseId)}"
+                  type="text" maxlength="100" value="${escapeHtml(ex.loggedWeight ?? "")}"
+                  aria-label="Weight for ${escapeHtml(ex.exerciseName)}" />
+              </td>
+              <td class="session-detail__cell session-detail__cell--prev">${prevWeight}</td>
+              <td class="session-detail__cell">
+                ${buildEffortSelect(`session-edit-effort-${ex.loggedExerciseId}`, ex.effort, `Effort for ${ex.exerciseName}`, "session-detail__select", `data-session-edit-effort="${escapeHtml(ex.loggedExerciseId)}"`)}
+              </td>
+              <td class="session-detail__cell session-detail__cell--prev">${prevEffort}</td>
+            </tr>`;
+          })
+          .join("");
+
+  return `
+    <div class="session-detail__edit-error" id="session-detail-edit-error" role="alert" aria-live="polite" style="display:none;"></div>
+    <div class="session-detail__table-wrapper">
+      <table class="session-detail__table" aria-label="Edit session exercises">
+        <thead>
+          <tr class="session-detail__head-row">
+            <th class="session-detail__th" scope="col">Exercise</th>
+            <th class="session-detail__th" scope="col">Weight (kg)</th>
+            <th class="session-detail__th session-detail__th--prev" scope="col">Prev. Weight (kg)</th>
+            <th class="session-detail__th" scope="col">Effort</th>
+            <th class="session-detail__th session-detail__th--prev" scope="col">Prev. Effort</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+    </div>
+    ${buildEditOverallEffortRow(session)}
+    <div class="session-detail__toolbar workout-form__actions">
+      <button class="session-detail__save workout-form__submit" id="session-detail-save" type="button">Save changes</button>
+      <button class="session-detail__cancel workout-form__cancel" id="session-detail-cancel" type="button">Cancel</button>
+    </div>
+    ${renderDiscardModal()}`;
+}
+
 function buildOverallEffortRow(session: SessionDetailWithPrevious): string {
   const overallEffortValue = session.overallEffort != null
     ? `${session.overallEffort} · ${escapeHtml(getEffortLabel(session.overallEffort))}`
@@ -196,6 +275,242 @@ function buildOverallEffortRow(session: SessionDetailWithPrevious): string {
       <span class="session-detail__overall-effort-prev-label">Previous</span>
       <span class="session-detail__overall-effort-prev-value">${previousOverallEffortValue}</span>
     </div>`;
+}
+
+function buildEditOverallEffortRow(session: SessionDetailWithPrevious): string {
+  const previousOverallEffortValue = session.previousOverallEffort != null
+    ? `${session.previousOverallEffort} · ${escapeHtml(getEffortLabel(session.previousOverallEffort))}`
+    : `<span class="session-detail__no-data">—</span>`;
+
+  return `
+    <div class="session-detail__overall-effort-row">
+      <label class="session-detail__overall-effort-label" for="session-edit-overall-effort">Overall Effort</label>
+      <span class="session-detail__overall-effort-value">
+        ${buildEffortSelect("session-edit-overall-effort", session.overallEffort, "Overall workout effort", "session-detail__select session-detail__select--overall")}
+      </span>
+      <span class="session-detail__overall-effort-prev-label">Previous</span>
+      <span class="session-detail__overall-effort-prev-value">${previousOverallEffortValue}</span>
+    </div>`;
+}
+
+function buildEffortSelect(id: string, value: number | null, ariaLabel: string, className: string, extraAttributes = ""): string {
+  const options = [`<option value="">Not rated</option>`];
+  for (let effort = 1; effort <= 10; effort++) {
+    const selected = value === effort ? " selected" : "";
+    options.push(`<option value="${effort}"${selected}>${effort} · ${escapeHtml(getEffortLabel(effort))}</option>`);
+  }
+
+  return `<select class="${className}" id="${escapeHtml(id)}" aria-label="${escapeHtml(ariaLabel)}" ${extraAttributes}>${options.join("")}</select>`;
+}
+
+function renderDiscardModal(): string {
+  return `
+    <div class="discard-modal-backdrop" id="session-edit-discard-backdrop" style="display:none;">
+      <div class="discard-modal" role="alertdialog" aria-modal="true"
+           aria-labelledby="session-edit-discard-title"
+           aria-describedby="session-edit-discard-desc">
+        <h2 class="discard-modal__title" id="session-edit-discard-title">Discard changes?</h2>
+        <p class="discard-modal__desc" id="session-edit-discard-desc">
+          You have unsaved session edits. Are you sure you want to discard them?
+        </p>
+        <div class="discard-modal__actions">
+          <button class="discard-modal__discard" type="button" id="session-edit-discard-confirm">Discard</button>
+          <button class="discard-modal__continue" type="button" id="session-edit-discard-cancel">Keep editing</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function wireEditHandlers(sessionId: string): void {
+  document.getElementById("session-detail-save")?.addEventListener("click", () => {
+    void saveSessionEdits(sessionId);
+  });
+
+  document.getElementById("session-detail-cancel")?.addEventListener("click", () => {
+    handleEditCancel();
+  });
+
+  document.getElementById("session-edit-discard-confirm")?.addEventListener("click", () => {
+    confirmDiscardEdits();
+  });
+
+  document.getElementById("session-edit-discard-cancel")?.addEventListener("click", () => {
+    closeEditDiscardModal();
+  });
+
+  document.getElementById("session-edit-discard-backdrop")?.addEventListener("keydown", (event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      closeEditDiscardModal();
+      return;
+    }
+
+    if (event.key === "Tab") {
+      const confirmBtn = document.getElementById("session-edit-discard-confirm") as HTMLButtonElement | null;
+      const cancelBtn = document.getElementById("session-edit-discard-cancel") as HTMLButtonElement | null;
+      const focusable = [confirmBtn, cancelBtn].filter((el): el is HTMLButtonElement => el !== null);
+      if (focusable.length < 2) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+  });
+}
+
+function createSnapshot(session: SessionDetailWithPrevious): SessionEditSnapshot {
+  return {
+    overallEffort: session.overallEffort,
+    loggedExercises: session.exercises.map(ex => ({
+      loggedExerciseId: ex.loggedExerciseId,
+      loggedWeight: ex.loggedWeight,
+      effort: ex.effort,
+    })),
+  };
+}
+
+function readEditSnapshot(): SessionEditSnapshot {
+  const overallSelect = document.getElementById("session-edit-overall-effort") as HTMLSelectElement | null;
+  const exerciseRows = Array.from(document.querySelectorAll<HTMLTableRowElement>("[data-logged-exercise-id]"));
+
+  return {
+    overallEffort: parseNullableEffort(overallSelect?.value ?? ""),
+    loggedExercises: exerciseRows.map(row => {
+      const loggedExerciseId = row.dataset.loggedExerciseId ?? "";
+      const weightInput = row.querySelector<HTMLInputElement>("[data-session-edit-weight]");
+      const effortSelect = row.querySelector<HTMLSelectElement>("[data-session-edit-effort]");
+      const normalizedWeight = weightInput?.value.trim() ?? "";
+      return {
+        loggedExerciseId,
+        loggedWeight: normalizedWeight.length === 0 ? null : normalizedWeight,
+        effort: parseNullableEffort(effortSelect?.value ?? ""),
+      };
+    }),
+  };
+}
+
+function parseNullableEffort(value: string): number | null {
+  if (value === "") return null;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) ? parsed : null;
+}
+
+function hasUnsavedSessionEditChanges(): boolean {
+  if (originalEditSnapshot === null) return false;
+  return JSON.stringify(readEditSnapshot()) !== JSON.stringify(originalEditSnapshot);
+}
+
+function handleBackNavigation(): void {
+  if (originalEditSnapshot !== null && hasUnsavedSessionEditChanges()) {
+    pendingDiscardAction = "back";
+    openEditDiscardModal();
+    return;
+  }
+
+  navigate("/history");
+}
+
+function handleEditCancel(): void {
+  if (hasUnsavedSessionEditChanges()) {
+    pendingDiscardAction = "cancel";
+    openEditDiscardModal();
+    return;
+  }
+
+  if (currentSession) renderSessionContent(currentSession, false);
+}
+
+function openEditDiscardModal(): void {
+  const backdrop = document.getElementById("session-edit-discard-backdrop") as HTMLElement | null;
+  if (backdrop) {
+    backdrop.style.display = "";
+    document.getElementById("session-edit-discard-confirm")?.focus();
+  }
+}
+
+function closeEditDiscardModal(): void {
+  const backdrop = document.getElementById("session-edit-discard-backdrop") as HTMLElement | null;
+  if (backdrop) backdrop.style.display = "none";
+  pendingDiscardAction = null;
+  document.getElementById("session-detail-cancel")?.focus();
+}
+
+function confirmDiscardEdits(): void {
+  const action = pendingDiscardAction;
+  pendingDiscardAction = null;
+  if (action === "back") {
+    navigate("/history");
+    return;
+  }
+
+  if (currentSession) renderSessionContent(currentSession, false);
+}
+
+async function saveSessionEdits(sessionId: string): Promise<void> {
+  if (isSavingSessionEdit) return;
+  const snapshot = readEditSnapshot();
+  const errorEl = document.getElementById("session-detail-edit-error") as HTMLElement | null;
+  const saveBtn = document.getElementById("session-detail-save") as HTMLButtonElement | null;
+  const cancelBtn = document.getElementById("session-detail-cancel") as HTMLButtonElement | null;
+
+  if (snapshot.loggedExercises.some(ex => ex.loggedWeight !== null && ex.loggedWeight.length > 100)) {
+    showEditError("Logged weight must not exceed 100 characters.");
+    return;
+  }
+
+  isSavingSessionEdit = true;
+  if (errorEl) errorEl.style.display = "none";
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Saving...";
+  }
+  if (cancelBtn) cancelBtn.disabled = true;
+
+  try {
+    const response = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(snapshot),
+    });
+
+    if (!response.ok) {
+      let message = "Failed to save session changes. Please try again.";
+      try {
+        const error = await response.json();
+        if (typeof error?.error === "string") message = error.error;
+      } catch {
+        // Keep generic save message when the API does not return a structured error body.
+      }
+      showEditError(message);
+      return;
+    }
+
+    const updatedSession: SessionDetailWithPrevious = await response.json();
+    currentSession = updatedSession;
+    renderSessionContent(updatedSession, false);
+  } catch {
+    showEditError("Failed to save session changes. Please try again.");
+  } finally {
+    isSavingSessionEdit = false;
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Save changes";
+    }
+    if (cancelBtn) cancelBtn.disabled = false;
+  }
+}
+
+function showEditError(message: string): void {
+  const errorEl = document.getElementById("session-detail-edit-error") as HTMLElement | null;
+  if (errorEl) {
+    errorEl.textContent = message;
+    errorEl.style.display = "";
+  }
 }
 
 function escapeHtml(text: string): string {
@@ -528,11 +843,17 @@ function appendDeleteSection(contentEl: HTMLElement, sessionId: string): void {
   const deleteSection = document.createElement("div");
   deleteSection.className = "session-detail__delete-section";
   deleteSection.innerHTML = `
+    <button class="session-detail__edit" id="session-detail-edit" type="button">Edit session</button>
     <button class="session-detail__delete" id="session-detail-delete" type="button">Delete session</button>
     <div class="session-detail__delete-error" id="session-detail-delete-error"
          role="alert" aria-live="polite" style="display:none;"></div>
   `;
   contentEl.appendChild(deleteSection);
+
+  const editBtn = deleteSection.querySelector<HTMLButtonElement>("#session-detail-edit")!;
+  editBtn.addEventListener("click", () => {
+    if (currentSession) renderSessionContent(currentSession, true);
+  });
 
   // deleteBtn is a fresh element on every load — safe to add listener directly
   const deleteBtn = deleteSection.querySelector<HTMLButtonElement>("#session-detail-delete")!;
