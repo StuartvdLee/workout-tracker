@@ -637,7 +637,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
                 sessionSnapshot
                     .Where(s => string.Equals(s.PlannedWorkoutId, workoutId, StringComparison.OrdinalIgnoreCase))
                     .OrderByDescending(s => s.CompletedAt)
-                    .ThenByDescending(s => s.SessionId),
+                    .ThenByDescending(s => Guid.Parse(s.SessionId)),
                 targetExerciseIds);
 
             if (selectedExercises.Count == 0)
@@ -655,7 +655,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
                 hasPreviousSession = true,
                 completedAt = (DateTime?)selectedExercises.Values.Max(e => e.CompletedAt),
                 exercises = selectedExercises.Values
-                    .Select(e => new { e.ExerciseId, e.LoggedWeight, e.Effort, e.CompletedAt })
+                    .Select(e => new { e.ExerciseId, e.LoggedWeight, e.Effort, e.Sequence, e.CompletedAt })
                     .ToArray(),
             });
         });
@@ -676,7 +676,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
 
             var body = await request.ReadFromJsonAsync<SessionRequest>();
             var loggedExercises = (body?.LoggedExercises ?? [])
-                .Select(e => new MockLoggedExercise(Guid.NewGuid().ToString(), e.ExerciseId, e.LoggedReps, e.LoggedWeight, e.Notes, e.Effort))
+                .Select(e => new MockLoggedExercise(Guid.NewGuid().ToString(), e.ExerciseId, e.LoggedReps, e.LoggedWeight, e.Notes, e.Effort, e.Sequence))
                 .ToList();
 
             string workoutName;
@@ -741,7 +741,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
                 }
 
                 session.LoggedExercises = (body?.LoggedExercises ?? [])
-                    .Select(e => new MockLoggedExercise(Guid.NewGuid().ToString(), e.ExerciseId, e.LoggedReps, e.LoggedWeight, e.Notes, e.Effort))
+                    .Select(e => new MockLoggedExercise(Guid.NewGuid().ToString(), e.ExerciseId, e.LoggedReps, e.LoggedWeight, e.Notes, e.Effort, e.Sequence))
                     .ToList();
 
                 return Results.Ok(new { session.SessionId, session.PlannedWorkoutId, session.WorkoutName, session.CompletedAt });
@@ -832,7 +832,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
                          candidateSessionId.CompareTo(currentSessionId) < 0)
                     ))
                 .OrderByDescending(s => s.CompletedAt)
-                .ThenByDescending(s => s.SessionId)
+                .ThenByDescending(s => Guid.Parse(s.SessionId))
                 .ToList();
 
             var targetExerciseIds = session.LoggedExercises
@@ -946,6 +946,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
                     loggedExercise.ExerciseId,
                     loggedExercise.LoggedWeight,
                     loggedExercise.Effort,
+                    loggedExercise.Sequence,
                     session.CompletedAt);
             }
 
@@ -965,6 +966,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
         string ExerciseId,
         string? LoggedWeight,
         int? Effort,
+        int? Sequence,
         DateTime CompletedAt);
 
     private sealed class ExerciseRequest
@@ -1004,6 +1006,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
         public string? LoggedWeight { get; set; }
         public string? Notes { get; set; }
         public int? Effort { get; set; }
+        public int? Sequence { get; set; }
     }
 }
 
@@ -1027,7 +1030,7 @@ public record MockPlannedWorkout(string PlannedWorkoutId, string Name, List<Mock
     public List<MockPlannedWorkoutExercise> Exercises { get; set; } = Exercises;
 }
 
-public record MockLoggedExercise(string LoggedExerciseId, string ExerciseId, int? LoggedReps, string? LoggedWeight, string? Notes, int? Effort);
+public record MockLoggedExercise(string LoggedExerciseId, string ExerciseId, int? LoggedReps, string? LoggedWeight, string? Notes, int? Effort, int? Sequence);
 
 public record MockWorkoutSession(string SessionId, string PlannedWorkoutId, string WorkoutName, DateTime CompletedAt, List<MockLoggedExercise> LoggedExercises)
 {
