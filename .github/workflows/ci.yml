@@ -41,7 +41,7 @@ jobs:
 
       # Node.js is required by the MSBuild TypeScript build target in WorkoutTracker.Web
       - name: Set up Node.js
-        uses: actions/setup-node@v6.4.0
+        uses: actions/setup-node@v7.0.0
         with:
           node-version: 'lts/*'
           cache: 'npm'
@@ -84,7 +84,7 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Set up Node.js
-        uses: actions/setup-node@v6.4.0
+        uses: actions/setup-node@v7.0.0
         with:
           node-version: 'lts/*'
           cache: 'npm'
