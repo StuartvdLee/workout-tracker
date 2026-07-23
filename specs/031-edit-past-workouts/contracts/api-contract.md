@@ -73,6 +73,7 @@ Returns the same session-detail shape as `GET /api/sessions/{sessionId}` after t
 
 | Status | Condition | Body |
 |---|---|---|
+| `400 Bad Request` | request body is missing or not valid JSON | `{ "error": "A JSON request body is required." }` |
 | `400 Bad Request` | `overallEffort` outside 1-10 | `{ "error": "Overall effort must be between 1 and 10." }` |
 | `400 Bad Request` | exercise `effort` outside 1-10 | `{ "error": "Effort must be between 1 and 10." }` |
 | `400 Bad Request` | `loggedWeight` exceeds 100 characters | `{ "error": "Logged weight must not exceed 100 characters." }` |
