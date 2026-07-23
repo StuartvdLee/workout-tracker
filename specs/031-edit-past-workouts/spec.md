@@ -2,7 +2,7 @@
 
 **Feature Branch**: `031-edit-past-workouts`  
 **Created**: 2026-07-19  
-**Status**: Draft  
+**Status**: Delivered  
 **Input**: User description: "I want to be able to edit past workouts in case I filled in wrong values or forgot to fill in values for weight and effort. I also want to be able to edit the overall workout effort"
 
 ## User Scenarios & Testing *(mandatory)*

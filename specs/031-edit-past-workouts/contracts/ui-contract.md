@@ -8,7 +8,7 @@ Adds edit mode to the existing session detail page (`/history/session?id=<sessio
 
 | Surface | Element / Area | File |
 |---|---|---|
-| Session detail header | Edit action near title/back controls | `session-detail.ts` |
+| Session detail actions section | Edit session and Delete session buttons (shared `session-detail__delete-section`) | `session-detail.ts` |
 | Exercise table | Editable weight and effort cells | `session-detail.ts` |
 | Overall effort summary | Editable session-level effort | `session-detail.ts` |
 | Unsaved change protection | Discard confirmation modal | `session-detail.ts`, `styles.css` |
@@ -24,18 +24,19 @@ Existing view-mode behavior remains:
 - Overall effort summary row shows current and previous effort.
 - Chart section and delete-session section remain available.
 
-Add an edit action:
+The edit and delete actions share a dedicated section appended after the chart section:
 
 ```html
-<button class="session-detail__edit" id="session-detail-edit" type="button">
-  Edit
-</button>
+<div class="session-detail__delete-section">
+  <button class="session-detail__edit" id="session-detail-edit" type="button">Edit session</button>
+  <button class="session-detail__delete" id="session-detail-delete" type="button">Delete session</button>
+</div>
 ```
 
 Rules:
 
-- The Edit button is visible after session data loads successfully.
-- The Edit button is not shown in loading, not-found, or error states.
+- The Edit session button is visible after session data loads successfully.
+- The Edit session button is not shown in loading, not-found, or error states.
 - The Delete session action remains a destructive action and is not available while edit mode is active.
 
 ## Edit Mode
@@ -52,20 +53,24 @@ When the user selects Edit:
 Example row:
 
 ```html
-<tr class="session-detail__row session-detail__row--editing">
+<tr class="session-detail__row" data-logged-exercise-id="a1b2c3d4-e5f6-7890-abcd-ef1234567890">
   <td class="session-detail__cell session-detail__cell--exercise">Bench Press</td>
   <td class="session-detail__cell">
     <input
-      class="session-detail__weight-input"
+      class="session-detail__input"
       type="text"
       maxlength="100"
       value="82.5"
+      data-session-edit-weight="a1b2c3d4-e5f6-7890-abcd-ef1234567890"
       aria-label="Weight for Bench Press"
     />
   </td>
   <td class="session-detail__cell session-detail__cell--prev">80</td>
   <td class="session-detail__cell">
-    <select class="session-detail__effort-select" aria-label="Effort for Bench Press">
+    <select class="session-detail__select"
+            id="session-edit-effort-a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+            aria-label="Effort for Bench Press"
+            data-session-edit-effort="a1b2c3d4-e5f6-7890-abcd-ef1234567890">
       <option value="">Not rated</option>
       <option value="1">1 · Easy</option>
       <option value="2">2 · Easy</option>
@@ -86,28 +91,34 @@ Example row:
 Overall effort edit control:
 
 ```html
-<div class="session-detail__overall-effort-row session-detail__overall-effort-row--editing">
-  <label class="session-detail__overall-effort-label" for="session-detail-overall-effort">
+<div class="session-detail__overall-effort-row">
+  <label class="session-detail__overall-effort-label" for="session-edit-overall-effort">
     Overall Effort
   </label>
-  <select class="session-detail__effort-select" id="session-detail-overall-effort">
-    <option value="">Not rated</option>
-    <option value="1">1 · Easy</option>
-    ...
-    <option value="10">10 · All Out</option>
-  </select>
+  <span class="session-detail__overall-effort-value">
+    <select class="session-detail__select session-detail__select--overall"
+            id="session-edit-overall-effort"
+            aria-label="Overall workout effort">
+      <option value="">Not rated</option>
+      <option value="1">1 · Easy</option>
+      ...
+      <option value="10">10 · All Out</option>
+    </select>
+  </span>
   <span class="session-detail__overall-effort-prev-label">Previous</span>
   <span class="session-detail__overall-effort-prev-value">6 · Moderate</span>
 </div>
 ```
 
-Actions:
+Error message and actions (edit-error is placed above the table, actions are at the bottom):
 
 ```html
-<div class="session-detail__edit-actions">
-  <button class="session-detail__save" id="session-detail-save" type="button">Save changes</button>
-  <button class="session-detail__cancel" id="session-detail-cancel" type="button">Cancel</button>
-  <div class="session-detail__save-error" id="session-detail-save-error" role="alert" aria-live="polite"></div>
+<div class="session-detail__edit-error" id="session-detail-edit-error"
+     role="alert" aria-live="polite" style="display:none;"></div>
+<!-- table and overall effort row here -->
+<div class="session-detail__toolbar workout-form__actions">
+  <button class="session-detail__save workout-form__submit" id="session-detail-save" type="button">Save changes</button>
+  <button class="session-detail__cancel workout-form__cancel" id="session-detail-cancel" type="button">Cancel</button>
 </div>
 ```
 
@@ -122,7 +133,7 @@ Reuse the feature 023 discard modal language and classes:
        aria-describedby="session-edit-discard-desc">
     <h2 class="discard-modal__title" id="session-edit-discard-title">Discard changes?</h2>
     <p class="discard-modal__desc" id="session-edit-discard-desc">
-      You have unsaved changes. Are you sure you want to discard them?
+      You have unsaved session edits. Are you sure you want to discard them?
     </p>
     <div class="discard-modal__actions">
       <button class="discard-modal__discard" type="button" id="session-edit-discard-confirm">Discard</button>
