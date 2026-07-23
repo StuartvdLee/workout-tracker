@@ -2,7 +2,7 @@
 
 **Feature Branch**: `030-edit-exercise-order`  
 **Created**: 2026-07-19  
-**Status**: Draft  
+**Status**: Delivered (PR #130, merged)  
 **Input**: User description: "I want to be able to change the order of exercises in a current workout. In the top right of the current workout screen should be an \"Edit order\" button. This should \"collapse\" all exercises and only show their names (so the weight and effort should be hidden). I should be able to drag and drop exercises to change their order in the same way as when editing a workout on the \"Edit Workout\" screen."
 
 ## User Scenarios & Testing *(mandatory)*
@@ -58,10 +58,11 @@ As a user who has finished changing exercise order, I want to return to the norm
 ### Edge Cases
 
 - If the current workout has no exercises, the order-editing action should not create an empty drag-and-drop workflow and should keep the empty state clear.
-- If the current workout has exactly one exercise, entering order-editing mode should show the single exercise name without implying a reorder is possible.
+- If the current workout has exactly one exercise, entering order-editing mode should show the single exercise name without a drag handle, since reordering is not possible.
 - If the user starts dragging and cancels before dropping, the exercise order should remain unchanged.
 - If order changes cannot be saved or retained, the user should receive clear feedback and the app should avoid presenting a successfully changed order.
 - If the screen is narrow or touch-based, the collapsed ordering view should remain usable without exposing hidden weight or effort controls.
+- If the user presses Cancel after making order changes, the system must confirm before restoring the original order. If no order changes were made, Cancel exits order-editing mode immediately without a confirmation step.
 
 ## Requirements *(mandatory)*
 
@@ -75,9 +76,11 @@ As a user who has finished changing exercise order, I want to return to the norm
 - **FR-006**: The reorder interaction MUST be consistent with the drag-and-drop reorder behavior used on the "Edit Workout" screen.
 - **FR-007**: The changed order MUST be reflected in the current workout after the user reorders exercises.
 - **FR-008**: Reordering exercises MUST preserve each exercise's existing workout-entry data, including weight and effort values, with the correct exercise.
-- **FR-009**: Users MUST be able to exit order-editing mode and return to the normal current workout view.
+- **FR-009**: Users MUST be able to exit order-editing mode and return to the normal current workout view via a "Done" action that applies the in-memory reordered sequence.
 - **FR-010**: The normal current workout view MUST restore exercise details and entry controls after order-editing mode ends.
 - **FR-011**: The system MUST handle workouts with zero or one exercise without presenting a broken or misleading reorder experience.
+- **FR-012**: A "Cancel" action MUST be available in order-editing mode. If no order changes have been made, it MUST exit order-editing mode immediately. If the user has changed the exercise order, it MUST prompt for confirmation before discarding the changes and restoring the original order.
+- **FR-013**: When the user cancels with unsaved order changes, the system MUST show a clear confirmation dialog, and only discard changes if the user explicitly confirms.
 
 ### Security & Privacy Requirements
 

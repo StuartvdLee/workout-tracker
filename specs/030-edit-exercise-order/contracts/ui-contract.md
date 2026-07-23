@@ -57,7 +57,10 @@ Rules:
 </button>
 ```
 
-- Selecting the footer "Done" action exits order-editing mode and restores the normal logging view without saving the workout.
+- Selecting the footer "Done" action applies the in-memory exercise order and exits order-editing mode, restoring the normal logging view without saving the workout to the server.
+- The "Cancel" button (`#session-cancel`) is also available in order-editing mode:
+  - If no order changes have been made: exits order-editing mode immediately (equivalent to Done).
+  - If order changes have been made: opens the discard confirmation modal with order-specific content (see below).
 - For zero exercises, the button may be hidden or disabled.
 - For one exercise, the button may enter name-only mode but no drag handle is rendered.
 
@@ -94,6 +97,28 @@ Rules:
 - Weight controls, effort sliders, target text, previous-performance text, and exercise-entry controls are not rendered in this mode.
 - The normal Save Workout / Cancel actions remain outside the exercise rows; while order-editing mode is active, the primary action is relabeled "Done" and exits the mode instead of saving.
 - Reordered rows update the in-memory active workout order immediately.
+
+## Discard Confirmation Modal (Order-Editing Mode)
+
+When the user presses "Cancel" while in order-editing mode and has made order changes, the existing discard modal is re-used with order-specific content:
+
+```html
+<div class="discard-modal" ...>
+  <h2 class="discard-modal__title" id="discard-title">Discard changes?</h2>
+  <p class="discard-modal__desc" id="discard-desc">You have unsaved order changes. Are you sure you want to discard them?</p>
+  <div class="discard-modal__actions">
+    <button class="discard-modal__discard" type="button" id="discard-confirm">Discard</button>
+    <button class="discard-modal__continue" type="button" id="discard-cancel">Keep editing</button>
+  </div>
+</div>
+```
+
+Rules:
+
+- Selecting "Discard" restores the exercise order to what it was when "Edit order" was selected, then exits order-editing mode.
+- Selecting "Keep editing" closes the modal and returns the user to order-editing mode with their changes intact.
+- In normal (non-order-editing) discard mode the continue button reads "Continue workout"; in order-editing mode it reads "Keep editing".
+- The modal is not shown if no order changes were made; "Cancel" exits order-editing mode immediately in that case.
 
 ## Reorder Interaction
 

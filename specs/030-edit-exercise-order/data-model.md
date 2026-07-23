@@ -20,11 +20,32 @@ Represents the workout currently loaded in `active-session.ts`.
 
 **State transitions**:
 
-1. Loaded from `GET /api/workouts/{workoutId}` in template order or URL-provided order.
-2. User enters order-editing mode.
-3. User reorders `exercises` in memory.
-4. User exits order-editing mode; normal logging view renders in the updated order.
-5. User saves the workout; existing session save sends `sequence` based on the current `exercises` array order.
+```text
+Normal logging mode
+  -> user selects "Edit order"
+Order-editing mode with collapsed rows (orderBeforeEditing snapshot taken)
+  -> drag/touch/keyboard reorder
+Order-editing mode with updated array order
+  -> user selects "Done"
+Normal logging mode in updated order
+  -> user saves workout
+Session POST logs sequence values from updated order
+
+  -- alternative exit path --
+Order-editing mode (no changes made)
+  -> user selects "Cancel"
+Normal logging mode in original order (no confirmation needed)
+
+  -- alternative exit path with changes --
+Order-editing mode (changes made)
+  -> user selects "Cancel"
+Discard confirmation modal
+  -> user selects "Keep editing"
+Order-editing mode resumes (changes intact)
+
+  -> user selects "Discard"
+Normal logging mode in original order (orderBeforeEditing restored)
+```
 
 ### Workout Exercise
 
@@ -85,6 +106,9 @@ Order-editing mode with updated array order
 Normal logging mode in updated order
   -> user saves workout
 Session POST logs sequence values from updated order
+
+  -- or Cancel with changes -> discard confirmed --
+Normal logging mode in original order
 ```
 
 ## Persistence
