@@ -57,7 +57,7 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           TEST_DB_CONNECTION: "Host=localhost;Port=5432;Database=workout_tracker_test;Username=postgres;Password=postgres"
-        run: dotnet test src/WorkoutTracker.UnitTests/WorkoutTracker.UnitTests.csproj --no-build --configuration Release --logger "trx;LogFileName=test-results.trx"
+        run: dotnet test --project src/WorkoutTracker.UnitTests/WorkoutTracker.UnitTests.csproj --no-build --configuration Release --logger "trx;LogFileName=test-results.trx"
 
       - name: Upload unit test results
         if: always() && github.event_name == 'pull_request'
@@ -115,7 +115,7 @@ jobs:
         run: pwsh src/WorkoutTracker.E2ETests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
 
       - name: Run E2E tests
-        run: dotnet test src/WorkoutTracker.E2ETests/WorkoutTracker.E2ETests.csproj --no-build --configuration Release --logger "trx;LogFileName=test-results.trx"
+        run: dotnet test --project src/WorkoutTracker.E2ETests/WorkoutTracker.E2ETests.csproj --no-build --configuration Release --logger "trx;LogFileName=test-results.trx"
 
       - name: Upload test results
         if: always()
