@@ -625,14 +625,14 @@ public class WorkoutHistoryTests
     }
 
     [Fact]
-    public async Task SessionDetailPage_ExerciseColumnSizesToLongestName()
+    public async Task SessionDetailPage_ExerciseColumnConstrainsMaximumLengthName()
     {
         var page = await CreatePageAsync();
         var sessionId = Guid.NewGuid();
         try
         {
             await page.SetViewportSizeAsync(600, 800);
-            var longName = "Calf Extension";
+            var longName = string.Concat(Enumerable.Repeat("Maximum Length Exercise Name ", 6))[..150];
             await StubSessionDetailAsync(page, sessionId, ["Abductor", longName, "Leg Press"]);
             await page.GotoAsync($"{_webApp.BaseUrl}/history/session?id={sessionId}");
             await page.WaitForSelectorAsync(".session-detail__table");
@@ -650,28 +650,43 @@ public class WorkoutHistoryTests
                         paddingLeft: parseFloat(style.paddingLeft),
                         paddingRight: parseFloat(style.paddingRight),
                         whiteSpace: style.whiteSpace,
+                        overflow: style.overflow,
+                        textOverflow: style.textOverflow,
                     };
                 }");
             var requiredWidth = measurements.GetProperty("textWidth").GetDouble()
                 + measurements.GetProperty("paddingLeft").GetDouble()
                 + measurements.GetProperty("paddingRight").GetDouble();
             var cellWidth = measurements.GetProperty("cellWidth").GetDouble();
+            var wrapper = page.Locator(".session-detail__table-wrapper");
+            var wrapperBox = await wrapper.BoundingBoxAsync();
+            Assert.NotNull(wrapperBox);
 
             Assert.Equal("nowrap", measurements.GetProperty("whiteSpace").GetString());
+            Assert.Equal("hidden", measurements.GetProperty("overflow").GetString());
+            Assert.Equal("ellipsis", measurements.GetProperty("textOverflow").GetString());
             Assert.True(measurements.GetProperty("paddingRight").GetDouble() > 0,
                 "The exercise column must leave trailing space after the longest name.");
-            Assert.InRange(cellWidth, requiredWidth - 1, requiredWidth + 2);
+            Assert.True(cellWidth < requiredWidth,
+                "A maximum-length exercise name must be truncated rather than widening the sticky column indefinitely.");
+            Assert.True(cellWidth < wrapperBox.Width,
+                "The sticky Exercise column must leave visible space for statistic columns.");
+            await Expect(longestCell).ToHaveAttributeAsync("title", longName);
+            await Expect(longestCell).ToHaveAttributeAsync("aria-label", longName);
 
             var columnWidths = await exerciseCells.EvaluateAllAsync<double[]>(
                 "cells => cells.map(cell => cell.getBoundingClientRect().width)");
             Assert.All(columnWidths, width => Assert.InRange(Math.Abs(width - cellWidth), 0, 1));
 
-            var wrapper = page.Locator(".session-detail__table-wrapper");
             await SetHorizontalScrollAsync(wrapper, 1);
             await AssertStickyCellsAlignedAsync(
                 wrapper,
                 page.Locator(".session-detail__th").First,
                 longestCell);
+            var lastHeaderBox = await page.Locator(".session-detail__th").Last.BoundingBoxAsync();
+            Assert.NotNull(lastHeaderBox);
+            Assert.True(lastHeaderBox.X + lastHeaderBox.Width <= wrapperBox.X + wrapperBox.Width + 2,
+                "The final statistic column must remain fully visible with a maximum-length exercise name.");
             await SetHorizontalScrollAsync(wrapper, 0);
             await AssertStickyCellsAlignedAsync(
                 wrapper,

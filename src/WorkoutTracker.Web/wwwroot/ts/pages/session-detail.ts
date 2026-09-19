@@ -185,7 +185,7 @@ function renderDetailTable(session: SessionDetailWithPrevious): string {
 
             return `
             <tr class="session-detail__row">
-              <td class="session-detail__cell session-detail__cell--exercise">${escapeHtml(ex.exerciseName)}</td>
+              <td class="session-detail__cell session-detail__cell--exercise" title="${escapeHtml(ex.exerciseName)}" aria-label="${escapeHtml(ex.exerciseName)}">${escapeHtml(ex.exerciseName)}</td>
               <td class="session-detail__cell">${weight}</td>
               <td class="session-detail__cell session-detail__cell--prev">${prevWeight}</td>
               <td class="session-detail__cell">${sets}</td>
@@ -229,7 +229,7 @@ function renderEditTable(session: SessionDetailWithPrevious): string {
             const prevEffort = ex.previousEffort !== null ? `${ex.previousEffort}` : `<span class="session-detail__no-data">—</span>`;
             return `
             <tr class="session-detail__row" data-logged-exercise-id="${escapeHtml(ex.loggedExerciseId)}">
-              <td class="session-detail__cell session-detail__cell--exercise">${escapeHtml(ex.exerciseName)}</td>
+              <td class="session-detail__cell session-detail__cell--exercise" title="${escapeHtml(ex.exerciseName)}" aria-label="${escapeHtml(ex.exerciseName)}">${escapeHtml(ex.exerciseName)}</td>
               <td class="session-detail__cell">
                 <input class="session-detail__input" data-session-edit-weight="${escapeHtml(ex.loggedExerciseId)}"
                   type="text" maxlength="100" value="${escapeHtml(ex.loggedWeight ?? "")}"

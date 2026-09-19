@@ -29,8 +29,8 @@ Represents the first semantic table column while the table is horizontally scrol
 - **Cells**: existing exercise-name cells, one per exercise row
 - **Anchor edge**: left edge of the table's scroll viewport
 - **Surface**: one opaque light-grey header-row surface shared by the header and body cells
-- **Width**: longest displayed exercise name plus cell padding and trailing `var(--spacing-md)` margin; no fixed pixel or percentage width
-- **Text flow**: exercise names remain on one line so the column can size to its longest name
+- **Width**: longest displayed exercise name plus cell padding and trailing `var(--spacing-md)` margin, capped by `min(20rem, 55vw)` so statistic space remains visible; no fixed pixel or percentage width
+- **Text flow**: exercise names remain on one line and truncate with an ellipsis at the cap; the full name remains the cell's text and is exposed through `aria-label` and `title`
 - **Layer order**: header above body fixed cells; fixed cells above horizontally moving statistic content
 - **Divider**: visual boundary at the fixed column's trailing edge using the existing table border colour; no divider between the header row and first body row
 
@@ -58,5 +58,5 @@ Represents the first semantic table column while the table is horizontally scrol
 
 - The fixed column must not reduce the scroll range needed to reveal the final statistic column.
 - The fixed header and first body cell must remain aligned within normal rendering tolerance throughout scrolling.
-- The Exercise column width is determined by the longest displayed exercise name plus cell padding; names remain on one line and must not overlap scrolling values.
+- The Exercise column width is determined by the longest displayed exercise name plus cell padding up to its viewport-aware maximum; longer names truncate without overlapping scrolling values, and their full value remains accessible.
 - No application data is transformed or validated differently by this feature.

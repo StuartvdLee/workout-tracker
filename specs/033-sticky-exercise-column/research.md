@@ -80,8 +80,8 @@ This feature reuses the session-detail page and table patterns established by:
 
 ## Decision 7: Size the Exercise column from its content
 
-**Decision**: Use automatic table layout with `width: 1%` on the first header/body cells, `white-space: nowrap` on exercise names, and trailing `var(--spacing-md)` padding. Do not set a fixed pixel or percentage width for the Exercise column.
+**Decision**: Use automatic table layout with `width: 1%` on the first header/body cells, `white-space: nowrap`, trailing `var(--spacing-md)` padding, and `max-width: min(20rem, 55vw)` on exercise cells. Do not set a fixed pixel or percentage width for the Exercise column. Truncated names retain their full text and expose it through `aria-label` and `title`.
 
-**Rationale**: The first column should be only as wide as the longest displayed exercise name plus a small margin, while the existing table minimum width and statistic-column sizing preserve horizontal scrolling. The shrink-to-content hint prevents automatic layout from absorbing excess table width.
+**Rationale**: Ordinary names should make the first column only as wide as the longest displayed name plus a small margin. The viewport-aware cap prevents a valid 150-character name from covering the scrollport, while ellipsis plus accessible full-name attributes preserve identification. The existing table minimum width and statistic-column sizing retain horizontal scrolling.
 
 No `NEEDS CLARIFICATION` items remain.

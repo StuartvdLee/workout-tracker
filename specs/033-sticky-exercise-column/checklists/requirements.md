@@ -32,5 +32,5 @@
 ## Notes
 
 - Validation completed on 2026-09-19. All checklist items pass.
-- Delivered behavior is documented in the feature artifacts: native sticky positioning, shared light-grey fixed-column surface, content-sized nowrap Exercise column with trailing padding, no header/body divider, and preserved body-row separators.
+- Delivered behavior is documented in the feature artifacts: native sticky positioning, shared light-grey fixed-column surface, content-sized nowrap Exercise column with trailing padding and a viewport-aware maximum, accessible full names for ellipsized values, no header/body divider, and preserved body-row separators.
 - Runtime and browser regression validation completed after implementation; the feature remains frontend-only with unchanged data and table semantics.

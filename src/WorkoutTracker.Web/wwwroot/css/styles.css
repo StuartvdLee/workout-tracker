@@ -2351,6 +2351,7 @@ body.is-dragging .workout-selected__drag-handle {
 }
 
 .session-detail__cell--exercise {
+  max-width: min(20rem, 55vw);
   font-weight: 500;
   white-space: nowrap;
 }

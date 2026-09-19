@@ -64,11 +64,11 @@ No new foundational implementation is required. `src/WorkoutTracker.Web/wwwroot/
 > Add the theme and responsive assertions before making any follow-up styling adjustments.
 
 - [x] T006 [US2] Add light- and dark-theme Playwright assertions in `src/WorkoutTracker.E2ETests/E2E/WorkoutHistoryTests.cs` that fixed header/body cells have non-transparent computed backgrounds matching their surrounding surfaces and stack above ordinary statistic cells while scrolled
-- [x] T007 [US2] Add responsive Playwright coverage in `src/WorkoutTracker.E2ETests/E2E/WorkoutHistoryTests.cs` for an overflowing supported viewport, maximum-scroll final-column visibility, restoration to the zero-scroll layout without an offset artifact, and a long exercise name that remains contained without overlapping statistic cells
+- [x] T007 [US2] Add responsive Playwright coverage in `src/WorkoutTracker.E2ETests/E2E/WorkoutHistoryTests.cs` for an overflowing supported viewport, maximum-scroll final-column visibility, restoration to the zero-scroll layout without an offset artifact, and a 150-character exercise name that is capped, ellipsized, and exposes its full accessible name without overlapping statistic cells
 
 ### Implementation for User Story 2
 
-- [x] T008 [US2] Refine the fixed-column rules in `src/WorkoutTracker.Web/wwwroot/css/styles.css` to use only existing theme tokens, preserve the current `52rem` table minimum width and statistics-column allocation, use `table-layout: auto` with first-column `width: 1%`, keep exercise names unwrapped, size the Exercise column from its longest name with trailing padding and no fixed width, remove the header bottom border while retaining body-row dividers, and preserve the zero-scroll layout
+- [x] T008 [US2] Refine the fixed-column rules in `src/WorkoutTracker.Web/wwwroot/css/styles.css` to use only existing theme tokens, preserve the current `52rem` table minimum width and statistics-column allocation, use `table-layout: auto` with first-column `width: 1%`, keep exercise names unwrapped, size the Exercise column from its longest name with trailing padding up to `min(20rem, 55vw)`, expose truncated full names through `aria-label` and `title`, remove the header bottom border while retaining body-row dividers, and preserve the zero-scroll layout
 - [x] T009 [US2] Run the theme, responsive, boundary, and long-name tests in `src/WorkoutTracker.E2ETests/E2E/WorkoutHistoryTests.cs`, confirming the last column remains fully readable and fixed surfaces never reveal scrolling values beneath them
 
 **Checkpoint**: User Story 2 is complete when all supported themes and tested viewport sizes preserve readability, opacity, alignment, and full table access.

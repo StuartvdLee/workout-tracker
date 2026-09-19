@@ -38,8 +38,8 @@ No route, API, data, or copy contract changes are introduced.
 
 1. The `Exercise` header remains aligned with exercise names.
 2. Every exercise name remains vertically aligned with the statistics in its own row.
-3. The Exercise column width is determined by the longest displayed exercise name, and exercise names remain on one line.
-4. The Exercise column includes trailing `var(--spacing-md)` padding after the longest name, uses no fixed pixel or percentage width, and keeps names on one line; statistics-column sizing, typography, and spacing remain unchanged.
+3. The Exercise column width is determined by the longest displayed exercise name up to `min(20rem, 55vw)`, and exercise names remain on one line.
+4. The Exercise column includes trailing `var(--spacing-md)` padding and uses no fixed pixel or percentage width. Names exceeding the maximum truncate with an ellipsis while retaining full cell text, `aria-label`, and `title`; statistics-column sizing, typography, and spacing remain unchanged.
 5. Statistic content, row order, and column order remain unchanged.
 
 ## Mode Contract

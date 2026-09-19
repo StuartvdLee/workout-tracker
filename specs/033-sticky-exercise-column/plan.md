@@ -16,7 +16,7 @@ Keep the Exercise header and exercise-name cells visible at the left edge of the
 **Target Platform**: Modern web browsers supported by Workout Tracker, across desktop and narrow responsive viewports
 **Project Type**: Web application (ASP.NET Core/.NET Aspire host with vanilla TypeScript frontend)
 **Performance Goals**: With 50 rows, at least 19 of 20 sampled horizontal scroll interactions paint within 100 ms; add zero JavaScript scroll handlers and zero network requests
-**Constraints**: No external CSS/JS framework; preserve seven-column ordering, size the Exercise column from its longest displayed name without a fixed width, preserve native table semantics, view/edit rendering, theme tokens, and complete access to the final column
+**Constraints**: No external CSS/JS framework; preserve seven-column ordering, size the Exercise column from its longest displayed name without a fixed width while applying a viewport-aware maximum, expose truncated full names accessibly, preserve native table semantics, view/edit rendering, theme tokens, and complete access to the final column
 **Scale/Scope**: One existing CSS file plus focused session-detail Playwright tests; no new runtime module, endpoint, migration, or dependency
 
 ## Constitution Check
@@ -73,7 +73,7 @@ Key decisions reused from previous specs and current code:
 4. **Features 024 and 028** establish the repository pattern for small visual changes: retain existing markup and tokens, keep the runtime change surgical, and combine automated regression tests with a manual visual check.
 5. Browser-native fixed positioning inside the current overflow wrapper avoids duplicated rows, scroll-event handlers, and accessibility regressions.
 6. Opaque theme-token backgrounds plus explicit stacking are required for statistic values to disappear behind the Exercise column.
-7. The delivered sizing strategy is `table-layout: auto`, `width: 1%` on the first header/body cells, `white-space: nowrap` for exercise names, and trailing `var(--spacing-md)` padding; this replaces the former first-column percentage width without introducing a fixed pixel width.
+7. The delivered sizing strategy is `table-layout: auto`, `width: 1%` on the first header/body cells, `white-space: nowrap`, trailing `var(--spacing-md)` padding, and `max-width: min(20rem, 55vw)` on exercise cells. This replaces the former first-column percentage width, truncates extreme names with an ellipsis, and preserves statistic space. Full names remain available through cell text, `aria-label`, and `title`.
 
 No `NEEDS CLARIFICATION` markers remain.
 

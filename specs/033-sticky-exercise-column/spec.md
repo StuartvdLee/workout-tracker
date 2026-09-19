@@ -40,7 +40,7 @@ A user can read the fixed Exercise column clearly on supported screen sizes and 
 
 ### Edge Cases
 
-- Exercise names that are long MUST remain on one line within the content-sized fixed column, including its trailing margin, and MUST NOT overlap statistic cells.
+- Exercise names that fit within the viewport-aware column limit MUST remain on one line with trailing spacing. Longer valid names, including the 150-character maximum, MUST be visually truncated without covering all statistic space, while their full value remains available through accessible text and a hover title.
 - The fixed column MUST remain correctly layered while scrolling to either horizontal boundary.
 - Rows with missing or placeholder statistic values MUST retain alignment with their exercise names.
 - A past workout containing one exercise MUST behave consistently with a workout containing many exercises.
@@ -59,7 +59,7 @@ A user can read the fixed Exercise column clearly on supported screen sizes and 
 - **FR-006**: Users MUST be able to scroll far enough to view the complete content of the final statistic column.
 - **FR-007**: The fixed Exercise column MUST preserve the table's typography, spacing, outer border, and body-row dividers; its header and body cells MUST use the same light-grey, theme-aware surface, with no horizontal divider between the header row and the first body row.
 - **FR-008**: The behavior MUST apply whenever the past-workout table overflows horizontally and MUST preserve the existing table layout without an offset artifact at the zero horizontal scroll position.
-- **FR-009**: The Exercise column MUST derive its width from the longest displayed exercise name, include trailing spacing after that name, and MUST NOT use a fixed column width.
+- **FR-009**: The Exercise column MUST derive its width from the longest displayed exercise name up to a viewport-aware maximum, include trailing spacing, and MUST NOT use a fixed column width. Names beyond the maximum MUST truncate visually while preserving the full accessible name and hover title.
 - **FR-010**: The change MUST NOT alter workout data, statistic values, column order, row order, or existing session actions.
 
 ### Security & Privacy Requirements
@@ -88,7 +88,7 @@ A user can read the fixed Exercise column clearly on supported screen sizes and 
 ## Assumptions
 
 - The Exercise column is the first column in the past-workout table and remains the leftmost column.
-- The Exercise column is content-sized from the longest displayed exercise name; user-configurable column resizing remains outside this feature's scope.
+- The Exercise column is content-sized from the longest displayed exercise name up to a viewport-aware maximum that preserves visible statistic space; user-configurable column resizing remains outside this feature's scope.
 - Only the past-workout detail table is affected; tables elsewhere in the application retain their current behavior.
 - Vertical page scrolling and the current table header behavior are unchanged.
 - Existing supported browsers and input methods define the compatibility scope.

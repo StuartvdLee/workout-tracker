@@ -8,7 +8,7 @@
 1. Update the existing session-detail table styles so the Exercise header and exercise-name cells remain anchored to the left edge of `.session-detail__table-wrapper`.
 2. Give the fixed header and body cells the existing light-grey header-row surface colour.
 3. Add explicit layering and a subtle trailing divider so scrolling statistics disappear behind the fixed column; remove the header-cell bottom border while retaining body-row dividers.
-4. Use automatic table layout with a shrink-to-content first column (`width: 1%` on the first header/body cells), `white-space: nowrap`, and trailing padding so it sizes to the longest displayed name without a fixed width; preserve horizontal overflow plus both view/edit table markup.
+4. Use automatic table layout with a shrink-to-content first column (`width: 1%` on the first header/body cells), `white-space: nowrap`, trailing padding, and `max-width: min(20rem, 55vw)`. Names beyond the cap truncate with an ellipsis and retain full `aria-label`/`title` values; preserve horizontal overflow plus both view/edit table markup.
 5. Add focused Playwright regression coverage in `WorkoutHistoryTests.cs` for position, scroll reach, opacity/layering, and edit mode.
 
 ## Validation Commands
@@ -57,7 +57,8 @@ Do not stash, reset, overwrite, or discard `src/WorkoutTracker.Web/wwwroot/css/s
 - Fixed header/body backgrounds are opaque and use the shared light-grey header-row surface.
 - Fixed cells layer above ordinary statistic cells.
 - The header row has no bottom border; body-row separators remain.
-- Maximum horizontal scroll exposes the complete last column.
+- A 150-character exercise name is capped, ellipsized, and exposes its full value through `aria-label` and `title`.
+- Maximum horizontal scroll exposes the complete last column, including with a maximum-length exercise name.
 - View mode and edit mode both preserve the fixed column.
 - Existing seven-column headers and exercise-row assertions continue to pass.
 
@@ -96,6 +97,6 @@ Do not stash, reset, overwrite, or discard `src/WorkoutTracker.Web/wwwroot/css/s
 ## Delivered Implementation Notes
 
 - Runtime changes are limited to the existing session-detail CSS and browser regression tests.
-- The first column uses native sticky positioning, `table-layout: auto`, `width: 1%` shrink-to-content hints, `white-space: nowrap`, and trailing padding.
+- The first column uses native sticky positioning, `table-layout: auto`, `width: 1%` shrink-to-content hints, `white-space: nowrap`, trailing padding, and a `min(20rem, 55vw)` maximum with accessible full-name attributes.
 - The fixed column uses the same light-grey theme surface as the header row; the header/body divider is removed, while body-row dividers remain.
 - View-mode and edit-mode coverage, theme checks, long-name sizing, final-column reachability, and the 50-row performance budget were completed.
