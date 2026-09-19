@@ -939,6 +939,7 @@ public class WorkoutsPageTests
             await page.Locator(".sidebar__link[data-page='home']").ClickAsync();
             await page.Locator("#workout-select option:not([disabled])").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
             await page.Locator("#workout-select").SelectOptionAsync(new SelectOptionValue { Label = "Toggle Test Workout" });
+            await page.Locator("#sets-select").SelectOptionAsync("3");
 
             var toggle = page.Locator("#home-randomise-toggle");
             await Expect(toggle).ToBeVisibleAsync();

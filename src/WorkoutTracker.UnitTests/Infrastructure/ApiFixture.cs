@@ -1,6 +1,8 @@
+using System.Data.Common;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using WorkoutTracker.Infrastructure.Data;
@@ -14,6 +16,12 @@ namespace WorkoutTracker.UnitTests.Infrastructure;
 /// </summary>
 public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    private readonly CommandCountingInterceptor _commandCounter = new();
+
+    public int ExecutedCommandCount => _commandCounter.Count;
+
+    public void ResetCommandCount() => _commandCounter.Reset();
+
     /// <summary>
     /// Connection string for the test database. Override via TEST_DB_CONNECTION env var in CI.
     /// </summary>
@@ -55,8 +63,48 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
             services.AddDbContext<WorkoutTrackerDbContext>(options =>
                 options
                     .UseNpgsql(ConnectionString)
-                    .UseSnakeCaseNamingConvention());
+                    .UseSnakeCaseNamingConvention()
+                    .AddInterceptors(_commandCounter));
         });
+    }
+
+    private sealed class CommandCountingInterceptor : DbCommandInterceptor
+    {
+        private int _count;
+
+        public int Count => Volatile.Read(ref _count);
+
+        public void Reset() => Interlocked.Exchange(ref _count, 0);
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            Interlocked.Increment(ref _count);
+            return ValueTask.FromResult(result);
+        }
+
+        public override ValueTask<InterceptionResult<object>> ScalarExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<object> result,
+            CancellationToken cancellationToken = default)
+        {
+            Interlocked.Increment(ref _count);
+            return ValueTask.FromResult(result);
+        }
+
+        public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            Interlocked.Increment(ref _count);
+            return ValueTask.FromResult(result);
+        }
     }
 
     public async ValueTask InitializeAsync()

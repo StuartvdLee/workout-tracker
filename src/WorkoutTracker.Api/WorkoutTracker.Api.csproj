@@ -9,6 +9,9 @@
     <ProjectReference Include="..\WorkoutTracker.ServiceDefaults\WorkoutTracker.ServiceDefaults.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="WorkoutTracker.UnitTests" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="13.5.3" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.12">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

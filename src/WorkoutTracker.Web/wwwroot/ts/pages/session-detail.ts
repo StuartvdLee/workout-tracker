@@ -14,6 +14,7 @@ interface SessionExerciseWithPrevious {
   readonly loggedWeight: string | null;
   readonly effort: number | null;
   readonly previousWeight: string | null;
+  readonly previousSets?: number | null;
   readonly previousEffort: number | null;
 }
 
@@ -23,6 +24,7 @@ interface SessionDetailWithPrevious {
   readonly workoutName: string | null;
   readonly completedAt: string;
   readonly overallEffort: number | null;
+  readonly sets?: number | null;
   readonly previousOverallEffort: number | null;
   readonly exercises: SessionExerciseWithPrevious[];
 }
@@ -45,6 +47,7 @@ interface SessionTrends {
 }
 
 interface SessionEditSnapshot {
+  readonly sets: number | null;
   readonly overallEffort: number | null;
   readonly loggedExercises: SessionEditExerciseSnapshot[];
 }
@@ -170,11 +173,13 @@ function formatDate(isoDate: string): string {
 function renderDetailTable(session: SessionDetailWithPrevious): string {
   const rows =
     session.exercises.length === 0
-      ? `<tr><td class="session-detail__empty-cell" colspan="5">No exercises logged</td></tr>`
+      ? `<tr><td class="session-detail__empty-cell" colspan="7">No exercises logged</td></tr>`
       : session.exercises
           .map((ex) => {
             const weight = ex.loggedWeight !== null ? escapeHtml(ex.loggedWeight) : `<span class="session-detail__no-data">—</span>`;
             const prevWeight = ex.previousWeight !== null ? escapeHtml(ex.previousWeight) : `<span class="session-detail__no-data">—</span>`;
+            const sets = session.sets != null ? `${session.sets}` : `<span class="session-detail__no-data">—</span>`;
+            const previousSets = ex.previousSets != null ? `${ex.previousSets}` : `<span class="session-detail__no-data">—</span>`;
             const effort = ex.effort !== null ? `${ex.effort}` : `<span class="session-detail__no-data">—</span>`;
             const prevEffort = ex.previousEffort !== null ? `${ex.previousEffort}` : `<span class="session-detail__no-data">—</span>`;
 
@@ -183,6 +188,8 @@ function renderDetailTable(session: SessionDetailWithPrevious): string {
               <td class="session-detail__cell session-detail__cell--exercise">${escapeHtml(ex.exerciseName)}</td>
               <td class="session-detail__cell">${weight}</td>
               <td class="session-detail__cell session-detail__cell--prev">${prevWeight}</td>
+              <td class="session-detail__cell">${sets}</td>
+              <td class="session-detail__cell session-detail__cell--prev">${previousSets}</td>
               <td class="session-detail__cell">${effort}</td>
               <td class="session-detail__cell session-detail__cell--prev">${prevEffort}</td>
             </tr>`;
@@ -197,6 +204,8 @@ function renderDetailTable(session: SessionDetailWithPrevious): string {
             <th class="session-detail__th" scope="col">Exercise</th>
             <th class="session-detail__th" scope="col">Weight (kg)</th>
             <th class="session-detail__th session-detail__th--prev" scope="col">Prev. Weight (kg)</th>
+            <th class="session-detail__th" scope="col">Sets</th>
+            <th class="session-detail__th session-detail__th--prev" scope="col">Prev. Sets</th>
             <th class="session-detail__th" scope="col">Effort</th>
             <th class="session-detail__th session-detail__th--prev" scope="col">Prev. Effort</th>
           </tr>
@@ -212,10 +221,11 @@ function renderDetailTable(session: SessionDetailWithPrevious): string {
 function renderEditTable(session: SessionDetailWithPrevious): string {
   const rows =
     session.exercises.length === 0
-      ? `<tr><td class="session-detail__empty-cell" colspan="5">No exercises logged</td></tr>`
+      ? `<tr><td class="session-detail__empty-cell" colspan="7">No exercises logged</td></tr>`
       : session.exercises
           .map((ex) => {
             const prevWeight = ex.previousWeight !== null ? escapeHtml(ex.previousWeight) : `<span class="session-detail__no-data">—</span>`;
+            const previousSets = ex.previousSets != null ? `${ex.previousSets}` : `<span class="session-detail__no-data">—</span>`;
             const prevEffort = ex.previousEffort !== null ? `${ex.previousEffort}` : `<span class="session-detail__no-data">—</span>`;
             return `
             <tr class="session-detail__row" data-logged-exercise-id="${escapeHtml(ex.loggedExerciseId)}">
@@ -227,6 +237,10 @@ function renderEditTable(session: SessionDetailWithPrevious): string {
               </td>
               <td class="session-detail__cell session-detail__cell--prev">${prevWeight}</td>
               <td class="session-detail__cell">
+                ${buildSetsSelect(`session-edit-sets-${ex.loggedExerciseId}`, session.sets, `Sets for ${ex.exerciseName}`, ex.loggedExerciseId)}
+              </td>
+              <td class="session-detail__cell session-detail__cell--prev">${previousSets}</td>
+              <td class="session-detail__cell">
                 ${buildEffortSelect(`session-edit-effort-${ex.loggedExerciseId}`, ex.effort, `Effort for ${ex.exerciseName}`, "session-detail__select", `data-session-edit-effort="${escapeHtml(ex.loggedExerciseId)}"`)}
               </td>
               <td class="session-detail__cell session-detail__cell--prev">${prevEffort}</td>
@@ -236,6 +250,9 @@ function renderEditTable(session: SessionDetailWithPrevious): string {
 
   return `
     <div class="session-detail__edit-error" id="session-detail-edit-error" role="alert" aria-live="polite" style="display:none;"></div>
+    <p class="session-detail__shared-value-description" id="session-edit-sets-description">
+      Sets applies to the whole workout. Changing any row updates every row.
+    </p>
     <div class="session-detail__table-wrapper">
       <table class="session-detail__table" aria-label="Edit session exercises">
         <thead>
@@ -243,6 +260,8 @@ function renderEditTable(session: SessionDetailWithPrevious): string {
             <th class="session-detail__th" scope="col">Exercise</th>
             <th class="session-detail__th" scope="col">Weight (kg)</th>
             <th class="session-detail__th session-detail__th--prev" scope="col">Prev. Weight (kg)</th>
+            <th class="session-detail__th" scope="col">Sets</th>
+            <th class="session-detail__th session-detail__th--prev" scope="col">Prev. Sets</th>
             <th class="session-detail__th" scope="col">Effort</th>
             <th class="session-detail__th session-detail__th--prev" scope="col">Prev. Effort</th>
           </tr>
@@ -303,6 +322,17 @@ function buildEffortSelect(id: string, value: number | null, ariaLabel: string, 
   return `<select class="${className}" id="${escapeHtml(id)}" aria-label="${escapeHtml(ariaLabel)}" ${extraAttributes}>${options.join("")}</select>`;
 }
 
+function buildSetsSelect(id: string, value: number | null | undefined, ariaLabel: string, exerciseId: string): string {
+  const options = [
+    `<option value=""${value == null ? " selected" : ""}>Not recorded</option>`,
+    `<option value="3"${value === 3 ? " selected" : ""}>3</option>`,
+    `<option value="5"${value === 5 ? " selected" : ""}>5</option>`,
+  ];
+  return `<select class="session-detail__select" id="${escapeHtml(id)}"
+    aria-label="${escapeHtml(ariaLabel)}" aria-describedby="session-edit-sets-description"
+    data-session-edit-sets="${escapeHtml(exerciseId)}">${options.join("")}</select>`;
+}
+
 function renderDiscardModal(): string {
   return `
     <div class="discard-modal-backdrop" id="session-edit-discard-backdrop" style="display:none;">
@@ -322,6 +352,13 @@ function renderDiscardModal(): string {
 }
 
 function wireEditHandlers(sessionId: string): void {
+  document.querySelectorAll<HTMLSelectElement>("[data-session-edit-sets]").forEach(select => {
+    select.addEventListener("change", () => {
+      document.querySelectorAll<HTMLSelectElement>("[data-session-edit-sets]").forEach(other => {
+        other.value = select.value;
+      });
+    });
+  });
   document.getElementById("session-detail-save")?.addEventListener("click", () => {
     void saveSessionEdits(sessionId);
   });
@@ -365,6 +402,7 @@ function wireEditHandlers(sessionId: string): void {
 
 function createSnapshot(session: SessionDetailWithPrevious): SessionEditSnapshot {
   return {
+    sets: session.sets ?? null,
     overallEffort: session.overallEffort,
     loggedExercises: session.exercises.map(ex => ({
       loggedExerciseId: ex.loggedExerciseId,
@@ -376,9 +414,11 @@ function createSnapshot(session: SessionDetailWithPrevious): SessionEditSnapshot
 
 function readEditSnapshot(): SessionEditSnapshot {
   const overallSelect = document.getElementById("session-edit-overall-effort") as HTMLSelectElement | null;
+  const setsSelect = document.querySelector<HTMLSelectElement>("[data-session-edit-sets]");
   const exerciseRows = Array.from(document.querySelectorAll<HTMLTableRowElement>("[data-logged-exercise-id]"));
 
   return {
+    sets: parseNullableSets(setsSelect?.value ?? ""),
     overallEffort: parseNullableEffort(overallSelect?.value ?? ""),
     loggedExercises: exerciseRows.map(row => {
       const loggedExerciseId = row.dataset.loggedExerciseId ?? "";
@@ -392,6 +432,11 @@ function readEditSnapshot(): SessionEditSnapshot {
       };
     }),
   };
+}
+
+function parseNullableSets(value: string): number | null {
+  if (value === "") return null;
+  return value === "3" || value === "5" ? Number(value) : null;
 }
 
 function parseNullableEffort(value: string): number | null {

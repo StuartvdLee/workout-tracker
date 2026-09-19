@@ -60,6 +60,50 @@ public class WorkoutAccessibilityTests
         await page.Locator(".workout-list__name").Filter(new() { HasText = name }).WaitForAsync();
     }
 
+    [Fact]
+    public async Task SessionSetsEdit_UsesExerciseSpecificLabelAndSharedDescription()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await SeedExerciseAsync(page, "Accessible Press");
+            var exercisesResponse = await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/exercises");
+            var exercise = (await exercisesResponse.JsonAsync())?.EnumerateArray().Single();
+            var exerciseId = exercise?.GetProperty("exerciseId").GetString()!;
+            var workoutResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts", new()
+            {
+                DataObject = new
+                {
+                    name = "Accessible Sets",
+                    exercises = new[] { new { exerciseId } },
+                },
+            });
+            var workoutId = (await workoutResponse.JsonAsync())?.GetProperty("plannedWorkoutId").GetString()!;
+            var sessionResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new
+                {
+                    sets = 3,
+                    loggedExercises = new[] { new { exerciseId, loggedWeight = "50" } },
+                },
+            });
+            var sessionId = (await sessionResponse.JsonAsync())?.GetProperty("workoutSessionId").GetString()!;
+
+            await page.GotoAsync($"{_webApp.BaseUrl}/history/session?id={sessionId}");
+            await page.WaitForSelectorAsync("#session-detail-edit");
+            await page.Locator("#session-detail-edit").ClickAsync();
+
+            var sets = page.Locator("[data-session-edit-sets]").First;
+            await Expect(sets).ToHaveAttributeAsync("aria-label", "Sets for Accessible Press");
+            await Expect(sets).ToHaveAttributeAsync("aria-describedby", "session-edit-sets-description");
+            await Expect(page.Locator("#session-edit-sets-description")).ToContainTextAsync("whole workout");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
     private static ILocatorAssertions Expect(ILocator locator) =>
         Assertions.Expect(locator);
 

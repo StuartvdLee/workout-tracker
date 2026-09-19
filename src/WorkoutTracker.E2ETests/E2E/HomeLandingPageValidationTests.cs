@@ -44,6 +44,22 @@ public class HomeLandingPageValidationTests
     }
 
     [Fact]
+    public async Task ClickStartWithoutSets_ShowsSetsErrorAndFocusesSets()
+    {
+        var page = await CreatePageAsync();
+        await page.Locator("#workout-select").SelectOptionAsync(new SelectOptionValue { Label = "Push" });
+
+        await page.Locator("button[type='submit']").ClickAsync();
+
+        await Expect(page.Locator("#sets-error")).ToHaveTextAsync("Please select sets");
+        Assert.Equal("sets-select", await page.EvaluateAsync<string>("document.activeElement?.id ?? ''"));
+
+        await page.Locator("#sets-select").SelectOptionAsync("5");
+        await Expect(page.Locator("#sets-error")).ToBeHiddenAsync();
+        await page.CloseAsync();
+    }
+
+    [Fact]
     public async Task SelectWorkoutAfterError_ClearsError()
     {
         var page = await CreatePageAsync();
@@ -145,6 +161,49 @@ public class HomeLandingPageValidationTests
         var ariaInvalid = await select.GetAttributeAsync("aria-invalid");
         Assert.Equal("true", ariaInvalid);
 
+        await page.CloseAsync();
+    }
+
+    [Fact]
+    public async Task WorkoutListFailure_LeavesSetsUsableButBlocksStart()
+    {
+        WebAppFixture.ResetWorkouts();
+        var page = await _playwright.Browser.NewPageAsync();
+        await page.RouteAsync("**/api/workouts", route => route.FulfillAsync(new() { Status = 500 }));
+
+        await page.GotoAsync(_webApp.BaseUrl);
+        await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+        await Expect(page.Locator("#sets-select")).ToBeEnabledAsync();
+        await page.Locator("#sets-select").SelectOptionAsync("3");
+        await page.Locator("button[type='submit']").ClickAsync();
+        await Expect(page.Locator("#workout-error")).ToHaveTextAsync("Please select a workout");
+
+        await page.UnrouteAsync("**/api/workouts");
+        await page.CloseAsync();
+    }
+
+    [Fact]
+    public async Task WorkoutAndSetsControls_AreDisabledWhileWorkoutListLoads()
+    {
+        WebAppFixture.ResetWorkouts();
+        WebAppFixture.SeedWorkout("Slow Workout");
+        var releaseResponse = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var page = await _playwright.Browser.NewPageAsync();
+        await page.RouteAsync("**/api/workouts", async route =>
+        {
+            await releaseResponse.Task;
+            await route.FallbackAsync();
+        });
+
+        await page.GotoAsync(_webApp.BaseUrl, new() { WaitUntil = WaitUntilState.DOMContentLoaded });
+        await Expect(page.Locator("#workout-select")).ToBeDisabledAsync();
+        await Expect(page.Locator("#sets-select")).ToBeDisabledAsync();
+
+        releaseResponse.SetResult();
+        await Expect(page.Locator("#workout-select")).ToBeEnabledAsync();
+        await Expect(page.Locator("#sets-select")).ToBeEnabledAsync();
+        await page.UnrouteAsync("**/api/workouts");
         await page.CloseAsync();
     }
 

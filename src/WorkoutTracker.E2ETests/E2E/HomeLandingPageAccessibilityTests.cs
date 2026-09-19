@@ -42,6 +42,11 @@ public class HomeLandingPageAccessibilityTests
         Assert.NotNull(selectBox);
         Assert.True(selectBox.Height >= minTouchTarget, $"Select height {selectBox.Height}px < {minTouchTarget}px minimum");
 
+        var setsSelect = page.Locator("#sets-select");
+        var setsSelectBox = await setsSelect.BoundingBoxAsync();
+        Assert.NotNull(setsSelectBox);
+        Assert.True(setsSelectBox.Height >= minTouchTarget, $"Sets select height {setsSelectBox.Height}px < {minTouchTarget}px minimum");
+
         var button = page.Locator("button[type='submit']");
         var buttonBox = await button.BoundingBoxAsync();
         Assert.NotNull(buttonBox);
@@ -57,6 +62,7 @@ public class HomeLandingPageAccessibilityTests
 
         var label = page.Locator("label[for='workout-select']");
         await Assertions.Expect(label).ToBeVisibleAsync();
+        await Assertions.Expect(page.Locator("label[for='sets-select']")).ToHaveTextAsync("Sets");
 
         await page.CloseAsync();
     }
@@ -84,6 +90,7 @@ public class HomeLandingPageAccessibilityTests
         var select = page.Locator("#workout-select");
         var describedBy = await select.GetAttributeAsync("aria-describedby");
         Assert.Equal("workout-error", describedBy);
+        Assert.Equal("sets-error", await page.Locator("#sets-select").GetAttributeAsync("aria-describedby"));
 
         await page.CloseAsync();
     }

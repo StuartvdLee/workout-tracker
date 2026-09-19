@@ -72,6 +72,11 @@ public class WorkoutHistoryTests
     {
         await page.Locator(".workout-list__start-btn").First.ClickAsync();
         // Workouts with fewer than 2 exercises skip the pre-start modal and navigate directly.
+        if (page.Url.Contains("/active-session?", StringComparison.Ordinal) &&
+            !page.Url.Contains("sets=", StringComparison.Ordinal))
+        {
+            await page.GotoAsync($"{page.Url}&sets=3");
+        }
     }
 
     /// <summary>
@@ -109,6 +114,7 @@ public class WorkoutHistoryTests
         {
             DataObject = new
             {
+                sets = 3,
                 loggedExercises = new[]
                 {
                     new { exerciseId, loggedReps, loggedWeight, notes },
@@ -117,6 +123,66 @@ public class WorkoutHistoryTests
         });
 
         return (workoutId, exerciseId);
+    }
+
+    [Fact]
+    public async Task SessionDetail_LoadsTwentyFiveExercisesWithinRequestAndTimeBudgets()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var exerciseIds = new List<string>();
+            for (var index = 0; index < 25; index++)
+            {
+                var exerciseResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/exercises", new()
+                {
+                    DataObject = new { name = $"Budget Exercise {index}", muscleIds = Array.Empty<string>() },
+                });
+                exerciseIds.Add((await exerciseResponse.JsonAsync())?.GetProperty("exerciseId").GetString()!);
+            }
+
+            var workoutResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts", new()
+            {
+                DataObject = new
+                {
+                    name = "Budget Workout",
+                    exercises = exerciseIds.Select(exerciseId => new { exerciseId }).ToArray(),
+                },
+            });
+            var workoutId = (await workoutResponse.JsonAsync())?.GetProperty("plannedWorkoutId").GetString()!;
+            var sessionResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new
+                {
+                    sets = 5,
+                    loggedExercises = exerciseIds.Select(exerciseId => new { exerciseId, loggedWeight = "50" }).ToArray(),
+                },
+            });
+            var sessionId = (await sessionResponse.JsonAsync())?.GetProperty("workoutSessionId").GetString()!;
+
+            var apiRequestCount = 0;
+            page.Request += (_, request) =>
+            {
+                if (request.Url.StartsWith($"{_webApp.BaseUrl}/api/", StringComparison.Ordinal))
+                {
+                    apiRequestCount++;
+                }
+            };
+
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            await page.GotoAsync($"{_webApp.BaseUrl}/history/session?id={sessionId}");
+            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+            await page.Locator(".session-detail__row").Nth(24).WaitForAsync();
+            stopwatch.Stop();
+
+            Assert.Equal(2, apiRequestCount);
+            Assert.True(stopwatch.ElapsedMilliseconds < 5000,
+                $"Session detail took {stopwatch.ElapsedMilliseconds}ms, expected < 5000ms.");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
     }
 
     private static async Task<string> GetInlineColorAsync(IPage page, string selector)
@@ -292,13 +358,69 @@ public class WorkoutHistoryTests
 
             // Column headers
             var headers = page.Locator(".session-detail__th");
-            await Expect(headers).ToHaveCountAsync(5);
+            await Expect(headers).ToHaveCountAsync(7);
+            Assert.Equal(
+                ["Exercise", "Weight (kg)", "Prev. Weight (kg)", "Sets", "Prev. Sets", "Effort", "Prev. Effort"],
+                await headers.AllTextContentsAsync());
+            var headersFitTheirColumns = await headers.EvaluateAllAsync<bool>(
+                "elements => elements.every(element => element.scrollWidth <= element.clientWidth)");
+            Assert.True(headersFitTheirColumns, "Session detail headers must not overflow into adjacent columns.");
 
             // Exercise row
             await Expect(page.Locator(".session-detail__cell--exercise").First).ToContainTextAsync("Bench Press");
         }
         finally
         {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task SessionDetailPage_OmitsUndefinedText_WhenLegacyResponseLacksSetsFields()
+    {
+        var page = await CreatePageAsync();
+        var sessionId = Guid.NewGuid();
+        try
+        {
+            await page.RouteAsync($"**/api/sessions/{sessionId}", async route =>
+            {
+                await route.FulfillAsync(new()
+                {
+                    Status = 200,
+                    ContentType = "application/json",
+                    Body = $$"""
+                    {
+                      "workoutSessionId":"{{sessionId}}",
+                      "plannedWorkoutId":null,
+                      "workoutName":"Legacy Workout",
+                      "completedAt":"2026-09-19T10:00:00Z",
+                      "overallEffort":null,
+                      "previousOverallEffort":null,
+                      "exercises":[{
+                        "loggedExerciseId":"{{Guid.NewGuid()}}",
+                        "exerciseId":"{{Guid.NewGuid()}}",
+                        "exerciseName":"Bench Press",
+                        "loggedWeight":"80",
+                        "effort":7,
+                        "previousWeight":"75",
+                        "previousEffort":6
+                      }]
+                    }
+                    """,
+                });
+            });
+
+            await page.GotoAsync($"{_webApp.BaseUrl}/history/session?id={sessionId}");
+            await page.WaitForSelectorAsync(".session-detail__table");
+
+            await Expect(page.Locator(".session-detail__table")).Not.ToContainTextAsync("undefined");
+            var rowCells = page.Locator(".session-detail__row").First.Locator(".session-detail__cell");
+            await Expect(rowCells.Nth(3)).ToHaveTextAsync("—");
+            await Expect(rowCells.Nth(4)).ToHaveTextAsync("—");
+        }
+        finally
+        {
+            await page.UnrouteAsync($"**/api/sessions/{sessionId}");
             await page.CloseAsync();
         }
     }
@@ -339,6 +461,7 @@ public class WorkoutHistoryTests
 
             await page.Locator("#session-detail-edit").ClickAsync();
             await page.Locator(".session-detail__input").First.FillAsync("82.5");
+            await page.Locator("[data-session-edit-sets]").First.SelectOptionAsync("5");
             await page.Locator("[data-session-edit-effort]").First.SelectOptionAsync("9");
             await page.Locator("#session-edit-overall-effort").SelectOptionAsync("8");
             await page.Locator("#session-detail-save").ClickAsync();
@@ -346,7 +469,8 @@ public class WorkoutHistoryTests
             await Expect(page.Locator("#session-detail-edit")).ToBeVisibleAsync();
             var cells = page.Locator(".session-detail__row").First.Locator(".session-detail__cell");
             await Expect(cells.Nth(1)).ToContainTextAsync("82.5");
-            await Expect(cells.Nth(3)).ToContainTextAsync("9");
+            await Expect(cells.Nth(3)).ToContainTextAsync("5");
+            await Expect(cells.Nth(5)).ToContainTextAsync("9");
             await Expect(page.Locator(".session-detail__overall-effort-value")).ToContainTextAsync("8");
         }
         finally
@@ -416,6 +540,7 @@ public class WorkoutHistoryTests
 
             await page.Locator("#session-detail-edit").ClickAsync();
             await page.Locator(".session-detail__input").First.FillAsync("120");
+            await page.Locator("[data-session-edit-sets]").First.SelectOptionAsync("5");
             await page.Locator("[data-session-edit-effort]").First.SelectOptionAsync("7");
             await page.Locator("#session-edit-overall-effort").SelectOptionAsync("6");
             await page.Locator("#session-detail-save").ClickAsync();
@@ -428,7 +553,8 @@ public class WorkoutHistoryTests
 
             var cells = page.Locator(".session-detail__row").First.Locator(".session-detail__cell");
             await Expect(cells.Nth(1)).ToContainTextAsync("120");
-            await Expect(cells.Nth(3)).ToContainTextAsync("7");
+            await Expect(cells.Nth(3)).ToContainTextAsync("5");
+            await Expect(cells.Nth(5)).ToContainTextAsync("7");
             await Expect(page.Locator(".session-detail__overall-effort-value")).ToContainTextAsync("6");
         }
         finally
@@ -632,11 +758,13 @@ public class WorkoutHistoryTests
 
             await page.Locator("#session-detail-edit").ClickAsync();
             await page.Locator(".session-detail__input").First.FillAsync("95");
+            await page.Locator("[data-session-edit-sets]").First.SelectOptionAsync("5");
             await page.Locator("[data-session-edit-effort]").First.SelectOptionAsync("10");
             await page.Locator("#session-detail-save").ClickAsync();
 
             await Expect(page.Locator("#session-detail-edit-error")).ToContainTextAsync("Unable to save.");
             await Expect(page.Locator(".session-detail__input").First).ToHaveValueAsync("95");
+            await Expect(page.Locator("[data-session-edit-sets]").First).ToHaveValueAsync("5");
             await Expect(page.Locator("[data-session-edit-effort]").First).ToHaveValueAsync("10");
         }
         finally
@@ -646,6 +774,201 @@ public class WorkoutHistoryTests
         }
     }
 
+    [Fact]
+    public async Task SessionDetailPage_EditSession_SynchronizesSessionSetsAndPersists()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await SeedExerciseAsync(page, "Bench Press");
+            await SeedExerciseAsync(page, "Overhead Press");
+            var exercisesResponse = await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/exercises");
+            var exercises = (await exercisesResponse.JsonAsync())!.Value.EnumerateArray().ToArray();
+            var createWorkoutResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts", new()
+            {
+                DataObject = new
+                {
+                    name = "Synchronized Sets",
+                    exercises = exercises.Select(ex => new { exerciseId = ex.GetProperty("exerciseId").GetString() }).ToArray(),
+                },
+            });
+            var workoutId = (await createWorkoutResponse.JsonAsync())?.GetProperty("plannedWorkoutId").GetString()!;
+            var sessionResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new
+                {
+                    sets = 3,
+                    loggedExercises = exercises.Select(ex => new
+                    {
+                        exerciseId = ex.GetProperty("exerciseId").GetString(),
+                        loggedWeight = "50",
+                    }).ToArray(),
+                },
+            });
+            var sessionId = (await sessionResponse.JsonAsync())?.GetProperty("workoutSessionId").GetString()!;
+
+            await page.GotoAsync($"{_webApp.BaseUrl}/history/session?id={sessionId}");
+            await page.WaitForSelectorAsync(".session-detail__table");
+            await page.Locator("#session-detail-edit").ClickAsync();
+
+            var selects = page.Locator("[data-session-edit-sets]");
+            await Expect(selects).ToHaveCountAsync(2);
+            await Expect(selects.First).ToHaveAttributeAsync("aria-describedby", "session-edit-sets-description");
+            await selects.First.SelectOptionAsync("5");
+            await Expect(selects.Nth(1)).ToHaveValueAsync("5");
+            await page.Locator("#session-detail-save").ClickAsync();
+
+            var rows = page.Locator(".session-detail__row");
+            await Expect(rows.Nth(0).Locator(".session-detail__cell").Nth(3)).ToHaveTextAsync("5");
+            await Expect(rows.Nth(1).Locator(".session-detail__cell").Nth(3)).ToHaveTextAsync("5");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task ActiveSession_OmitsUndefinedSets_WhenLegacyPreviousResponseLacksSets()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var (workoutId, exerciseId) = await CreateWorkoutAndSessionViaApiAsync(page);
+            await page.RouteAsync($"**/api/workouts/{workoutId}/previous-performance", async route =>
+            {
+                await route.FulfillAsync(new()
+                {
+                    Status = 200,
+                    ContentType = "application/json",
+                    Body = $$"""
+                    {
+                      "hasPreviousSession":true,
+                      "completedAt":"2026-09-19T10:00:00Z",
+                      "exercises":[{
+                        "exerciseId":"{{exerciseId}}",
+                        "loggedWeight":"80",
+                        "effort":7,
+                        "sequence":0,
+                        "completedAt":"2026-09-19T10:00:00Z"
+                      }]
+                    }
+                    """,
+                });
+            });
+
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}&sets=5");
+            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+            var previous = page.Locator($"#previous-{exerciseId}");
+            await Expect(previous).ToContainTextAsync("80 KG");
+            await Expect(previous).Not.ToContainTextAsync("undefined");
+            await Expect(previous).Not.ToContainTextAsync("sets");
+        }
+        finally
+        {
+            await page.UnrouteAllAsync();
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task StartPageSelectedSets_PersistThroughSaveAndHistoryDetail()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await SeedExerciseAsync(page, "Persisted Sets Exercise");
+            await NavigateToWorkoutsAsync(page);
+            await CreateWorkoutViaUIAsync(page, "Persisted Sets Workout", "Persisted Sets Exercise");
+
+            await page.GotoAsync(_webApp.BaseUrl);
+            await page.Locator("#workout-select option:not([disabled])").First.WaitForAsync(
+                new() { State = WaitForSelectorState.Attached });
+            await page.Locator("#workout-select").SelectOptionAsync(new SelectOptionValue { Index = 1 });
+            await page.Locator("#sets-select").SelectOptionAsync("5");
+            await page.Locator("#workout-form button[type='submit']").ClickAsync();
+            await page.WaitForSelectorAsync(".active-session");
+            await page.Locator("#session-save").ClickAsync();
+            await page.Locator("#effort-modal-skip").ClickAsync();
+            await page.WaitForURLAsync(new Regex(".*/history.*"));
+
+            await page.Locator(".history-session__header").First.ClickAsync();
+            await page.WaitForSelectorAsync(".session-detail__table");
+            await Expect(page.Locator(".session-detail__row").First.Locator(".session-detail__cell").Nth(3))
+                .ToHaveTextAsync("5");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("&sets=4")]
+    [InlineData("&sets=abc")]
+    public async Task ActiveSession_MissingOrInvalidSetsCannotSave(string setsQuery)
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var (workoutId, _) = await CreateWorkoutAndSessionViaApiAsync(page);
+            var createRequests = 0;
+            page.Request += (_, request) =>
+            {
+                if (request.Method == "POST" && request.Url.Contains($"/api/workouts/{workoutId}/sessions", StringComparison.Ordinal))
+                {
+                    createRequests++;
+                }
+            };
+
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}{setsQuery}");
+            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+            await page.Locator("#session-save").ClickAsync();
+            await page.Locator("#effort-modal-skip").ClickAsync();
+
+            await Expect(page.Locator("#session-api-error")).ToContainTextAsync("Sets must be 3 or 5");
+            Assert.Equal(0, createRequests);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task ActiveSession_SaveSendsOneTopLevelSetsValue()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var (workoutId, _) = await CreateWorkoutAndSessionViaApiAsync(page);
+            string? requestBody = null;
+            page.Request += (_, request) =>
+            {
+                if (request.Method == "POST" && request.Url.Contains($"/api/workouts/{workoutId}/sessions", StringComparison.Ordinal))
+                {
+                    requestBody = request.PostData;
+                }
+            };
+
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}&sets=5");
+            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+            await page.Locator("#session-save").ClickAsync();
+            await page.Locator("#effort-modal-skip").ClickAsync();
+            await page.WaitForURLAsync(new Regex(".*/history.*"));
+
+            using var document = System.Text.Json.JsonDocument.Parse(requestBody!);
+            Assert.Equal(5, document.RootElement.GetProperty("sets").GetInt32());
+            Assert.All(document.RootElement.GetProperty("loggedExercises").EnumerateArray(), exercise =>
+                Assert.False(exercise.TryGetProperty("sets", out _)));
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
     [Fact]
     public async Task HistoryPage_NoGroupHeaders_FlatList()
     {
@@ -723,6 +1046,7 @@ public class WorkoutHistoryTests
             {
                 DataObject = new
                 {
+                    sets = 3,
                     loggedExercises = new[] { new { exerciseId, loggedWeight = "70 KG", effort = 6 } },
                 },
             });
@@ -732,6 +1056,7 @@ public class WorkoutHistoryTests
             {
                 DataObject = new
                 {
+                    sets = 5,
                     loggedExercises = new[] { new { exerciseId, loggedWeight = "75 KG", effort = 7 } },
                 },
             });
@@ -749,6 +1074,8 @@ public class WorkoutHistoryTests
             var cells = rows.First.Locator(".session-detail__cell");
             await Expect(cells.Nth(1)).ToContainTextAsync("75 KG");
             await Expect(cells.Nth(2)).ToContainTextAsync("70 KG");
+            await Expect(cells.Nth(3)).ToContainTextAsync("5");
+            await Expect(cells.Nth(4)).ToContainTextAsync("3");
         }
         finally
         {
@@ -780,17 +1107,17 @@ public class WorkoutHistoryTests
 
             await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
             {
-                DataObject = new { loggedExercises = new[] { new { exerciseId, loggedWeight = "70 KG", effort = 6 } } },
+                DataObject = new { sets = 3, loggedExercises = new[] { new { exerciseId, loggedWeight = "70 KG", effort = 6 } } },
             });
 
             await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
             {
-                DataObject = new { loggedExercises = new[] { new { exerciseId } } },
+                DataObject = new { sets = 5, loggedExercises = new[] { new { exerciseId } } },
             });
 
             var currentSessionResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
             {
-                DataObject = new { loggedExercises = new[] { new { exerciseId, loggedWeight = "75 KG", effort = 7 } } },
+                DataObject = new { sets = 5, loggedExercises = new[] { new { exerciseId, loggedWeight = "75 KG", effort = 7 } } },
             });
             var currentSession = await currentSessionResponse.JsonAsync();
             var sessionId = currentSession?.GetProperty("workoutSessionId").GetString()!;
@@ -800,7 +1127,8 @@ public class WorkoutHistoryTests
 
             var cells = page.Locator(".session-detail__row").First.Locator(".session-detail__cell");
             await Expect(cells.Nth(2)).ToContainTextAsync("70 KG");
-            await Expect(cells.Nth(4)).ToContainTextAsync("6");
+            await Expect(cells.Nth(4)).ToContainTextAsync("3");
+            await Expect(cells.Nth(6)).ToContainTextAsync("6");
         }
         finally
         {
@@ -832,19 +1160,20 @@ public class WorkoutHistoryTests
 
             await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
             {
-                DataObject = new { loggedExercises = new[] { new { exerciseId, loggedWeight = "70", effort = 6 } } },
+                DataObject = new { sets = 3, loggedExercises = new[] { new { exerciseId, loggedWeight = "70", effort = 6 } } },
             });
 
             await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
             {
-                DataObject = new { loggedExercises = new[] { new { exerciseId } } },
+                DataObject = new { sets = 5, loggedExercises = new[] { new { exerciseId } } },
             });
 
-            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}");
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}&sets=3");
             await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
             var previousValue = page.Locator(".active-session__previous-value").First;
             await Expect(previousValue).ToContainTextAsync("70 KG");
+            await Expect(previousValue).ToContainTextAsync("3 sets");
             await Expect(previousValue).ToContainTextAsync("6");
         }
         finally
@@ -1087,7 +1416,7 @@ public class WorkoutHistoryTests
         {
             var (workoutId, _) = await CreateWorkoutAndSessionViaApiAsync(page);
             // Navigate to the active session page (start a new session)
-            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}");
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}&sets=3");
             await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
             var saveBtn = page.Locator("#session-save");
@@ -1109,7 +1438,7 @@ public class WorkoutHistoryTests
         try
         {
             var (workoutId, _) = await CreateWorkoutAndSessionViaApiAsync(page);
-            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}");
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}&sets=3");
             await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
             await page.Locator("#session-save").ClickAsync();
@@ -1138,7 +1467,7 @@ public class WorkoutHistoryTests
         try
         {
             var (workoutId, _) = await CreateWorkoutAndSessionViaApiAsync(page);
-            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}");
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}&sets=3");
             await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
             await page.Locator("#session-save").ClickAsync();
@@ -1172,7 +1501,7 @@ public class WorkoutHistoryTests
         try
         {
             var (workoutId, _) = await CreateWorkoutAndSessionViaApiAsync(page);
-            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}");
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}&sets=3");
             await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
             await page.Locator("#session-save").ClickAsync();
@@ -1196,7 +1525,7 @@ public class WorkoutHistoryTests
         try
         {
             var (workoutId, _) = await CreateWorkoutAndSessionViaApiAsync(page);
-            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}");
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}&sets=3");
             await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
             await page.Locator("#session-save").ClickAsync();
@@ -1223,7 +1552,7 @@ public class WorkoutHistoryTests
         try
         {
             var (workoutId, _) = await CreateWorkoutAndSessionViaApiAsync(page);
-            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}");
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}&sets=3");
             await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
             await page.Locator("#session-save").ClickAsync();
@@ -1253,7 +1582,7 @@ public class WorkoutHistoryTests
         try
         {
             var (workoutId, _) = await CreateWorkoutAndSessionViaApiAsync(page);
-            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}");
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}&sets=3");
             await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
             var slider = page.Locator(".active-session__effort-slider").First;
@@ -1280,7 +1609,7 @@ public class WorkoutHistoryTests
         try
         {
             var (workoutId, _) = await CreateWorkoutAndSessionViaApiAsync(page);
-            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}");
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}&sets=3");
             await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
             await page.Locator("#session-save").ClickAsync();
@@ -1309,7 +1638,7 @@ public class WorkoutHistoryTests
         try
         {
             var (workoutId, _) = await CreateWorkoutAndSessionViaApiAsync(page);
-            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}");
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}&sets=3");
             await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
             var perExerciseSlider = page.Locator(".active-session__effort-slider").First;
@@ -1338,7 +1667,7 @@ public class WorkoutHistoryTests
         try
         {
             var (workoutId, _) = await CreateWorkoutAndSessionViaApiAsync(page);
-            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}");
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}&sets=3");
             await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
             await page.Locator("#session-save").ClickAsync();
@@ -1371,7 +1700,7 @@ public class WorkoutHistoryTests
         try
         {
             var (workoutId, _) = await CreateWorkoutAndSessionViaApiAsync(page);
-            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}");
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}&sets=3");
             await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
             var sampleCount = 20;

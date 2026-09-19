@@ -2272,6 +2272,7 @@ body.is-dragging .workout-selected__drag-handle {
 
 .session-detail__table {
   width: 100%;
+  min-width: 52rem;
   border-collapse: collapse;
   background-color: var(--color-white);
   font-size: var(--font-size-sm);
@@ -2289,11 +2290,35 @@ body.is-dragging .workout-selected__drag-handle {
   color: var(--color-text);
   border-bottom: 1px solid var(--color-border);
   word-break: normal;
-  width: 16%;
+  white-space: nowrap;
 }
 
-.session-detail__th:first-child {
-  width: 36%;
+.session-detail__th:nth-child(1) {
+  width: 24%;
+}
+
+.session-detail__th:nth-child(2) {
+  width: 13%;
+}
+
+.session-detail__th:nth-child(3) {
+  width: 17%;
+}
+
+.session-detail__th:nth-child(4) {
+  width: 8%;
+}
+
+.session-detail__th:nth-child(5) {
+  width: 12%;
+}
+
+.session-detail__th:nth-child(6) {
+  width: 10%;
+}
+
+.session-detail__th:nth-child(7) {
+  width: 16%;
 }
 
 .session-detail__th--prev {

@@ -396,20 +396,20 @@ app.MapGet("/api/workouts/{workoutId:guid}", async (Guid workoutId, WorkoutTrack
 
 app.MapGet("/api/workouts/{workoutId:guid}/previous-performance", async (Guid workoutId, WorkoutTrackerDbContext db) =>
 {
-    var workoutExists = await db.PlannedWorkouts
-        .AnyAsync(pw => pw.PlannedWorkoutId == workoutId);
+    var workout = await db.PlannedWorkouts
+        .Where(pw => pw.PlannedWorkoutId == workoutId)
+        .Select(pw => new
+        {
+            ExerciseIds = pw.Exercises.Select(pwe => pwe.ExerciseId).ToList(),
+        })
+        .FirstOrDefaultAsync();
 
-    if (!workoutExists)
+    if (workout is null)
     {
         return Results.Json(new { error = "Workout not found." }, statusCode: 404);
     }
 
-    var workoutExerciseIds = await db.PlannedWorkoutExercises
-        .Where(pwe => pwe.PlannedWorkoutId == workoutId)
-        .Select(pwe => pwe.ExerciseId)
-        .ToListAsync();
-
-    var targetExerciseIds = workoutExerciseIds.ToHashSet();
+    var targetExerciseIds = workout.ExerciseIds.ToHashSet();
     var sessions = await db.WorkoutSessions
         .Where(ws => ws.PlannedWorkoutId == workoutId)
         .OrderByDescending(ws => EF.Property<DateTime>(ws, "CompletedAt"))
@@ -419,8 +419,9 @@ app.MapGet("/api/workouts/{workoutId:guid}/previous-performance", async (Guid wo
         {
             ws.WorkoutSessionId,
             CompletedAt = EF.Property<DateTime>(ws, "CompletedAt"),
+            ws.Sets,
             LoggedExercises = ws.LoggedExercises
-                .Where(le => workoutExerciseIds.Contains(le.ExerciseId))
+                .Where(le => workout.ExerciseIds.Contains(le.ExerciseId))
                 .Select(le => new HistoricalExerciseData(
                     le.ExerciseId,
                     le.LoggedWeight,
@@ -431,7 +432,7 @@ app.MapGet("/api/workouts/{workoutId:guid}/previous-performance", async (Guid wo
         .ToListAsync();
 
     var latestExercises = PreviousExerciseDataSelector.SelectLatestUsablePerExercise(
-        sessions.Select(s => new HistoricalSessionData(s.WorkoutSessionId, s.CompletedAt, null, s.LoggedExercises)),
+        sessions.Select(s => new HistoricalSessionData(s.WorkoutSessionId, s.CompletedAt, null, s.Sets, s.LoggedExercises)),
         targetExerciseIds);
 
     if (latestExercises.Count == 0)
@@ -456,6 +457,7 @@ app.MapGet("/api/workouts/{workoutId:guid}/previous-performance", async (Guid wo
                 e.LoggedWeight,
                 e.Effort,
                 e.Sequence,
+                e.Sets,
                 e.CompletedAt,
             })
             .ToList(),
@@ -713,6 +715,9 @@ app.MapPost("/api/workouts/{workoutId:guid}/sessions", async (Guid workoutId, Ht
     var body = await context.Request.ReadFromJsonAsync<SessionCreateRequest>();
     var loggedExercises = body?.LoggedExercises ?? [];
 
+    if (body?.Sets is not 3 and not 5)
+        return Results.Json(new { error = "Sets must be 3 or 5." }, statusCode: 400);
+
     foreach (var item in loggedExercises)
     {
         if (item.LoggedWeight is { Length: > 100 })
@@ -746,6 +751,7 @@ app.MapPost("/api/workouts/{workoutId:guid}/sessions", async (Guid workoutId, Ht
         PlannedWorkoutId = workoutId,
         WorkoutName = workout.Name,
         OverallEffort = body?.OverallEffort,
+        Sets = body!.Sets,
     };
 
     foreach (var item in loggedExercises)
@@ -771,6 +777,7 @@ app.MapPost("/api/workouts/{workoutId:guid}/sessions", async (Guid workoutId, Ht
         session.PlannedWorkoutId,
         session.WorkoutName,
         session.OverallEffort,
+        session.Sets,
         LoggedExercises = session.LoggedExercises.Select(le => new
         {
             le.LoggedExerciseId,
@@ -797,6 +804,7 @@ app.MapGet("/api/sessions", async (WorkoutTrackerDbContext db) =>
             WorkoutName = ws.WorkoutName ?? (ws.PlannedWorkout != null ? ws.PlannedWorkout.Name : null),
             CompletedAt = EF.Property<DateTime>(ws, "CompletedAt"),
             OverallEffort = ws.OverallEffort,
+            Sets = ws.Sets,
             LoggedExercises = ws.LoggedExercises.Select(le => new
             {
                 le.LoggedExerciseId,
@@ -853,9 +861,14 @@ app.MapPut("/api/sessions/{sessionId:guid}", async (Guid sessionId, HttpContext 
     }
 
     SessionUpdateRequest? body;
+    bool setsSpecified;
     try
     {
-        body = await context.Request.ReadFromJsonAsync<SessionUpdateRequest>();
+        using var document = await JsonDocument.ParseAsync(context.Request.Body);
+        setsSpecified = document.RootElement.EnumerateObject()
+            .Any(property => property.Name.Equals("sets", StringComparison.OrdinalIgnoreCase));
+        body = document.RootElement.Deserialize<SessionUpdateRequest>(
+            new JsonSerializerOptions(JsonSerializerDefaults.Web));
     }
     catch (JsonException)
     {
@@ -876,6 +889,9 @@ app.MapPut("/api/sessions/{sessionId:guid}", async (Guid sessionId, HttpContext 
     }
 
     var loggedExercises = body.LoggedExercises ?? [];
+
+    if (setsSpecified && body.Sets is not null and not 3 and not 5)
+        return Results.Json(new { error = "Sets must be 3 or 5." }, statusCode: 400);
 
     if (body.OverallEffort is not null && (body.OverallEffort < 1 || body.OverallEffort > 10))
         return Results.Json(new { error = "Overall effort must be between 1 and 10." }, statusCode: 400);
@@ -902,6 +918,10 @@ app.MapPut("/api/sessions/{sessionId:guid}", async (Guid sessionId, HttpContext 
     }
 
     session.OverallEffort = body.OverallEffort;
+    if (setsSpecified)
+    {
+        session.Sets = body.Sets;
+    }
     foreach (var item in loggedExercises)
     {
         var loggedExercise = sessionLoggedExercises[item.LoggedExerciseId];
@@ -950,6 +970,7 @@ internal sealed class WorkoutExerciseItem
 
 internal sealed class SessionCreateRequest
 {
+    public int? Sets { get; set; }
     public int? OverallEffort { get; set; }
     public SessionLoggedExerciseItem[] LoggedExercises { get; set; } = [];
 }
@@ -965,6 +986,7 @@ internal sealed class SessionLoggedExerciseItem
 
 internal sealed class SessionUpdateRequest
 {
+    public int? Sets { get; set; }
     public int? OverallEffort { get; set; }
     public SessionUpdateLoggedExerciseItem[] LoggedExercises { get; set; } = [];
 }
@@ -998,6 +1020,7 @@ internal sealed record HistoricalSessionData(
     Guid WorkoutSessionId,
     DateTime CompletedAt,
     int? OverallEffort,
+    int? Sets,
     List<HistoricalExerciseData> LoggedExercises);
 
 internal sealed record LatestExerciseComparison(
@@ -1005,6 +1028,7 @@ internal sealed record LatestExerciseComparison(
     string? LoggedWeight,
     int? Effort,
     int? Sequence,
+    int? Sets,
     DateTime CompletedAt);
 
 internal static class PreviousExerciseDataSelector
@@ -1017,7 +1041,7 @@ internal static class PreviousExerciseDataSelector
     {
         var selected = new Dictionary<Guid, LatestExerciseComparison>();
 
-        foreach (var session in sessions)
+        foreach (var session in sessions.Take(MaxSessionsToScan))
         {
             foreach (var loggedExercise in session.LoggedExercises)
             {
@@ -1033,6 +1057,7 @@ internal static class PreviousExerciseDataSelector
                     loggedExercise.LoggedWeight,
                     loggedExercise.Effort,
                     loggedExercise.Sequence,
+                    session.Sets,
                     session.CompletedAt);
             }
 
@@ -1062,6 +1087,7 @@ internal static class SessionDetailResponseBuilder
                 WorkoutName = ws.WorkoutName ?? (ws.PlannedWorkout != null ? ws.PlannedWorkout.Name : null),
                 CompletedAt = EF.Property<DateTime>(ws, "CompletedAt"),
                 ws.OverallEffort,
+                ws.Sets,
                 Exercises = ws.LoggedExercises
                     .OrderBy(le => le.Sequence)
                     .Select(le => new
@@ -1098,6 +1124,7 @@ internal static class SessionDetailResponseBuilder
                     ws.WorkoutSessionId,
                     EF.Property<DateTime>(ws, "CompletedAt"),
                     ws.OverallEffort,
+                    ws.Sets,
                     ws.LoggedExercises
                         .Where(le => sessionExerciseIds.Contains(le.ExerciseId))
                         .Select(le => new HistoricalExerciseData(
@@ -1118,6 +1145,7 @@ internal static class SessionDetailResponseBuilder
             session.WorkoutName,
             session.CompletedAt,
             session.OverallEffort,
+            session.Sets,
             PreviousOverallEffort = priorSession?.OverallEffort,
             Exercises = session.Exercises.Select(le =>
             {
@@ -1132,6 +1160,7 @@ internal static class SessionDetailResponseBuilder
                     le.Effort,
                     PreviousWeight = prior?.LoggedWeight,
                     PreviousEffort = prior?.Effort,
+                    PreviousSets = prior?.Sets,
                 };
             }).ToList(),
         });

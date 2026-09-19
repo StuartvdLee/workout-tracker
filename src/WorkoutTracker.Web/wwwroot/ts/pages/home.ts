@@ -45,6 +45,20 @@ export function render(container: HTMLElement): void {
             <option value="" disabled selected>Select a workout</option>
           </select>
         </div>
+        <div class="workout-form__group">
+          <label class="workout-form__label" for="sets-select">Sets</label>
+          <select
+            class="workout-form__select"
+            id="sets-select"
+            name="sets"
+            aria-describedby="sets-error"
+            required
+          >
+            <option value="" disabled selected>Select sets</option>
+            <option value="3">3</option>
+            <option value="5">5</option>
+          </select>
+        </div>
         <div class="workout-form__randomise" id="home-randomise-row" style="display:none;">
           <label class="workout-form__randomise-label" for="home-randomise-toggle">Randomise exercise order</label>
           <button
@@ -58,6 +72,13 @@ export function render(container: HTMLElement): void {
         <div
           class="workout-form__error"
           id="workout-error"
+          role="alert"
+          aria-live="polite"
+          hidden
+        ></div>
+        <div
+          class="workout-form__error"
+          id="sets-error"
           role="alert"
           aria-live="polite"
           hidden
@@ -109,17 +130,21 @@ function initForm(): void {
   const form = document.getElementById("workout-form") as HTMLFormElement | null;
   const select = document.getElementById("workout-select") as HTMLSelectElement | null;
   const errorEl = document.getElementById("workout-error") as HTMLElement | null;
+  const setsSelect = document.getElementById("sets-select") as HTMLSelectElement | null;
+  const setsErrorEl = document.getElementById("sets-error") as HTMLElement | null;
   const toggleBtn = document.getElementById("home-randomise-toggle") as HTMLButtonElement | null;
 
-  if (!form || !select || !errorEl) {
+  if (!form || !select || !errorEl || !setsSelect || !setsErrorEl) {
     return;
   }
 
-  populateWorkoutOptions(select);
+  select.disabled = true;
+  setsSelect.disabled = true;
+  void populateWorkoutOptions(select, setsSelect);
 
   form.addEventListener("submit", (event: Event) => {
     event.preventDefault();
-    void handleStartWorkout(select, errorEl);
+    void handleStartWorkout(select, errorEl, setsSelect, setsErrorEl);
   });
 
   select.addEventListener("change", () => {
@@ -129,13 +154,22 @@ function initForm(): void {
     updateRandomiseRowVisibility(select.value);
   });
 
+  setsSelect.addEventListener("change", () => {
+    if (isValidSetsValue(setsSelect.value)) {
+      clearError(setsSelect, setsErrorEl);
+    }
+  });
+
   toggleBtn?.addEventListener("click", () => {
     const current = toggleBtn.getAttribute("aria-checked") === "true";
     toggleBtn.setAttribute("aria-checked", String(!current));
   });
 }
 
-async function populateWorkoutOptions(select: HTMLSelectElement): Promise<void> {
+async function populateWorkoutOptions(
+  select: HTMLSelectElement,
+  setsSelect: HTMLSelectElement,
+): Promise<void> {
   try {
     const response = await fetch("/api/workouts");
     if (!response.ok) {
@@ -153,6 +187,9 @@ async function populateWorkoutOptions(select: HTMLSelectElement): Promise<void> 
     }
   } catch {
     // API unavailable — dropdown remains empty
+  } finally {
+    select.disabled = false;
+    setsSelect.disabled = false;
   }
 }
 
@@ -169,35 +206,48 @@ function updateRandomiseRowVisibility(selectedValue: string): void {
   }
 }
 
-async function handleStartWorkout(select: HTMLSelectElement, errorEl: HTMLElement): Promise<void> {
+async function handleStartWorkout(
+  select: HTMLSelectElement,
+  errorEl: HTMLElement,
+  setsSelect: HTMLSelectElement,
+  setsErrorEl: HTMLElement,
+): Promise<void> {
   const selectedValue = select.value;
 
   if (!selectedValue || !isValidWorkoutValue(selectedValue)) {
     showError(select, errorEl, "Please select a workout");
+    select.focus();
     return;
   }
 
   clearError(select, errorEl);
+  const sets = setsSelect.value;
+  if (!isValidSetsValue(sets)) {
+    showError(setsSelect, setsErrorEl, "Please select sets");
+    setsSelect.focus();
+    return;
+  }
+  clearError(setsSelect, setsErrorEl);
 
   const toggleBtn = document.getElementById("home-randomise-toggle") as HTMLButtonElement | null;
   const isRandomise = toggleBtn?.getAttribute("aria-checked") === "true";
 
   if (!isRandomise) {
-    navigate(`/active-session?id=${selectedValue}`);
+    navigate(`/active-session?id=${selectedValue}&sets=${sets}`);
     return;
   }
 
   try {
     const response = await fetch(`/api/workouts/${selectedValue}`);
     if (!response.ok) {
-      navigate(`/active-session?id=${selectedValue}`);
+      navigate(`/active-session?id=${selectedValue}&sets=${sets}`);
       return;
     }
     const workout: WorkoutDetail = await response.json();
     const order = shuffle(workout.exercises).map((ex) => ex.exerciseId).join(",");
-    navigate(`/active-session?id=${selectedValue}&order=${order}`);
+    navigate(`/active-session?id=${selectedValue}&sets=${sets}&order=${order}`);
   } catch {
-    navigate(`/active-session?id=${selectedValue}`);
+    navigate(`/active-session?id=${selectedValue}&sets=${sets}`);
   }
 }
 
@@ -205,6 +255,10 @@ async function handleStartWorkout(select: HTMLSelectElement, errorEl: HTMLElemen
 
 function isValidWorkoutValue(value: string): boolean {
   return loadedWorkouts.has(value);
+}
+
+function isValidSetsValue(value: string): value is "3" | "5" {
+  return value === "3" || value === "5";
 }
 
 function showError(select: HTMLSelectElement, errorEl: HTMLElement, message: string): void {
