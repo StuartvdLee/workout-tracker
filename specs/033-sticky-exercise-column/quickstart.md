@@ -7,7 +7,7 @@
 
 1. Update the existing session-detail table styles so the Exercise header and exercise-name cells remain anchored to the left edge of `.session-detail__table-wrapper`.
 2. Give the fixed header and body cells the existing light-grey header-row surface colour.
-3. Add explicit layering and a subtle trailing divider so scrolling statistics disappear behind the fixed column; remove the header-cell bottom border while retaining body-row dividers.
+3. Add explicit layering so scrolling statistics disappear behind the fixed column; omit a trailing vertical divider and the Overall Effort row's separate top border while retaining the table's normal bottom border and body-row dividers.
 4. Use automatic table layout with a shrink-to-content first column (`width: 1%` on the first header/body cells), `white-space: nowrap`, trailing padding, and `max-width: min(20rem, 55vw)`. Names beyond the cap truncate with an ellipsis and retain full `aria-label`/`title` values; preserve horizontal overflow plus both view/edit table markup.
 5. Add focused Playwright regression coverage in `WorkoutHistoryTests.cs` for position, scroll reach, opacity/layering, and edit mode.
 

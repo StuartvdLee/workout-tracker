@@ -32,7 +32,7 @@ Represents the first semantic table column while the table is horizontally scrol
 - **Width**: longest displayed exercise name plus cell padding and trailing `var(--spacing-md)` margin, capped by `min(20rem, 55vw)` so statistic space remains visible; no fixed pixel or percentage width
 - **Text flow**: exercise names remain on one line and truncate with an ellipsis at the cap; the full name remains the cell's text and is exposed through `aria-label` and `title`
 - **Layer order**: header above body fixed cells; fixed cells above horizontally moving statistic content
-- **Divider**: visual boundary at the fixed column's trailing edge using the existing table border colour; no divider between the header row and first body row
+- **Dividers**: no vertical boundary at the fixed column's trailing edge and no divider between the header row and first body row
 
 ## Invariants
 

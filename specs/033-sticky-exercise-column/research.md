@@ -34,7 +34,7 @@ This feature reuses the session-detail page and table patterns established by:
 
 ## Decision 3: Give fixed cells opaque, theme-aware surfaces and explicit layering
 
-**Decision**: The entire fixed Exercise column, including its body cells, uses the existing light-grey header-row surface colour, while the header layers above body cells. A subtle existing border-colour trailing edge distinguishes the fixed column from moving statistics; the header row has no bottom divider.
+**Decision**: The entire fixed Exercise column, including its body cells, uses the existing light-grey header-row surface colour, while the header layers above body cells. The fixed column has no trailing vertical divider, and the header row has no bottom divider.
 
 **Rationale**: Opaque backgrounds are required for values to disappear behind the names. Existing colour tokens automatically preserve light/dark theme behavior, while explicit layering prevents scrolling content from painting above the fixed cells.
 

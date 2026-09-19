@@ -46,7 +46,7 @@ No new foundational implementation is required. `src/WorkoutTracker.Web/wwwroot/
 
 ### Implementation for User Story 1
 
-- [x] T004 [US1] Implement the fixed Exercise header/body cells in `src/WorkoutTracker.Web/wwwroot/css/styles.css` using the existing session-detail table selectors, the wrapper as the scroll boundary, the shared light-grey header-row surface for body and header cells, explicit stacking order, an existing border-colour trailing divider, and no header/body divider
+- [x] T004 [US1] Implement the fixed Exercise header/body cells in `src/WorkoutTracker.Web/wwwroot/css/styles.css` using the existing session-detail table selectors, the wrapper as the scroll boundary, the shared light-grey header-row surface for body and header cells, explicit stacking order, no trailing vertical divider, and no header/body divider
 - [x] T005 [US1] Run the new fixed-column tests plus existing session-detail table and edit-mode tests in `src/WorkoutTracker.E2ETests/E2E/WorkoutHistoryTests.cs`, confirming view/edit alignment and no regression to seven-column content or edit controls
 
 **Checkpoint**: User Story 1 is complete when exercise context remains visible and aligned throughout horizontal scrolling in both table modes.

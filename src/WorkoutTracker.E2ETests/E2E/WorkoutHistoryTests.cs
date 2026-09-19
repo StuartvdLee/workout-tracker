@@ -595,7 +595,9 @@ public class WorkoutHistoryTests
                     const body = document.querySelector('.session-detail__cell--exercise');
                     const headerRow = document.querySelector('.session-detail__head-row');
                     const table = document.querySelector('.session-detail__table');
-                    if (!header || !body || !headerRow || !table) return [];
+                    const wrapper = document.querySelector('.session-detail__table-wrapper');
+                    const overallEffort = document.querySelector('.session-detail__overall-effort-row');
+                    if (!header || !body || !headerRow || !table || !wrapper || !overallEffort) return [];
                     const headerStyle = getComputedStyle(header);
                     const bodyStyle = getComputedStyle(body);
                     return [
@@ -606,16 +608,24 @@ public class WorkoutHistoryTests
                         headerStyle.zIndex,
                         bodyStyle.zIndex,
                         headerStyle.borderBottomWidth,
+                        headerStyle.boxShadow,
+                        bodyStyle.boxShadow,
+                        getComputedStyle(wrapper).borderBottomWidth,
+                        getComputedStyle(overallEffort).borderTopWidth,
                     ];
                 }");
 
-            Assert.Equal(7, styles.Length);
+            Assert.Equal(11, styles.Length);
             Assert.Equal(styles[1], styles[0]);
             Assert.Equal(styles[1], styles[2]);
             Assert.DoesNotContain("rgba(0, 0, 0, 0)", styles.Take(4));
             Assert.Equal("3", styles[4]);
             Assert.Equal("2", styles[5]);
             Assert.Equal("0px", styles[6]);
+            Assert.Equal("none", styles[7]);
+            Assert.Equal("none", styles[8]);
+            Assert.Equal("1px", styles[9]);
+            Assert.Equal("0px", styles[10]);
         }
         finally
         {
