@@ -2276,7 +2276,7 @@ body.is-dragging .workout-selected__drag-handle {
   border-collapse: collapse;
   background-color: var(--color-white);
   font-size: var(--font-size-sm);
-  table-layout: fixed;
+  table-layout: auto;
 }
 
 .session-detail__head-row {
@@ -2288,13 +2288,8 @@ body.is-dragging .workout-selected__drag-handle {
   padding: var(--spacing-sm);
   font-weight: 600;
   color: var(--color-text);
-  border-bottom: 1px solid var(--color-border);
   word-break: normal;
   white-space: nowrap;
-}
-
-.session-detail__th:nth-child(1) {
-  width: 24%;
 }
 
 .session-detail__th:nth-child(2) {
@@ -2326,6 +2321,22 @@ body.is-dragging .workout-selected__drag-handle {
   font-weight: 400;
 }
 
+.session-detail__th:first-child,
+.session-detail__cell:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  width: 1%;
+  padding-right: var(--spacing-md);
+  background-color: var(--color-bg);
+  box-shadow: 1px 0 0 var(--color-border);
+}
+
+.session-detail__head-row .session-detail__th:first-child {
+  z-index: 3;
+  background-color: var(--color-bg);
+}
+
 .session-detail__row:not(:last-child) {
   border-bottom: 1px solid var(--color-bg);
 }
@@ -2340,9 +2351,9 @@ body.is-dragging .workout-selected__drag-handle {
 }
 
 .session-detail__cell--exercise {
+  max-width: min(20rem, 55vw);
   font-weight: 500;
-  white-space: normal;
-  word-break: break-word;
+  white-space: nowrap;
 }
 
 .session-detail__cell--prev {
