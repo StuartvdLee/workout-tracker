@@ -595,7 +595,8 @@ public class WorkoutHistoryTests
                     const body = document.querySelector('.session-detail__cell--exercise');
                     const headerRow = document.querySelector('.session-detail__head-row');
                     const table = document.querySelector('.session-detail__table');
-                    if (!header || !body || !headerRow || !table) return [];
+                    const wrapper = document.querySelector('.session-detail__table-wrapper');
+                    if (!header || !body || !headerRow || !table || !wrapper) return [];
                     const headerStyle = getComputedStyle(header);
                     const bodyStyle = getComputedStyle(body);
                     return [
@@ -608,10 +609,11 @@ public class WorkoutHistoryTests
                         headerStyle.borderBottomWidth,
                         headerStyle.boxShadow,
                         bodyStyle.boxShadow,
+                        getComputedStyle(wrapper).borderBottomWidth,
                     ];
                 }");
 
-            Assert.Equal(9, styles.Length);
+            Assert.Equal(10, styles.Length);
             Assert.Equal(styles[1], styles[0]);
             Assert.Equal(styles[1], styles[2]);
             Assert.DoesNotContain("rgba(0, 0, 0, 0)", styles.Take(4));
@@ -620,6 +622,7 @@ public class WorkoutHistoryTests
             Assert.Equal("0px", styles[6]);
             Assert.Equal("none", styles[7]);
             Assert.Equal("none", styles[8]);
+            Assert.Equal("0px", styles[9]);
         }
         finally
         {

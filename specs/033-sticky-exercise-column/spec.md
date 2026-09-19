@@ -57,7 +57,7 @@ A user can read the fixed Exercise column clearly on supported screen sizes and 
 - **FR-004**: The Exercise header MUST remain aligned with the fixed exercise-name cells below it.
 - **FR-005**: Each fixed exercise-name cell MUST remain aligned with its corresponding statistics row at every horizontal scroll position.
 - **FR-006**: Users MUST be able to scroll far enough to view the complete content of the final statistic column.
-- **FR-007**: The fixed Exercise column MUST preserve the table's typography, spacing, outer border, and body-row dividers; its header and body cells MUST use the same light-grey, theme-aware surface, with no vertical divider at the column's trailing edge and no horizontal divider between the header row and the first body row.
+- **FR-007**: The fixed Exercise column MUST preserve the table's typography, spacing, top and side borders, and body-row dividers; its header and body cells MUST use the same light-grey, theme-aware surface, with no vertical divider at the column's trailing edge, no horizontal divider between the header row and the first body row, and no border beneath the table.
 - **FR-008**: The behavior MUST apply whenever the past-workout table overflows horizontally and MUST preserve the existing table layout without an offset artifact at the zero horizontal scroll position.
 - **FR-009**: The Exercise column MUST derive its width from the longest displayed exercise name up to a viewport-aware maximum, include trailing spacing, and MUST NOT use a fixed column width. Names beyond the maximum MUST truncate visually while preserving the full accessible name and hover title.
 - **FR-010**: The change MUST NOT alter workout data, statistic values, column order, row order, or existing session actions.

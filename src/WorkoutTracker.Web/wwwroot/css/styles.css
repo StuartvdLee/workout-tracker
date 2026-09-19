@@ -2267,6 +2267,7 @@ body.is-dragging .workout-selected__drag-handle {
 .session-detail__table-wrapper {
   overflow-x: auto;
   border: 1px solid var(--color-border);
+  border-bottom: 0;
   border-radius: var(--radius);
 }
 
