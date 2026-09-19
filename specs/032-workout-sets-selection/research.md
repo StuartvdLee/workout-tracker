@@ -1,10 +1,11 @@
 # Research: Workout Sets Selection
 
 **Feature**: `032-workout-sets-selection`
+**Status**: Decisions implemented in PR #159
 
 ## Decision 1: Store sets once on `WorkoutSession`
 
-**Decision**: Add nullable `int? Sets` to `WorkoutSession`, mapped to `workout_session.sets`, with a database check constraint allowing only `NULL`, `3`, or `5`.
+**Decision**: Add nullable `int? Sets` to `WorkoutSession`, mapped to `workout_sessions.sets`, with a database check constraint allowing only `NULL`, `3`, or `5`.
 
 **Rationale**: The selected value applies to every exercise in a performed workout. Session-level storage prevents duplicated values and conflicting per-exercise state. Nullable storage preserves compatibility with sessions created before this feature.
 
@@ -67,3 +68,7 @@
 **Rationale**: These are cross-layer user journeys and critical data-selection rules, matching the constitution and prior plans.
 
 No `NEEDS CLARIFICATION` markers remain.
+
+## Delivered Verification
+
+The decisions were implemented and covered by the API, selector-unit, frontend, and Playwright suites. The delivered implementation also added defensive handling for missing legacy `sets`/`previousSets` fields and fixed responsive detail-table column sizing after visual verification.

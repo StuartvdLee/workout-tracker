@@ -1,5 +1,7 @@
 # UI Contract: Workout Sets Selection
 
+**Status**: Implemented in PR #159
+
 ## Start Page (`Let's go!`)
 
 Add a field directly below `Select your workout`:
@@ -78,4 +80,4 @@ Rules:
 
 ## Responsive Behavior
 
-The wider detail table keeps the established responsive table behavior. Column headings remain unambiguous, values do not wrap unnecessarily, and horizontal overflow (if already used) remains accessible without hiding controls.
+The wider detail table keeps the established responsive table behavior. Column headings remain unambiguous, values do not wrap unnecessarily, and horizontal overflow (if already used) remains accessible without hiding controls. Delivered CSS assigns explicit widths to all seven columns so `Prev. Weight (kg)` does not overlap `Sets`.

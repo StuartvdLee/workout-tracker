@@ -11,11 +11,11 @@ Add an explicit 3-or-5 Sets selection below the workout selector before an activ
 
 **Language/Version**: C# on .NET 10.0 (backend), TypeScript ~7.0.2 (frontend)
 **Primary Dependencies**: ASP.NET Core minimal API, .NET Aspire, Entity Framework Core with Npgsql, vanilla TypeScript, Playwright, Vitest
-**Storage**: PostgreSQL via EF Core — add one nullable integer `sets` column and `NULL/3/5` check constraint to `workout_session`
+**Storage**: PostgreSQL via EF Core — add one nullable integer `sets` column and `NULL/3/5` check constraint to `workout_sessions`
 **Testing**: xUnit 3.2.2 + WebApplicationFactory integration tests (real PostgreSQL via `TEST_DB_CONNECTION`); dedicated selector unit tests; Playwright E2E tests; Vitest where frontend helper logic is extracted
 **Target Platform**: Web browser (mobile-first responsive UI)
 **Project Type**: Web application (SPA-style frontend served by ASP.NET Core / .NET Aspire orchestration)
-**Performance Goals**: No additional HTTP round trips or database round trips (deterministic gates PB-01 to PB-07); p95 workout-start and history-detail durations regress by no more than 10% or 100 milliseconds, whichever allowance is greater, measured over 20 warmed iterations for sessions with up to 25 exercises against a same-environment, same-session pre-feature baseline. See **Performance Budgets & Measurement Design**.
+**Performance Goals**: Automated request-count, query-count, selector-bound, and local latency budgets passed; the manual 20-warm-iteration comparative p95 baseline remains a pre-release follow-up because this branch has no separate pre-feature baseline commit. See **Performance Budgets & Measurement Design**.
 **Constraints**: No external JS/CSS frameworks; strict TypeScript; values restricted to 3 or 5 for new sessions; legacy rows remain nullable; one sets value per session despite repeated table display; preserve existing random-order query flow, BEM classes, no-data marker, edit/discard behavior, and latest-usable historical comparison semantics
 **Scale/Scope**: One model/configuration/migration, existing API session routes and selector records, start/active/detail TypeScript pages, limited responsive CSS, API/unit/E2E tests; no new project or endpoint
 
@@ -42,7 +42,7 @@ specs/032-workout-sets-selection/
 ├── contracts/
 │   ├── api-contract.md
 │   └── ui-contract.md
-└── tasks.md             # Created later by /speckit.tasks
+└── tasks.md             # Executed task list and delivery record
 ```
 
 ### Source Code (repository root)
@@ -142,7 +142,7 @@ These extend the existing relaxed-ceiling convention and catch gross regressions
 
 These ceilings are deliberately loose. They are regression tripwires, not the spec target.
 
-### Tier 3 — Comparative baseline procedure (pre-release, manual)
+### Tier 3 — Comparative baseline procedure (pre-release, manual; not run for PR #159)
 
 This is how PR-001 and SC-006 are actually satisfied. It is run once before release and recorded as evidence, not asserted in CI.
 
@@ -192,10 +192,10 @@ Each case constructs `HistoricalSessionData` values newest-first and asserts on 
 - **Testing** ✅ — API, dedicated selector-unit, and Playwright coverage explicitly proves allowed values, legacy nulls, source-session comparison consistency, older weight/effort fallback preservation, omitted-versus-null updates, required start selection, and synchronized historical editing. The selector test matrix and its `InternalsVisibleTo` prerequisite are specified in **Selector Test Design**.
 - **Security** ✅ — Client and server validate untrusted values, the database enforces the invariant, and no authorization/trust boundary changes are introduced.
 - **User Experience Consistency** ✅ — Existing form, summary, table, no-data, error, and discard interactions are preserved; all new copy and states are defined.
-- **Performance** ✅ — All data is added to existing bounded queries and payloads with no new round trips or N+1 access. Budgets PB-01 to PB-07 are deterministic and CI-blocking, PB-08 to PB-10 are relaxed regression tripwires, and the Tier 3 procedure supplies the comparative p95 evidence required by PR-001 and SC-006.
+- **Performance** ✅ — All data is added to existing bounded queries and payloads with no new round trips or N+1 access. PB-01 to PB-07 were verified by automated tests and PB-08 to PB-10 passed as local regression tripwires. The Tier 3 comparative p95 procedure remains explicitly unverified and is documented as a pre-release follow-up.
 
-No constitution violations. Plan is ready for `/speckit.tasks`.
+No constitution violations. Implementation is complete for PR #159; only the optional pre-release comparative baseline remains.
 
 ## Complexity Tracking
 
-> No constitution violations or exceptions identified.
+> No constitution violations or exceptions identified. The implementation follows this plan; the only deferred item is the manual comparative p95 baseline.

@@ -1,5 +1,7 @@
 # API Contract: Workout Sets Selection
 
+**Status**: Implemented in PR #159
+
 ## POST `/api/workouts/{workoutId}/sessions`
 
 Extends the existing session creation request.
@@ -99,4 +101,4 @@ No new routes are required. Existing POST, GET, and PUT proxy routes forward the
 - Existing consumers must tolerate these additive nullable response properties.
 - Existing PUT clients that omit `sets` preserve the stored value; explicit `sets: null` clears it.
 - New session creation rejects missing sets.
-- No extra API request is introduced by any affected page.
+- No extra API request is introduced by any affected page. The delivered implementation also tolerates omitted legacy Sets fields in frontend responses, rendering them as absent/no-data rather than `undefined`.

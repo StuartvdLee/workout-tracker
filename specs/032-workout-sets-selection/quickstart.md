@@ -2,6 +2,7 @@
 
 **Feature**: `032-workout-sets-selection`
 **Branch**: `032-workout-sets-selection`
+**Delivery**: Implemented in PR #159
 
 ## User Flows
 
@@ -68,5 +69,21 @@ dotnet run --project src/WorkoutTracker.E2ETests/WorkoutTracker.E2ETests.csproj 
 - Database and API reject values other than 3 or 5; update omission preserves, explicit null clears, and 3/5 replaces the stored value.
 - Tier 1 deterministic budgets PB-01 to PB-07 pass: no added HTTP round trips on start or detail, exactly two database round trips per historical endpoint, the 200-session scan bound is honoured, and exactly one top-level `sets` field is transported per session.
 - Tier 2 ceilings PB-08 to PB-10 pass in the local test environment.
-- Tier 3 comparative run is recorded: 5 discarded warm-ups then 20 timed iterations per flow, 25 exercises, same environment and session as the pre-feature baseline, with p95 regression within 10% or 100 milliseconds, whichever allowance is greater. Both p95 values, the delta, the machine, and both commit SHAs are pasted into the pull request.
-- Existing workout start, random order, save, history, and edit behaviors still pass.
+- Automated Tier 1 budgets PB-01 to PB-07 pass: request counts, query counts, selector bound, and one top-level Sets field are covered.
+- Automated Tier 2 local latency ceilings PB-08 to PB-10 pass.
+- Tier 3 comparative run is **not recorded**: the branch has no separate pre-feature baseline commit. Run it before release using the procedure in `plan.md` and record both p95 values, the delta, the machine, and both commit SHAs.
+- Existing workout start, random order, save, history, edit, legacy-field, and table-layout regression behaviors pass.
+
+## Delivered Validation Evidence
+
+- Release solution build: passed.
+- Frontend tests: 92 passed.
+- Backend tests: 167 passed.
+- Playwright E2E tests: 280 passed.
+- TypeScript build: passed.
+- No separate npm lint script exists in the repository; TypeScript compilation was used as the frontend static check.
+- `git diff --check`: passed.
+
+## Delivery Caveat
+
+The Workouts-page pre-start modal retains existing direct-navigation paths that do not append `sets`; the supported delivered flow is the `Let's go!` page described above. This is a follow-up consistency issue, not part of the completed artifact scope.

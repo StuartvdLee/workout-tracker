@@ -1,6 +1,7 @@
 # Data Model: Workout Sets Selection
 
 **Feature**: `032-workout-sets-selection`
+**Status**: Implemented in PR #159
 
 ## Entity Change
 
@@ -38,7 +39,7 @@ entity.HasCheckConstraint(
 
 ## Migration
 
-Create a migration adding a nullable integer `sets` column and the check constraint.
+Implemented by migration `src/WorkoutTracker.Infrastructure/Data/Migrations/20260919100320_AddSetsToWorkoutSession.cs`, which adds a nullable integer `sets` column and the check constraint.
 
 **Up**:
 
@@ -46,14 +47,14 @@ Create a migration adding a nullable integer `sets` column and the check constra
 migrationBuilder.AddColumn<int>(
     name: "sets",
     schema: "workout_tracker",
-    table: "workout_session",
+    table: "workout_sessions",
     type: "integer",
     nullable: true);
 
 migrationBuilder.AddCheckConstraint(
     name: "ck_workout_session_sets_allowed",
     schema: "workout_tracker",
-    table: "workout_session",
+    table: "workout_sessions",
     sql: "sets IS NULL OR sets IN (3, 5)");
 ```
 

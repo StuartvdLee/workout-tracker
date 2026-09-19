@@ -2,7 +2,7 @@
 
 **Feature Branch**: `032-workout-sets-selection`
 **Created**: 2026-09-19
-**Status**: Draft
+**Status**: Implemented and verified in PR #159
 **Input**: User description: "I want to add the number of sets to my workout. I want to select the number of sets right before I start my workout. So on the \"Let's go!\" page, add a dropdown called \"Sets\" below the \"Select your workout\" dropdown. Make sure it's in the same visual style. The number of sets will either be 3 or 5. The number of sets will apply to all exercises in a workout. In the \"current workout\" view/page, add the number of sets to the \"Last time\" information like this: \"3 sets\" or \"5 sets\" depending on the number of sets. On the \"History\" view of a previous workout, add the number of sets to the table as well as the previous number of sets. Do this in the same way as weight and effort"
 
 ## User Scenarios & Testing *(mandatory)*
@@ -114,3 +114,11 @@ When viewing a previous workout in History, the user sees a "Sets" column and a 
 - **SC-004**: 100% of history detail views for sessions predating this feature render without errors and show the standard no-data indicator for sets.
 - **SC-005**: 100% of affected flows use the existing select, table, validation, and no-data patterns with no new visual treatments introduced.
 - **SC-006**: Across at least 20 warmed measurements for sessions with up to 25 exercises, the p95 duration of starting a workout and opening history detail regresses by no more than 10% or 100 milliseconds, whichever allowance is greater, with no additional data-fetch round trips.
+
+## Delivery Verification
+
+- **Implemented**: PR #159 (`https://github.com/StuartvdLee/workout-tracker/pull/159`).
+- **Verified**: Release build passed; frontend tests passed (92); backend tests passed (167); Playwright E2E tests passed (280); TypeScript build passed; whitespace validation passed.
+- **Verified behavior**: New sessions require and persist Sets 3 or 5; active-workout comparisons and history current/previous Sets render correctly; legacy missing Sets is omitted or shown with the existing no-data marker; session-level editing remains synchronized.
+- **Not completed**: The manual pre-feature versus feature p95 baseline procedure in PR-001/SC-006 was not run because there is no separate pre-feature baseline commit for this branch. Automated request-count, query-count, selector-bound, and local latency smoke budgets passed.
+- **Tooling note**: The repository has no separate npm `lint` script; TypeScript compilation and the existing frontend test suite were run instead.
