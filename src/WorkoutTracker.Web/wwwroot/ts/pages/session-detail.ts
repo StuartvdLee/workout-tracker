@@ -418,7 +418,7 @@ function readEditSnapshot(): SessionEditSnapshot {
   const exerciseRows = Array.from(document.querySelectorAll<HTMLTableRowElement>("[data-logged-exercise-id]"));
 
   return {
-    sets: parseNullableSets(setsSelect?.value ?? ""),
+    sets: setsSelect ? parseNullableSets(setsSelect.value) : (originalEditSnapshot?.sets ?? null),
     overallEffort: parseNullableEffort(overallSelect?.value ?? ""),
     loggedExercises: exerciseRows.map(row => {
       const loggedExerciseId = row.dataset.loggedExerciseId ?? "";
