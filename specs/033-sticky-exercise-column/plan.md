@@ -51,7 +51,7 @@ src/WorkoutTracker.Web/
 └── wwwroot/
     └── css/
         └── styles.css                      # MODIFIED: fixed Exercise header/cells,
-                                            # opaque shared surface, layering, trailing divider, no header divider
+                                            # opaque shared surface, layering, no trailing or header divider
 
 src/WorkoutTracker.E2ETests/
 └── E2E/

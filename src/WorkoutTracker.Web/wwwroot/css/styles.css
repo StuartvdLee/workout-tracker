@@ -2329,7 +2329,6 @@ body.is-dragging .workout-selected__drag-handle {
   width: 1%;
   padding-right: var(--spacing-md);
   background-color: var(--color-bg);
-  box-shadow: 1px 0 0 var(--color-border);
 }
 
 .session-detail__head-row .session-detail__th:first-child {

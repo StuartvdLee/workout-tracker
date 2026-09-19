@@ -30,9 +30,9 @@ No route, API, data, or copy contract changes are introduced.
 3. No horizontal divider is shown between the table header row and the first body row.
 4. Moving statistic headers and cells pass behind fixed Exercise cells and are not readable through them.
 5. The fixed Exercise header layers above fixed body cells where paint regions could meet.
-6. A subtle divider using the existing border colour marks the fixed column's trailing edge.
+6. No vertical divider or shadow marks the fixed column's trailing edge.
 7. No horizontal divider appears between the header row and first body row.
-8. No shadow, divider, or fixed surface may obscure the exercise text itself.
+8. No fixed surface may obscure the exercise text itself.
 
 ## Content and Alignment Contract
 
