@@ -548,16 +548,21 @@ public class WorkoutHistoryTests
             var wrapper = page.Locator(".session-detail__table-wrapper");
             var header = page.Locator(".session-detail__th").First;
             var exerciseCell = page.Locator(".session-detail__cell--exercise").First;
-            var weightInput = page.Locator(".session-detail__input").First;
-            var initialInputBox = await weightInput.BoundingBoxAsync();
-            Assert.NotNull(initialInputBox);
+            var statisticControls = wrapper.Locator(".session-detail__input, .session-detail__select");
+            var initialControlXs = await statisticControls.EvaluateAllAsync<double[]>(
+                "controls => controls.map(control => control.getBoundingClientRect().x)");
+            Assert.NotEmpty(initialControlXs);
 
             await SetHorizontalScrollAsync(wrapper, 0.5);
             await AssertStickyCellsAlignedAsync(wrapper, header, exerciseCell);
-            var scrolledInputBox = await weightInput.BoundingBoxAsync();
-            Assert.NotNull(scrolledInputBox);
-            Assert.True(scrolledInputBox.X < initialInputBox.X,
-                "Editable statistic controls must move with the scrolling columns.");
+            var scrolledControlXs = await statisticControls.EvaluateAllAsync<double[]>(
+                "controls => controls.map(control => control.getBoundingClientRect().x)");
+            Assert.Equal(initialControlXs.Length, scrolledControlXs.Length);
+            for (var index = 0; index < initialControlXs.Length; index++)
+            {
+                Assert.True(scrolledControlXs[index] < initialControlXs[index],
+                    $"Editable statistic control {index} did not move with the scrolling columns.");
+            }
         }
         finally
         {
