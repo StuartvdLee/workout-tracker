@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Playwright;
 using WorkoutTracker.E2ETests.Infrastructure;
@@ -220,6 +221,94 @@ public class WorkoutHistoryTests
             new { sliderSelector, valueSelector, sliderValue });
     }
 
+    private static async Task StubSessionDetailAsync(
+        IPage page,
+        Guid sessionId,
+        IReadOnlyList<string> exerciseNames)
+    {
+        var exercises = exerciseNames.Select((name, index) => new
+        {
+            loggedExerciseId = Guid.NewGuid(),
+            exerciseId = Guid.NewGuid(),
+            exerciseName = name,
+            loggedWeight = $"{50 + index}",
+            effort = (index % 10) + 1,
+            previousWeight = $"{45 + index}",
+            previousSets = 3,
+            previousEffort = ((index + 8) % 10) + 1,
+        });
+        var body = JsonSerializer.Serialize(new
+        {
+            workoutSessionId = sessionId,
+            plannedWorkoutId = (Guid?)null,
+            workoutName = "Sticky Column Workout",
+            completedAt = "2026-09-19T10:00:00Z",
+            sets = 5,
+            overallEffort = 7,
+            previousOverallEffort = 6,
+            exercises,
+        });
+
+        await page.RouteAsync($"**/api/sessions/{sessionId}", async route =>
+        {
+            await route.FulfillAsync(new()
+            {
+                Status = 200,
+                ContentType = "application/json",
+                Body = body,
+            });
+        });
+    }
+
+    private static async Task<double> SetHorizontalScrollAsync(ILocator wrapper, double ratio)
+    {
+        return await wrapper.EvaluateAsync<double>(
+            @"async (element, ratio) => {
+                const maxScroll = element.scrollWidth - element.clientWidth;
+                element.scrollLeft = maxScroll * ratio;
+                await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+                return element.scrollLeft;
+            }",
+            ratio);
+    }
+
+    private static async Task AssertStickyCellsAlignedAsync(
+        ILocator wrapper,
+        ILocator header,
+        ILocator exerciseCell,
+        double tolerance = 2)
+    {
+        var wrapperBox = await wrapper.BoundingBoxAsync();
+        var headerBox = await header.BoundingBoxAsync();
+        var exerciseBox = await exerciseCell.BoundingBoxAsync();
+
+        Assert.NotNull(wrapperBox);
+        Assert.NotNull(headerBox);
+        Assert.NotNull(exerciseBox);
+        Assert.InRange(Math.Abs(headerBox.X - wrapperBox.X), 0, tolerance);
+        Assert.InRange(Math.Abs(exerciseBox.X - wrapperBox.X), 0, tolerance);
+        Assert.InRange(Math.Abs(headerBox.X - exerciseBox.X), 0, tolerance);
+    }
+
+    private static async Task<double[]> MeasureScrollPaintLatenciesAsync(
+        ILocator wrapper,
+        IReadOnlyList<double> ratios)
+    {
+        return await wrapper.EvaluateAsync<double[]>(
+            @"async (element, ratios) => {
+                const samples = [];
+                const maxScroll = element.scrollWidth - element.clientWidth;
+                for (const ratio of ratios) {
+                    const start = performance.now();
+                    element.scrollLeft = maxScroll * ratio;
+                    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+                    samples.push(performance.now() - start);
+                }
+                return samples;
+            }",
+            ratios);
+    }
+
     // ──────────────────────────────────────────
     // History Page
     // ──────────────────────────────────────────
@@ -367,6 +456,272 @@ public class WorkoutHistoryTests
         }
         finally
         {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task SessionDetailPage_ExerciseColumnStaysFixedWhileStatisticsScroll()
+    {
+        var page = await CreatePageAsync();
+        var sessionId = Guid.NewGuid();
+        try
+        {
+            await page.SetViewportSizeAsync(600, 800);
+            await StubSessionDetailAsync(page, sessionId, ["Bench Press", "Incline Dumbbell Press", "Cable Fly"]);
+            await page.GotoAsync($"{_webApp.BaseUrl}/history/session?id={sessionId}");
+            await page.WaitForSelectorAsync(".session-detail__table");
+
+            var wrapper = page.Locator(".session-detail__table-wrapper");
+            var header = page.Locator(".session-detail__th").First;
+            var exerciseCell = page.Locator(".session-detail__cell--exercise").First;
+            var statisticCell = page.Locator(".session-detail__row").First.Locator(".session-detail__cell").Nth(1);
+            var lastHeader = page.Locator(".session-detail__th").Last;
+            var hasOverflow = await wrapper.EvaluateAsync<bool>("element => element.scrollWidth > element.clientWidth");
+            Assert.True(hasOverflow, "The session detail table must overflow at the test viewport.");
+
+            var initialStatisticBox = await statisticCell.BoundingBoxAsync();
+            var initialExerciseBox = await exerciseCell.BoundingBoxAsync();
+            Assert.NotNull(initialStatisticBox);
+            Assert.NotNull(initialExerciseBox);
+
+            foreach (var ratio in new[] { 0d, 0.25d, 0.5d, 0.75d, 1d })
+            {
+                var scrollLeft = await SetHorizontalScrollAsync(wrapper, ratio);
+                await AssertStickyCellsAlignedAsync(wrapper, header, exerciseCell);
+                if (ratio > 0)
+                {
+                    Assert.True(scrollLeft > 0, $"Expected a positive scroll offset at ratio {ratio}.");
+                    var statisticBox = await statisticCell.BoundingBoxAsync();
+                    Assert.NotNull(statisticBox);
+                    Assert.True(statisticBox.X < initialStatisticBox.X,
+                        $"Statistic cell did not move left at ratio {ratio}.");
+                }
+            }
+
+            var wrapperBox = await wrapper.BoundingBoxAsync();
+            var exerciseBox = await exerciseCell.BoundingBoxAsync();
+            var lastHeaderBox = await lastHeader.BoundingBoxAsync();
+            Assert.NotNull(wrapperBox);
+            Assert.NotNull(exerciseBox);
+            Assert.NotNull(lastHeaderBox);
+            Assert.True(lastHeaderBox.X + lastHeaderBox.Width <= wrapperBox.X + wrapperBox.Width + 2,
+                "The final statistic column must be fully visible at maximum scroll.");
+
+            var allExerciseCellsOccludeScrollingContent = await page
+                .Locator(".session-detail__cell--exercise")
+                .EvaluateAllAsync<bool>(
+                    @"cells => cells.every(cell => {
+                        const rect = cell.getBoundingClientRect();
+                        return document.elementFromPoint(rect.right - 2, rect.top + (rect.height / 2))
+                            ?.closest('td') === cell;
+                    })");
+            Assert.True(allExerciseCellsOccludeScrollingContent,
+                "Every tested exercise cell must cover statistic content scrolling behind it.");
+
+            await SetHorizontalScrollAsync(wrapper, 0);
+            await AssertStickyCellsAlignedAsync(wrapper, header, exerciseCell);
+            var resetExerciseBox = await exerciseCell.BoundingBoxAsync();
+            Assert.NotNull(resetExerciseBox);
+            Assert.InRange(Math.Abs(resetExerciseBox.X - initialExerciseBox.X), 0, 2);
+        }
+        finally
+        {
+            await page.UnrouteAsync($"**/api/sessions/{sessionId}");
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task SessionDetailPage_EditModeKeepsExerciseColumnFixed()
+    {
+        var page = await CreatePageAsync();
+        var sessionId = Guid.NewGuid();
+        try
+        {
+            await page.SetViewportSizeAsync(600, 800);
+            await StubSessionDetailAsync(page, sessionId, ["Bench Press", "Incline Dumbbell Press"]);
+            await page.GotoAsync($"{_webApp.BaseUrl}/history/session?id={sessionId}");
+            await page.WaitForSelectorAsync("#session-detail-edit");
+            await page.Locator("#session-detail-edit").ClickAsync();
+
+            var wrapper = page.Locator(".session-detail__table-wrapper");
+            var header = page.Locator(".session-detail__th").First;
+            var exerciseCell = page.Locator(".session-detail__cell--exercise").First;
+            var weightInput = page.Locator(".session-detail__input").First;
+            var initialInputBox = await weightInput.BoundingBoxAsync();
+            Assert.NotNull(initialInputBox);
+
+            await SetHorizontalScrollAsync(wrapper, 0.5);
+            await AssertStickyCellsAlignedAsync(wrapper, header, exerciseCell);
+            var scrolledInputBox = await weightInput.BoundingBoxAsync();
+            Assert.NotNull(scrolledInputBox);
+            Assert.True(scrolledInputBox.X < initialInputBox.X,
+                "Editable statistic controls must move with the scrolling columns.");
+        }
+        finally
+        {
+            await page.UnrouteAsync($"**/api/sessions/{sessionId}");
+            await page.CloseAsync();
+        }
+    }
+
+    [Theory]
+    [InlineData("light")]
+    [InlineData("dark")]
+    public async Task SessionDetailPage_FixedColumnUsesOpaqueThemeSurfaces(string theme)
+    {
+        var page = await CreatePageAsync();
+        var sessionId = Guid.NewGuid();
+        try
+        {
+            await page.EvaluateAsync(
+                "theme => localStorage.setItem('workout-tracker-theme', theme)",
+                theme);
+            await StubSessionDetailAsync(page, sessionId, ["Bench Press"]);
+            await page.GotoAsync($"{_webApp.BaseUrl}/history/session?id={sessionId}");
+            await page.WaitForSelectorAsync(".session-detail__table");
+
+            var wrapper = page.Locator(".session-detail__table-wrapper");
+            await SetHorizontalScrollAsync(wrapper, 0.5);
+            var styles = await page.EvaluateAsync<string[]>(
+                @"() => {
+                    const header = document.querySelector('.session-detail__th:first-child');
+                    const body = document.querySelector('.session-detail__cell--exercise');
+                    const headerRow = document.querySelector('.session-detail__head-row');
+                    const table = document.querySelector('.session-detail__table');
+                    if (!header || !body || !headerRow || !table) return [];
+                    const headerStyle = getComputedStyle(header);
+                    const bodyStyle = getComputedStyle(body);
+                    return [
+                        headerStyle.backgroundColor,
+                        getComputedStyle(headerRow).backgroundColor,
+                        bodyStyle.backgroundColor,
+                        getComputedStyle(table).backgroundColor,
+                        headerStyle.zIndex,
+                        bodyStyle.zIndex,
+                        headerStyle.borderBottomWidth,
+                    ];
+                }");
+
+            Assert.Equal(7, styles.Length);
+            Assert.Equal(styles[1], styles[0]);
+            Assert.Equal(styles[1], styles[2]);
+            Assert.DoesNotContain("rgba(0, 0, 0, 0)", styles.Take(4));
+            Assert.Equal("3", styles[4]);
+            Assert.Equal("2", styles[5]);
+            Assert.Equal("0px", styles[6]);
+        }
+        finally
+        {
+            await page.UnrouteAsync($"**/api/sessions/{sessionId}");
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task SessionDetailPage_ExerciseColumnSizesToLongestName()
+    {
+        var page = await CreatePageAsync();
+        var sessionId = Guid.NewGuid();
+        try
+        {
+            await page.SetViewportSizeAsync(600, 800);
+            var longName = "Calf Extension";
+            await StubSessionDetailAsync(page, sessionId, ["Abductor", longName, "Leg Press"]);
+            await page.GotoAsync($"{_webApp.BaseUrl}/history/session?id={sessionId}");
+            await page.WaitForSelectorAsync(".session-detail__table");
+
+            var exerciseCells = page.Locator(".session-detail__cell--exercise");
+            var longestCell = exerciseCells.Nth(1);
+            var measurements = await longestCell.EvaluateAsync<JsonElement>(
+                @"element => {
+                    const range = document.createRange();
+                    range.selectNodeContents(element);
+                    const style = getComputedStyle(element);
+                    return {
+                        cellWidth: element.getBoundingClientRect().width,
+                        textWidth: range.getBoundingClientRect().width,
+                        paddingLeft: parseFloat(style.paddingLeft),
+                        paddingRight: parseFloat(style.paddingRight),
+                        whiteSpace: style.whiteSpace,
+                    };
+                }");
+            var requiredWidth = measurements.GetProperty("textWidth").GetDouble()
+                + measurements.GetProperty("paddingLeft").GetDouble()
+                + measurements.GetProperty("paddingRight").GetDouble();
+            var cellWidth = measurements.GetProperty("cellWidth").GetDouble();
+
+            Assert.Equal("nowrap", measurements.GetProperty("whiteSpace").GetString());
+            Assert.True(measurements.GetProperty("paddingRight").GetDouble() > 0,
+                "The exercise column must leave trailing space after the longest name.");
+            Assert.InRange(cellWidth, requiredWidth - 1, requiredWidth + 2);
+
+            var columnWidths = await exerciseCells.EvaluateAllAsync<double[]>(
+                "cells => cells.map(cell => cell.getBoundingClientRect().width)");
+            Assert.All(columnWidths, width => Assert.InRange(Math.Abs(width - cellWidth), 0, 1));
+
+            var wrapper = page.Locator(".session-detail__table-wrapper");
+            await SetHorizontalScrollAsync(wrapper, 1);
+            await AssertStickyCellsAlignedAsync(
+                wrapper,
+                page.Locator(".session-detail__th").First,
+                longestCell);
+            await SetHorizontalScrollAsync(wrapper, 0);
+            await AssertStickyCellsAlignedAsync(
+                wrapper,
+                page.Locator(".session-detail__th").First,
+                longestCell);
+        }
+        finally
+        {
+            await page.UnrouteAsync($"**/api/sessions/{sessionId}");
+            await page.CloseAsync();
+        }
+    }
+
+    [Theory]
+    [InlineData("light")]
+    [InlineData("dark")]
+    public async Task SessionDetailPage_FiftyRowsScrollPaintMeetsBudget(string theme)
+    {
+        var page = await CreatePageAsync();
+        var sessionId = Guid.NewGuid();
+        try
+        {
+            await page.SetViewportSizeAsync(600, 900);
+            await page.EvaluateAsync(
+                "selectedTheme => localStorage.setItem('workout-tracker-theme', selectedTheme)",
+                theme);
+            var exerciseNames = Enumerable.Range(1, 50).Select(index => $"Exercise {index}").ToArray();
+            await StubSessionDetailAsync(page, sessionId, exerciseNames);
+            await page.GotoAsync($"{_webApp.BaseUrl}/history/session?id={sessionId}");
+            await page.WaitForSelectorAsync(".session-detail__row:nth-child(50)");
+
+            var offsets = new[] { 0d, 0.25d, 0.5d, 0.75d, 1d };
+            var ratios = new double[20];
+            for (var index = 0; index < ratios.Length; index++)
+            {
+                ratios[index] = offsets[index % offsets.Length];
+            }
+            var samples = await MeasureScrollPaintLatenciesAsync(
+                page.Locator(".session-detail__table-wrapper"),
+                ratios);
+            var passingSamples = samples.Count(sample => sample <= 100);
+            var orderedSamples = samples.OrderBy(sample => sample).ToArray();
+            var p95 = orderedSamples[18];
+
+            var formattedSamples = string.Join(", ",
+                samples.Select(sample => sample.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)));
+            Console.WriteLine(FormattableString.Invariant(
+                $"Sticky column {theme} samples (ms): {formattedSamples}; p95={p95:F2}"));
+            Assert.True(passingSamples >= 19,
+                FormattableString.Invariant(
+                    $"Expected at least 19 of 20 {theme} samples within 100ms, got {passingSamples}. p95={p95:F2}ms."));
+        }
+        finally
+        {
+            await page.UnrouteAsync($"**/api/sessions/{sessionId}");
             await page.CloseAsync();
         }
     }
