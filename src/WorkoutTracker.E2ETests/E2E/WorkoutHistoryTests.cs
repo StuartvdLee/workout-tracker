@@ -606,11 +606,12 @@ public class WorkoutHistoryTests
                         headerStyle.zIndex,
                         bodyStyle.zIndex,
                         headerStyle.borderBottomWidth,
+                        headerStyle.boxShadow,
                         bodyStyle.boxShadow,
                     ];
                 }");
 
-            Assert.Equal(8, styles.Length);
+            Assert.Equal(9, styles.Length);
             Assert.Equal(styles[1], styles[0]);
             Assert.Equal(styles[1], styles[2]);
             Assert.DoesNotContain("rgba(0, 0, 0, 0)", styles.Take(4));
@@ -618,6 +619,7 @@ public class WorkoutHistoryTests
             Assert.Equal("2", styles[5]);
             Assert.Equal("0px", styles[6]);
             Assert.Equal("none", styles[7]);
+            Assert.Equal("none", styles[8]);
         }
         finally
         {
