@@ -71,12 +71,8 @@ public class WorkoutHistoryTests
     private static async Task StartWorkoutViaPrestartModalAsync(IPage page)
     {
         await page.Locator(".workout-list__start-btn").First.ClickAsync();
-        // Workouts with fewer than 2 exercises skip the pre-start modal and navigate directly.
-        if (page.Url.Contains("/active-session?", StringComparison.Ordinal) &&
-            !page.Url.Contains("sets=", StringComparison.Ordinal))
-        {
-            await page.GotoAsync($"{page.Url}&sets=3");
-        }
+        await page.Locator("#prestart-sets").SelectOptionAsync("3");
+        await page.Locator("#prestart-no").ClickAsync();
     }
 
     /// <summary>

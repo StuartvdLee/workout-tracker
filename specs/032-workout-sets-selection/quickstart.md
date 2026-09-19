@@ -79,11 +79,11 @@ dotnet run --project src/WorkoutTracker.E2ETests/WorkoutTracker.E2ETests.csproj 
 - Release solution build: passed.
 - Frontend tests: 92 passed.
 - Backend tests: 167 passed.
-- Playwright E2E tests: 280 passed.
+- Playwright E2E tests: 281 passed.
 - TypeScript build: passed.
 - No separate npm lint script exists in the repository; TypeScript compilation was used as the frontend static check.
 - `git diff --check`: passed.
 
-## Delivery Caveat
+## Additional Start Path
 
-The Workouts-page pre-start modal retains existing direct-navigation paths that do not append `sets`; the supported delivered flow is the `Let's go!` page described above. This is a follow-up consistency issue, not part of the completed artifact scope.
+The Workouts-page Start action also collects Sets in its pre-start modal. All direct navigation paths include `sets=3|5`, including single-exercise workouts and both randomized and original-order starts.

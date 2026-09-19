@@ -122,7 +122,7 @@
 - [X] T036 Add an EF Core command-counting test interceptor to `src/WorkoutTracker.UnitTests/Infrastructure/ApiFixture.cs`, then assert PB-04/PB-05 exactly-two-query budgets and PB-07 one-top-level-Sets contract in `src/WorkoutTracker.UnitTests/Api/SessionApiTests.cs`
 - [X] T037 Assert PB-06 by proving the selector ignores usable data beyond `MaxSessionsToScan = 200`, and add the PB-10 25-exercise session-create `< 2000 ms` local-host smoke assertion in `src/WorkoutTracker.UnitTests/Api/PreviousExerciseDataSelectorTests.cs` and `src/WorkoutTracker.UnitTests/Api/SessionApiTests.cs`
 - [ ] T038 **Deferred pre-release follow-up**: Execute the Tier 3 procedure from `specs/032-workout-sets-selection/quickstart.md` after establishing a separate pre-feature baseline commit; seed 25 exercises and 10 historical sessions, discard 5 warm-ups, time 20 iterations per flow on both commits in the same environment/session, compute p95, verify delta is within the greater of 10% or 100 ms, and record both p95 values, delta, machine, and commit SHAs in the pull request description
-- [X] T039 Run all available automated validation from `specs/032-workout-sets-selection/quickstart.md`: Release build, TypeScript build, 92 frontend tests, 167 backend tests, 280 Playwright tests, automated performance budgets, manual Sets flows, and whitespace validation. The repository has no npm `lint` script, and T038 is explicitly deferred.
+- [X] T039 Run all available automated validation from `specs/032-workout-sets-selection/quickstart.md`: Release build, TypeScript build, 92 frontend tests, 167 backend tests, 281 Playwright tests, automated performance budgets, manual Sets flows, and whitespace validation. The repository has no npm `lint` script, and T038 is explicitly deferred.
 
 ---
 
@@ -239,7 +239,7 @@ Task T029: Responsive table styling in styles.css
 - PR #159 contains the delivered implementation.
 - T001-T037 and T039 are complete.
 - T038 remains intentionally open as a pre-release comparative p95 measurement, not as an implementation blocker.
-- Delivered follow-up fixes include missing/undefined legacy Sets rendering and explicit detail-table column widths to prevent header overlap.
+- Delivered follow-up fixes include missing/undefined legacy Sets rendering, explicit detail-table column widths to prevent header overlap, and Sets selection for every Workouts-page Start path.
 
 ## Notes
 

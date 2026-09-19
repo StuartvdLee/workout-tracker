@@ -23,6 +23,7 @@ Rules:
 - Missing sets shows `Please select sets` using the existing form error treatment and focuses/marks the sets control.
 - Valid navigation includes `sets=3` or `sets=5` together with existing `id` and optional randomized `order` parameters.
 - No additional fetch is introduced.
+- The Workouts-page Start modal also requires Sets before either original-order or randomized navigation, including single-exercise workouts.
 
 ## Active Session (`Last time`)
 

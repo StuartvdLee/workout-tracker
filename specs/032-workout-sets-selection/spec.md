@@ -118,7 +118,7 @@ When viewing a previous workout in History, the user sees a "Sets" column and a 
 ## Delivery Verification
 
 - **Implemented**: PR #159 (`https://github.com/StuartvdLee/workout-tracker/pull/159`).
-- **Verified**: Release build passed; frontend tests passed (92); backend tests passed (167); Playwright E2E tests passed (280); TypeScript build passed; whitespace validation passed.
+- **Verified**: Release build passed; frontend tests passed (92); backend tests passed (167); Playwright E2E tests passed (281); TypeScript build passed; whitespace validation passed.
 - **Verified behavior**: New sessions require and persist Sets 3 or 5; active-workout comparisons and history current/previous Sets render correctly; legacy missing Sets is omitted or shown with the existing no-data marker; session-level editing remains synchronized.
 - **Not completed**: The manual pre-feature versus feature p95 baseline procedure in PR-001/SC-006 was not run because there is no separate pre-feature baseline commit for this branch. Automated request-count, query-count, selector-bound, and local latency smoke budgets passed.
 - **Tooling note**: The repository has no separate npm `lint` script; TypeScript compilation and the existing frontend test suite were run instead.
