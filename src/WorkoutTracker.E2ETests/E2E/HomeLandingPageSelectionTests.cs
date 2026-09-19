@@ -57,6 +57,23 @@ public class HomeLandingPageSelectionTests
     }
 
     [Fact]
+    public async Task HomePage_DisplaysSetsDropdownBelowWorkout_WithExactOptionsAndSharedStyle()
+    {
+        var page = await CreatePageAsync();
+        var sets = page.Locator("#sets-select");
+
+        await Expect(page.Locator("label[for='sets-select']")).ToHaveTextAsync("Sets");
+        await Expect(sets).ToHaveClassAsync("workout-form__select");
+        Assert.Equal("", await sets.InputValueAsync());
+        Assert.Equal(["Select sets", "3", "5"], await sets.Locator("option").AllTextContentsAsync());
+        Assert.Equal(
+            "sets-select",
+            await page.Locator(".workout-form__group").Nth(1).Locator("select").GetAttributeAsync("id"));
+
+        await page.CloseAsync();
+    }
+
+    [Fact]
     public async Task HomePage_DisplaysStartWorkoutButton()
     {
         var page = await CreatePageAsync();
@@ -77,6 +94,7 @@ public class HomeLandingPageSelectionTests
 
         var select = page.Locator("#workout-select");
         await select.SelectOptionAsync(new SelectOptionValue { Label = label });
+        await page.Locator("#sets-select").SelectOptionAsync("3");
 
         var selectedValue = await select.InputValueAsync();
         Assert.NotEmpty(selectedValue);
@@ -103,6 +121,22 @@ public class HomeLandingPageSelectionTests
         await page.CloseAsync();
     }
 
+    [Fact]
+    public async Task StartWorkout_NavigationIncludesSelectedSets()
+    {
+        var page = await CreatePageAsync();
+        await page.Locator("#workout-select").SelectOptionAsync(new SelectOptionValue { Label = "Push" });
+        await page.Locator("#sets-select").SelectOptionAsync("5");
+
+        await page.Locator("button[type='submit']").ClickAsync();
+
+        await Expect(page).ToHaveURLAsync(new System.Text.RegularExpressions.Regex(@"active-session\?.*sets=5"));
+        await page.CloseAsync();
+    }
+
     private static ILocatorAssertions Expect(ILocator locator) =>
         Assertions.Expect(locator);
+
+    private static IPageAssertions Expect(IPage page) =>
+        Assertions.Expect(page);
 }

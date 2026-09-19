@@ -134,7 +134,17 @@ export async function render(container: HTMLElement): Promise<void> {
       </div>
       <div class="prestart-modal-backdrop" id="workout-prestart-backdrop" style="display:none;">
         <div class="prestart-modal" role="dialog" aria-modal="true" aria-labelledby="prestart-modal-title">
-          <h2 class="prestart-modal__title" id="prestart-modal-title">Randomise exercise order?</h2>
+          <h2 class="prestart-modal__title" id="prestart-modal-title">Start workout</h2>
+          <div class="workout-form__group">
+            <label class="workout-form__label" for="prestart-sets">Sets</label>
+            <select class="workout-form__select" id="prestart-sets" aria-describedby="prestart-error" required>
+              <option value="" disabled selected>Select sets</option>
+              <option value="3">3</option>
+              <option value="5">5</option>
+            </select>
+          </div>
+          <p id="prestart-randomise-question">Randomise exercise order?</p>
+          <div class="workout-form__error" id="prestart-error" role="alert" aria-live="polite"></div>
           <div class="prestart-modal__actions">
             <button class="prestart-modal__no-btn" type="button" id="prestart-no">No</button>
             <button class="prestart-modal__yes-btn" type="button" id="prestart-yes">Yes</button>
@@ -937,25 +947,32 @@ function initPreStartModal(): void {
 
 function openPreStartModal(workout: Workout, triggerBtn: HTMLButtonElement): void {
   const backdrop = document.getElementById("workout-prestart-backdrop") as HTMLElement | null;
+  const setsSelect = document.getElementById("prestart-sets") as HTMLSelectElement | null;
+  const randomiseQuestion = document.getElementById("prestart-randomise-question") as HTMLElement | null;
   const yesBtn = document.getElementById("prestart-yes") as HTMLButtonElement | null;
+  const noBtn = document.getElementById("prestart-no") as HTMLButtonElement | null;
 
   if (!backdrop) return;
-
-  if (workout.exercises.length < 2) {
-    navigate(`/active-session?id=${workout.plannedWorkoutId}`);
-    return;
-  }
 
   prestartWorkout = workout;
   prestartTriggerBtn = triggerBtn;
 
+  const canRandomise = workout.exercises.length >= 2;
+  if (randomiseQuestion) randomiseQuestion.style.display = canRandomise ? "" : "none";
+  if (yesBtn) yesBtn.style.display = canRandomise ? "" : "none";
+  if (noBtn) noBtn.textContent = canRandomise ? "No" : "Start";
+
   backdrop.style.display = "";
-  yesBtn?.focus();
+  setsSelect?.focus();
 }
 
 function closePreStartModal(): void {
   const backdrop = document.getElementById("workout-prestart-backdrop") as HTMLElement | null;
+  const setsSelect = document.getElementById("prestart-sets") as HTMLSelectElement | null;
+  const errorEl = document.getElementById("prestart-error") as HTMLElement | null;
   if (backdrop) backdrop.style.display = "none";
+  if (setsSelect) setsSelect.value = "";
+  if (errorEl) errorEl.textContent = "";
 
   const triggerBtn = prestartTriggerBtn;
   prestartWorkout = null;
@@ -964,19 +981,40 @@ function closePreStartModal(): void {
   triggerBtn?.focus();
 }
 
+function getPrestartSets(): number | null {
+  const setsSelect = document.getElementById("prestart-sets") as HTMLSelectElement | null;
+  const errorEl = document.getElementById("prestart-error") as HTMLElement | null;
+  const sets = Number(setsSelect?.value);
+
+  if (sets !== 3 && sets !== 5) {
+    if (errorEl) errorEl.textContent = "Please select sets";
+    setsSelect?.focus();
+    return null;
+  }
+
+  if (errorEl) errorEl.textContent = "";
+  return sets;
+}
+
 function handleYes(): void {
   if (!prestartWorkout) return;
+  const sets = getPrestartSets();
+  if (sets === null) return;
+
   const workoutId = prestartWorkout.plannedWorkoutId;
   const order = shuffle(prestartWorkout.exercises).map((ex) => ex.exerciseId).join(",");
   closePreStartModal();
-  navigate(`/active-session?id=${workoutId}&order=${order}`);
+  navigate(`/active-session?id=${workoutId}&sets=${sets}&order=${order}`);
 }
 
 function handleNo(): void {
   if (!prestartWorkout) return;
+  const sets = getPrestartSets();
+  if (sets === null) return;
+
   const workoutId = prestartWorkout.plannedWorkoutId;
   closePreStartModal();
-  navigate(`/active-session?id=${workoutId}`);
+  navigate(`/active-session?id=${workoutId}&sets=${sets}`);
 }
 
 // =============================================================================

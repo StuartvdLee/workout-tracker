@@ -58,6 +58,7 @@ public class HomeLandingPageRegressionTests
             var button = page.Locator("button[type='submit']");
             var error = page.Locator("#workout-error");
             await select.SelectOptionAsync(new SelectOptionValue { Label = label });
+            await page.Locator("#sets-select").SelectOptionAsync("3");
             await button.ClickAsync();
             await Assertions.Expect(error).ToBeHiddenAsync();
             // Navigate back to home for the next iteration (form submit navigates away)

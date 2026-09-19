@@ -72,4 +72,36 @@ public class HomeLandingPagePerformanceTests
 
         await page.CloseAsync();
     }
+
+    [Fact]
+    public async Task HomePage_LoadAndStartUseExistingRequestBudgets()
+    {
+        WebAppFixture.ResetWorkouts();
+        WebAppFixture.SeedWorkout("Request Budget Workout");
+        var page = await _playwright.Browser.NewPageAsync();
+        var apiRequests = new List<string>();
+        page.Request += (_, request) =>
+        {
+            if (request.Url.StartsWith($"{_webApp.BaseUrl}/api/", StringComparison.Ordinal))
+            {
+                apiRequests.Add(request.Url);
+            }
+        };
+
+        await page.GotoAsync(_webApp.BaseUrl);
+        await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        Assert.Equal(2, apiRequests.Count);
+
+        apiRequests.Clear();
+        await page.Locator("#workout-select option:not([disabled])").First.WaitForAsync(
+            new() { State = WaitForSelectorState.Attached });
+        await page.Locator("#workout-select").SelectOptionAsync(
+            new SelectOptionValue { Index = 1 });
+        await page.Locator("#sets-select").SelectOptionAsync("3");
+        await page.Locator("button[type='submit']").ClickAsync();
+        await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+        Assert.Equal(2, apiRequests.Count);
+        await page.CloseAsync();
+    }
 }

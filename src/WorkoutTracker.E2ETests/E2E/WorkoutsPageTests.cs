@@ -60,15 +60,6 @@ public class WorkoutsPageTests
         await page.Locator(".workout-list__name").Filter(new() { HasText = name }).WaitForAsync();
     }
 
-    /// <summary>
-    /// Clicks the Start button on the first workout. Workouts with fewer than 2 exercises
-    /// skip the pre-start modal and navigate directly to the active session.
-    /// </summary>
-    private static async Task StartWorkoutViaPrestartModalAsync(IPage page)
-    {
-        await page.Locator(".workout-list__start-btn").First.ClickAsync();
-    }
-
     // ──────────────────────────────────────────
     // Navigation & Page Loading
     // ──────────────────────────────────────────
@@ -873,8 +864,13 @@ public class WorkoutsPageTests
 
             var startBtn = page.Locator(".workout-list__start-btn").First;
             await startBtn.ClickAsync();
-            // 1-exercise workouts skip the pre-start modal and navigate directly.
-            await Expect(page).ToHaveURLAsync(new Regex(@"/active-session\?id="));
+            await Expect(page.Locator("#workout-prestart-backdrop")).ToBeVisibleAsync();
+            await Expect(page.Locator("#prestart-randomise-question")).ToBeHiddenAsync();
+            await Expect(page.Locator("#prestart-no")).ToHaveTextAsync("Start");
+            await page.Locator("#prestart-sets").SelectOptionAsync("3");
+            await page.Locator("#prestart-no").ClickAsync();
+
+            await Expect(page).ToHaveURLAsync(new Regex(@"/active-session\?id=.*&sets=3"));
         }
         finally
         {
@@ -893,9 +889,32 @@ public class WorkoutsPageTests
 
             await page.Locator(".workout-list__start-btn").First.ClickAsync();
             await page.WaitForSelectorAsync("#workout-prestart-backdrop", new() { State = WaitForSelectorState.Visible });
+            await page.Locator("#prestart-sets").SelectOptionAsync("5");
             await page.Locator("#prestart-yes").ClickAsync();
 
-            await Expect(page).ToHaveURLAsync(new Regex(@"/active-session\?id=.*&order="));
+            await Expect(page).ToHaveURLAsync(new Regex(@"/active-session\?id=.*&sets=5&order="));
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task PrestartModal_RequiresSetsBeforeStarting()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await CreateTwoExerciseWorkoutViaApiAsync(page);
+            await NavigateToWorkoutsAsync(page);
+
+            await page.Locator(".workout-list__start-btn").First.ClickAsync();
+            await page.Locator("#prestart-no").ClickAsync();
+
+            await Expect(page.Locator("#prestart-error")).ToHaveTextAsync("Please select sets");
+            await Expect(page.Locator("#prestart-sets")).ToBeFocusedAsync();
+            await Expect(page.Locator("#workout-prestart-backdrop")).ToBeVisibleAsync();
         }
         finally
         {
@@ -939,6 +958,7 @@ public class WorkoutsPageTests
             await page.Locator(".sidebar__link[data-page='home']").ClickAsync();
             await page.Locator("#workout-select option:not([disabled])").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
             await page.Locator("#workout-select").SelectOptionAsync(new SelectOptionValue { Label = "Toggle Test Workout" });
+            await page.Locator("#sets-select").SelectOptionAsync("3");
 
             var toggle = page.Locator("#home-randomise-toggle");
             await Expect(toggle).ToBeVisibleAsync();

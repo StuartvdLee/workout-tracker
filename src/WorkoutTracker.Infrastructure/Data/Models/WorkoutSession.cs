@@ -12,5 +12,7 @@ public class WorkoutSession
 
     public int? OverallEffort { get; set; }
 
+    public int? Sets { get; set; }
+
     public ICollection<LoggedExercise> LoggedExercises { get; set; } = [];
 }

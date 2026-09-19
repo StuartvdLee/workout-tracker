@@ -656,7 +656,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
                 hasPreviousSession = true,
                 completedAt = (DateTime?)selectedExercises.Values.Max(e => e.CompletedAt),
                 exercises = selectedExercises.Values
-                    .Select(e => new { e.ExerciseId, e.LoggedWeight, e.Effort, e.Sequence, e.CompletedAt })
+                    .Select(e => new { e.ExerciseId, e.LoggedWeight, e.Effort, e.Sequence, e.Sets, e.CompletedAt })
                     .ToArray(),
             });
         });
@@ -695,6 +695,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
                 loggedExercises)
             {
                 OverallEffort = body?.OverallEffort,
+                Sets = body?.Sets,
             };
 
             lock (_sessionsLock)
@@ -710,6 +711,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
                     session.WorkoutName,
                     session.CompletedAt,
                     session.OverallEffort,
+                    session.Sets,
                 },
                 statusCode: 201);
         });
@@ -773,6 +775,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
                     s.WorkoutName,
                     s.CompletedAt,
                     OverallEffort = s.OverallEffort,
+                    Sets = s.Sets,
                     LoggedExercises = s.LoggedExercises
                         .Select(le =>
                         {
@@ -849,6 +852,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
                 session.WorkoutName,
                 session.CompletedAt,
                 OverallEffort = session.OverallEffort,
+                Sets = session.Sets,
                 PreviousOverallEffort = priorSession?.OverallEffort,
                 Exercises = session.LoggedExercises.Select(le =>
                 {
@@ -863,6 +867,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
                         le.Effort,
                         PreviousWeight = prior?.LoggedWeight,
                         PreviousEffort = prior?.Effort,
+                        PreviousSets = prior?.Sets,
                     };
                 }).ToList(),
             });
@@ -934,6 +939,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
                 }
 
                 session.OverallEffort = body.OverallEffort;
+                session.Sets = body.Sets;
                 session.LoggedExercises = session.LoggedExercises
                     .Select(le =>
                     {
@@ -1033,6 +1039,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
                     loggedExercise.LoggedWeight,
                     loggedExercise.Effort,
                     loggedExercise.Sequence,
+                    session.Sets,
                     session.CompletedAt);
             }
 
@@ -1089,6 +1096,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
             session.WorkoutName,
             session.CompletedAt,
             OverallEffort = session.OverallEffort,
+            Sets = session.Sets,
             PreviousOverallEffort = priorSession?.OverallEffort,
             Exercises = session.LoggedExercises.Select(le =>
             {
@@ -1104,6 +1112,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
                     le.Effort,
                     PreviousWeight = prior?.LoggedWeight,
                     PreviousEffort = prior?.Effort,
+                    PreviousSets = prior?.Sets,
                 };
             }).ToList(),
         });
@@ -1114,6 +1123,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
         string? LoggedWeight,
         int? Effort,
         int? Sequence,
+        int? Sets,
         DateTime CompletedAt);
 
     private sealed class ExerciseRequest
@@ -1143,6 +1153,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
     private sealed class SessionRequest
     {
         public int? OverallEffort { get; set; }
+        public int? Sets { get; set; }
         public SessionLoggedExerciseRequest[]? LoggedExercises { get; set; }
     }
 
@@ -1184,4 +1195,5 @@ public record MockWorkoutSession(string SessionId, string PlannedWorkoutId, stri
 {
     public List<MockLoggedExercise> LoggedExercises { get; set; } = LoggedExercises;
     public int? OverallEffort { get; set; }
+    public int? Sets { get; set; }
 }

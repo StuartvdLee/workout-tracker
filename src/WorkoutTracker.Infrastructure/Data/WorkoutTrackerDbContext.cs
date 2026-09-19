@@ -142,9 +142,15 @@ public class WorkoutTrackerDbContext(DbContextOptions<WorkoutTrackerDbContext> o
 
             entity.Property<DateTime>("CompletedAt").HasDefaultValueSql("now()");
 
-            entity.ToTable(t => t.HasCheckConstraint(
-                "ck_workout_session_overall_effort_range",
-                "overall_effort IS NULL OR (overall_effort >= 1 AND overall_effort <= 10)"));
+            entity.ToTable(t =>
+            {
+                t.HasCheckConstraint(
+                    "ck_workout_session_overall_effort_range",
+                    "overall_effort IS NULL OR (overall_effort >= 1 AND overall_effort <= 10)");
+                t.HasCheckConstraint(
+                    "ck_workout_session_sets_allowed",
+                    "sets IS NULL OR sets IN (3, 5)");
+            });
         });
 
         modelBuilder.Entity<LoggedExercise>(entity =>

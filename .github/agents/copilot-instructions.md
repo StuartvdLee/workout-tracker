@@ -1,6 +1,6 @@
 # stark-ray Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-07-19
+Auto-generated from all feature plans. Last updated: 2026-09-19
 
 ## Active Technologies
 - PostgreSQL via EF Core — adding one nullable integer column (`effort`) to the existing `logged_exercise` table (005-active-workout-effort)
@@ -27,6 +27,7 @@ Auto-generated from all feature plans. Last updated: 2026-07-19
 - C# on .NET 10.0 (backend — no changes), TypeScript ~7.0.2 (frontend — primary change) + ASP.NET Core, Aspire, EF Core/Npgsql, vanilla TypeScript, Playwright, Vitest. (030-edit-exercise-order)
 - C# on .NET 10.0 (backend), TypeScript ~7.0.2 (frontend) + ASP.NET Core minimal API, .NET Aspire, Entity Framework Core with Npgsql, vanilla TypeScript, Playwright, Vitest (031-edit-past-workouts)
 - PostgreSQL via EF Core — no schema changes; updates existing `workout_session.overall_effort`, `logged_exercise.logged_weight`, and `logged_exercise.effort` columns (031-edit-past-workouts)
+- PostgreSQL via EF Core — add one nullable integer `sets` column and `NULL/3/5` check constraint to `workout_session` (032-workout-sets-selection)
 
 - C# on .NET 10.0 (backend), TypeScript 5.9.3 (frontend) + ASP.NET Core minimal API, .NET Aspire 13.1.2, Entity Framework Core with Npgsql, vanilla TypeScript (no JS frameworks) (003-add-exercises)
 
@@ -46,9 +47,9 @@ npm test && npm run lint
 C# on .NET 10.0 (backend), TypeScript 5.9.3 (frontend): Follow standard conventions
 
 ## Recent Changes
+- 032-workout-sets-selection: Added C# on .NET 10.0 (backend), TypeScript ~7.0.2 (frontend) + ASP.NET Core minimal API, .NET Aspire, Entity Framework Core with Npgsql, vanilla TypeScript, Playwright, Vitest
 - 031-edit-past-workouts: Added C# on .NET 10.0 (backend), TypeScript ~7.0.2 (frontend) + ASP.NET Core minimal API, .NET Aspire, Entity Framework Core with Npgsql, vanilla TypeScript, Playwright, Vitest
 - 030-edit-exercise-order: Added C# on .NET 10.0 (backend — no changes), TypeScript ~7.0.2 (frontend — primary change) + ASP.NET Core, Aspire, EF Core/Npgsql, vanilla TypeScript, Playwright, Vitest.
-- 029-latest-exercise-data: Added C# on .NET 10.0 (backend), TypeScript ~7.0.2 (frontend) + ASP.NET Core minimal API, .NET Aspire, Entity Framework Core with Npgsql, vanilla TypeScript (no JS frameworks)
 
 
 <!-- MANUAL ADDITIONS START -->

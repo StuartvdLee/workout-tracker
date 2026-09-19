@@ -25,6 +25,7 @@ interface PreviousExerciseData {
   readonly loggedWeight: string | null;
   readonly effort: number | null;
   readonly sequence: number | null;
+  readonly sets?: number | null;
   readonly completedAt?: string;
 }
 
@@ -44,21 +45,24 @@ let isOrderEditing = false;
 let orderBeforeEditing: WorkoutExercise[] | null = null;
 let hasOrderChanges = false;
 let currentPreviousData: Map<string, PreviousExerciseData> | "error" | null = null;
+let sessionSets: 3 | 5 | null = null;
 const MODAL_FOCUSABLE_SELECTOR =
   'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [contenteditable="true"], [tabindex]:not([tabindex="-1"])';
 
 export async function render(container: HTMLElement): Promise<void> {
   const params = new URLSearchParams(window.location.search);
   const workoutId = params.get("id");
+  const setsParam = params.get("sets");
 
   if (!workoutId) {
     container.innerHTML = `
       <div class="active-session">
-        <p>No workout selected. <a href="/workouts">Go to Workouts</a></p>
+        <p>No workout selected. <a href="/">Return to Let's go!</a></p>
       </div>
     `;
     return;
   }
+  sessionSets = setsParam === "3" || setsParam === "5" ? Number(setsParam) as 3 | 5 : null;
 
   // Reset state
   workout = null;
@@ -478,6 +482,7 @@ function renderExerciseInputs(): void {
         // Build value string from non-null fields
         const parts: string[] = [];
         if (entry.loggedWeight !== null) parts.push(`${entry.loggedWeight} KG`);
+        if (entry.sets === 3 || entry.sets === 5) parts.push(`${entry.sets} sets`);
         if (entry.effort !== null) parts.push(`${entry.effort} — ${getEffortLabel(entry.effort)}`);
         if (parts.length > 0 && entry.sequence !== null) parts.unshift(`#${entry.sequence + 1}`);
 
@@ -747,6 +752,10 @@ async function handleSave(overallEffort: number | null): Promise<void> {
   if (!saveBtn) return;
 
   if (apiErrorEl) apiErrorEl.textContent = "";
+  if (sessionSets === null) {
+    if (apiErrorEl) apiErrorEl.textContent = "Sets must be 3 or 5. Return to Let's go! and select sets.";
+    return;
+  }
 
   // Client-side weight validation
   const exercisesEl = document.getElementById("session-exercises");
@@ -784,7 +793,7 @@ async function handleSave(overallEffort: number | null): Promise<void> {
     const response = await fetch(`/api/workouts/${workout.plannedWorkoutId}/sessions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ loggedExercises, overallEffort }),
+      body: JSON.stringify({ sets: sessionSets, loggedExercises, overallEffort }),
     });
 
     if (response.ok) {

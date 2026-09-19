@@ -96,7 +96,7 @@ public class WorkoutReorderTests
     private async Task<(string WorkoutId, string BenchPressId, string SquatId, string DeadliftId)> OpenCurrentWorkoutWithThreeExercisesAsync(IPage page)
     {
         var workout = await CreateThreeExerciseWorkoutViaApiAsync(page);
-        await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workout.WorkoutId}");
+        await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workout.WorkoutId}&sets=3");
         await page.WaitForSelectorAsync(".active-session__exercise-item:nth-child(3)");
         return workout;
     }

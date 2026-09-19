@@ -1,6 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using WorkoutTracker.Infrastructure.Data;
+using WorkoutTracker.Infrastructure.Data.Models;
 using Xunit;
 using WorkoutTracker.UnitTests.Infrastructure;
 
@@ -50,6 +54,73 @@ public class SessionApiTests : IAsyncLifetime
 
     // --- POST /api/workouts/{id}/sessions ---
 
+    [Theory]
+    [InlineData(3)]
+    [InlineData(5)]
+    public async Task CreateSession_PersistsAllowedSetsAndReturnsItFromCreateAndList(int sets)
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync($"Sets {sets}", $"Exercise {sets}");
+
+        var response = await _client.PostAsJsonAsync(
+            $"/api/workouts/{workoutId}/sessions",
+            new { Sets = sets, LoggedExercises = new[] { new { ExerciseId = exerciseId } } });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var created = await response.Content.ReadFromJsonAsync<SessionDetailDto>();
+        Assert.Equal(sets, created?.Sets);
+
+        var listed = await _client.GetFromJsonAsync<List<SessionDto>>("/api/sessions");
+        Assert.Equal(sets, Assert.Single(listed!).Sets);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(0)]
+    [InlineData(4)]
+    [InlineData(6)]
+    public async Task CreateSession_RejectsMissingNullOrInvalidSets(int? sets)
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync($"Invalid Sets {sets}", Guid.NewGuid().ToString());
+        object payload = sets is null
+            ? new { LoggedExercises = new[] { new { ExerciseId = exerciseId } } }
+            : new { Sets = sets, LoggedExercises = new[] { new { ExerciseId = exerciseId } } };
+
+        var response = await _client.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", payload);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("Sets must be 3 or 5.", (await response.Content.ReadFromJsonAsync<ErrorDto>())?.Error);
+    }
+
+    [Fact]
+    public async Task CreateSession_RejectsExplicitNullSets()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Null Sets", "Null Sets Exercise");
+
+        var response = await _client.PostAsJsonAsync(
+            $"/api/workouts/{workoutId}/sessions",
+            new { Sets = (int?)null, LoggedExercises = new[] { new { ExerciseId = exerciseId } } });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("Sets must be 3 or 5.", (await response.Content.ReadFromJsonAsync<ErrorDto>())?.Error);
+    }
+
+    [Fact]
+    public async Task DatabaseConstraint_RejectsInvalidSets()
+    {
+        var (workoutId, _) = await CreateWorkoutWithExerciseAsync("Constraint Sets", "Constraint Exercise");
+        await using var scope = _fixture.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<WorkoutTrackerDbContext>();
+        db.WorkoutSessions.Add(new WorkoutSession
+        {
+            WorkoutSessionId = Guid.NewGuid(),
+            PlannedWorkoutId = workoutId,
+            WorkoutName = "Constraint Sets",
+            Sets = 4,
+        });
+
+        await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+    }
+
     [Fact]
     public async Task CreateSession_Returns201_WhenWorkoutExists()
     {
@@ -59,6 +130,7 @@ public class SessionApiTests : IAsyncLifetime
             $"/api/workouts/{workoutId}/sessions",
             new
             {
+                Sets = 3,
                 LoggedExercises = new[]
                 {
                     new { ExerciseId = exerciseId, LoggedWeight = "100", Notes = "Felt strong", Effort = 7 }
@@ -81,6 +153,7 @@ public class SessionApiTests : IAsyncLifetime
             $"/api/workouts/{workoutId}/sessions",
             new
             {
+                Sets = 3,
                 LoggedExercises = new[]
                 {
                     new { ExerciseId = exerciseId, LoggedWeight = "80", Notes = (string?)null, Effort = (int?)null }
@@ -99,6 +172,7 @@ public class SessionApiTests : IAsyncLifetime
             $"/api/workouts/{workoutId}/sessions",
             new
             {
+                Sets = 3,
                 LoggedExercises = new[]
                 {
                     new { ExerciseId = exerciseId, LoggedWeight = "60", Notes = (string?)null, Effort = 8 }
@@ -123,6 +197,7 @@ public class SessionApiTests : IAsyncLifetime
             $"/api/workouts/{workoutId}/sessions",
             new
             {
+                Sets = 3,
                 LoggedExercises = new[]
                 {
                     new { ExerciseId = exerciseId, LoggedWeight = (string?)null, Notes = (string?)null, Effort = (int?)null }
@@ -145,6 +220,7 @@ public class SessionApiTests : IAsyncLifetime
             $"/api/workouts/{workoutId}/sessions",
             new
             {
+                Sets = 3,
                 LoggedExercises = new[]
                 {
                     new { ExerciseId = exerciseId, LoggedWeight = (string?)null }
@@ -167,6 +243,7 @@ public class SessionApiTests : IAsyncLifetime
             $"/api/workouts/{workoutId}/sessions",
             new
             {
+                Sets = 3,
                 LoggedExercises = new[]
                 {
                     new { ExerciseId = exerciseId, LoggedWeight = (string?)null, Notes = (string?)null, Effort = 11 }
@@ -181,6 +258,7 @@ public class SessionApiTests : IAsyncLifetime
             $"/api/workouts/{workoutId}/sessions",
             new
             {
+                Sets = 3,
                 LoggedExercises = new[]
                 {
                     new { ExerciseId = exerciseId, LoggedWeight = (string?)null, Notes = (string?)null, Effort = 0 }
@@ -201,6 +279,7 @@ public class SessionApiTests : IAsyncLifetime
             $"/api/workouts/{workoutId}/sessions",
             new
             {
+                Sets = 3,
                 LoggedExercises = new[]
                 {
                     new { ExerciseId = exerciseId, LoggedWeight = new string('x', 101), Notes = (string?)null, Effort = (int?)null }
@@ -233,6 +312,7 @@ public class SessionApiTests : IAsyncLifetime
             $"/api/workouts/{workoutId}/sessions",
             new
             {
+                Sets = 3,
                 LoggedExercises = new[]
                 {
                     new { ExerciseId = exerciseId, LoggedWeight = "75", Notes = (string?)null, Effort = 6 }
@@ -255,7 +335,7 @@ public class SessionApiTests : IAsyncLifetime
 
         var response = await _client.PostAsJsonAsync(
             $"/api/workouts/{workoutId}/sessions",
-            new { LoggedExercises = Array.Empty<object>() });
+            new { Sets = 3, LoggedExercises = Array.Empty<object>() });
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
     }
@@ -265,7 +345,7 @@ public class SessionApiTests : IAsyncLifetime
     {
         var response = await _client.PostAsJsonAsync(
             $"/api/workouts/{Guid.NewGuid()}/sessions",
-            new { LoggedExercises = Array.Empty<object>() });
+            new { Sets = 3, LoggedExercises = Array.Empty<object>() });
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         var error = await response.Content.ReadFromJsonAsync<ErrorDto>();
@@ -279,7 +359,7 @@ public class SessionApiTests : IAsyncLifetime
 
         await _client.PostAsJsonAsync(
             $"/api/workouts/{workoutId}/sessions",
-            new { LoggedExercises = Array.Empty<object>() });
+            new { Sets = 3, LoggedExercises = Array.Empty<object>() });
 
         var sessionsResponse = await _client.GetAsync("/api/sessions");
         var sessions = await sessionsResponse.Content.ReadFromJsonAsync<List<SessionDto>>();
@@ -318,6 +398,7 @@ public class SessionApiTests : IAsyncLifetime
             $"/api/workouts/{workout.PlannedWorkoutId}/sessions",
             new
             {
+                Sets = 3,
                 LoggedExercises = new[]
                 {
                     new { ExerciseId = exerciseB.ExerciseId, LoggedWeight = (string?)null, Effort = (int?)null, Sequence = (int?)0 },
@@ -346,6 +427,7 @@ public class SessionApiTests : IAsyncLifetime
             $"/api/workouts/{workoutId}/sessions",
             new
             {
+                Sets = 3,
                 LoggedExercises = new[]
                 {
                     new { ExerciseId = exerciseId, LoggedWeight = (string?)null, Effort = (int?)null, Sequence = (int?)null }
@@ -369,6 +451,7 @@ public class SessionApiTests : IAsyncLifetime
             $"/api/workouts/{workoutId}/sessions",
             new
             {
+                Sets = 3,
                 LoggedExercises = new[]
                 {
                     new { ExerciseId = exerciseId, LoggedWeight = (string?)null }
@@ -417,6 +500,7 @@ public class SessionApiTests : IAsyncLifetime
             $"/api/workouts/{workout.PlannedWorkoutId}/sessions",
             new
             {
+                Sets = 3,
                 LoggedExercises = new[]
                 {
                     new { ExerciseId = exerciseC.ExerciseId, LoggedWeight = (string?)null, Sequence = (int?)0 },
@@ -486,6 +570,7 @@ public class SessionApiTests : IAsyncLifetime
             $"/api/workouts/{workout.PlannedWorkoutId}/sessions",
             new
             {
+                Sets = 5,
                 LoggedExercises = new[]
                 {
                     new { ExerciseId = exerciseA.ExerciseId, LoggedWeight = (string?)"80", Notes = (string?)null, Effort = (int?)7, Sequence = (int?)0 },
@@ -522,6 +607,7 @@ public class SessionApiTests : IAsyncLifetime
             $"/api/workouts/{workoutId}/sessions",
             new
             {
+                Sets = 3,
                 LoggedExercises = new[]
                 {
                     new { ExerciseId = exerciseId, LoggedWeight = "80", Notes = (string?)null, Effort = 7 }
@@ -578,6 +664,7 @@ public class SessionApiTests : IAsyncLifetime
             $"/api/workouts/{workout.PlannedWorkoutId}/sessions",
             new
             {
+                Sets = 3,
                 LoggedExercises = new[]
                 {
                     new { ExerciseId = exerciseA.ExerciseId, LoggedWeight = (string?)"60", Notes = (string?)null, Effort = (int?)null },
@@ -666,6 +753,7 @@ public class SessionApiTests : IAsyncLifetime
             $"/api/workouts/{workoutId}/sessions",
             new
             {
+                Sets = 3,
                 LoggedExercises = new[]
                 {
                     new { ExerciseId = exerciseId, LoggedWeight = "60", Notes = (string?)null, Effort = 5 }
@@ -676,6 +764,7 @@ public class SessionApiTests : IAsyncLifetime
             $"/api/workouts/{workoutId}/sessions",
             new
             {
+                Sets = 3,
                 LoggedExercises = new[]
                 {
                     new { ExerciseId = exerciseId, LoggedWeight = "80", Notes = (string?)null, Effort = 7 }
@@ -718,6 +807,7 @@ public class SessionApiTests : IAsyncLifetime
             $"/api/workouts/{workoutB.PlannedWorkoutId}/sessions",
             new
             {
+                Sets = 3,
                 LoggedExercises = new[]
                 {
                     new { ExerciseId = exercise.ExerciseId, LoggedWeight = "100", Notes = (string?)null, Effort = 9 }
@@ -761,6 +851,7 @@ public class SessionApiTests : IAsyncLifetime
             $"/api/workouts/{workout.PlannedWorkoutId}/sessions",
             new
             {
+                Sets = 3,
                 LoggedExercises = new[]
                 {
                     new { ExerciseId = exerciseA.ExerciseId, LoggedWeight = "40", Notes = (string?)null, Effort = (int?)5 },
@@ -772,6 +863,7 @@ public class SessionApiTests : IAsyncLifetime
             $"/api/workouts/{workout.PlannedWorkoutId}/sessions",
             new
             {
+                Sets = 5,
                 LoggedExercises = new[]
                 {
                     new { ExerciseId = exerciseA.ExerciseId, LoggedWeight = (string?)"45", Notes = (string?)null, Effort = (int?)7 },
@@ -790,10 +882,57 @@ public class SessionApiTests : IAsyncLifetime
         var exA = result.Exercises.First(e => e.ExerciseId == exerciseA.ExerciseId);
         Assert.Equal("45", exA.LoggedWeight);
         Assert.Equal(7, exA.Effort);
+        Assert.Equal(5, exA.Sets);
 
         var exB = result.Exercises.First(e => e.ExerciseId == exerciseB.ExerciseId);
         Assert.Equal("60", exB.LoggedWeight);
         Assert.Equal(6, exB.Effort);
+        Assert.Equal(3, exB.Sets);
+    }
+
+    [Fact]
+    public async Task GetPreviousPerformance_ReturnsSetsFromEachSelectedSourceSession()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Previous Sets", "Bench Press");
+        await CreateSessionAsync(workoutId, exerciseId, "70", 6, 3);
+        await CreateSessionAsync(workoutId, exerciseId, null, null, 5);
+
+        var response = await _client.GetAsync($"/api/workouts/{workoutId}/previous-performance");
+
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<PreviousPerformanceDto>();
+        var exercise = Assert.Single(result!.Exercises);
+        Assert.Equal("70", exercise.LoggedWeight);
+        Assert.Equal(3, exercise.Sets);
+    }
+
+    [Fact]
+    public async Task GetPreviousPerformance_ReturnsNullSetsForLegacySession()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Legacy Previous Sets", "Legacy Row");
+        var session = await CreateSessionAsync(workoutId, exerciseId, "70", 6, 3);
+        var clearResponse = await _client.PutAsJsonAsync(
+            $"/api/sessions/{session.WorkoutSessionId}",
+            new { Sets = (int?)null, LoggedExercises = Array.Empty<object>() });
+        clearResponse.EnsureSuccessStatusCode();
+
+        var result = await _client.GetFromJsonAsync<PreviousPerformanceDto>(
+            $"/api/workouts/{workoutId}/previous-performance");
+
+        Assert.Null(Assert.Single(result!.Exercises).Sets);
+    }
+
+    [Fact]
+    public async Task GetPreviousPerformance_UsesExactlyTwoDatabaseQueries()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Query Budget Previous", "Row");
+        await CreateSessionAsync(workoutId, exerciseId, "80", 7, 5);
+        _fixture.ResetCommandCount();
+
+        var response = await _client.GetAsync($"/api/workouts/{workoutId}/previous-performance");
+
+        response.EnsureSuccessStatusCode();
+        Assert.Equal(2, _fixture.ExecutedCommandCount);
     }
 
     // --- GET /api/sessions/latest ---
@@ -896,7 +1035,7 @@ public class SessionApiTests : IAsyncLifetime
         var (workoutId, _) = await CreateWorkoutWithExerciseAsync("Rest Day", "Stretch");
         var response = await _client.PostAsJsonAsync(
             $"/api/workouts/{workoutId}/sessions",
-            new { LoggedExercises = Array.Empty<object>() });
+            new { Sets = 3, LoggedExercises = Array.Empty<object>() });
         response.EnsureSuccessStatusCode();
         var session = (await response.Content.ReadFromJsonAsync<SessionDetailDto>())!;
 
@@ -925,6 +1064,82 @@ public class SessionApiTests : IAsyncLifetime
         Assert.Equal(7, detail.Exercises[0].Effort);
         Assert.Equal("70 KG", detail.Exercises[0].PreviousWeight);
         Assert.Equal(6, detail.Exercises[0].PreviousEffort);
+    }
+
+    [Fact]
+    public async Task GetSessionDetail_ReturnsCurrentAndPreviousSets()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Detail Sets", "Squat");
+        await CreateSessionAsync(workoutId, exerciseId, "100", 7, 3);
+        var current = await CreateSessionAsync(workoutId, exerciseId, "105", 8, 5);
+
+        var detail = await _client.GetFromJsonAsync<SessionDetailWithPreviousDto>(
+            $"/api/sessions/{current.WorkoutSessionId}");
+
+        Assert.Equal(5, detail?.Sets);
+        Assert.Equal(3, Assert.Single(detail!.Exercises).PreviousSets);
+    }
+
+    [Fact]
+    public async Task GetSessionDetail_ReturnsPreviousSetsFromDifferentSourceSessionsPerExercise()
+    {
+        var firstExercise = await _client.PostAsJsonAsync("/api/exercises", new { Name = "Sets Source A" });
+        var firstId = (await firstExercise.Content.ReadFromJsonAsync<ExerciseDto>())!.ExerciseId;
+        var secondExercise = await _client.PostAsJsonAsync("/api/exercises", new { Name = "Sets Source B" });
+        var secondId = (await secondExercise.Content.ReadFromJsonAsync<ExerciseDto>())!.ExerciseId;
+        var workoutResponse = await _client.PostAsJsonAsync("/api/workouts", new
+        {
+            Name = "Different Sets Sources",
+            Exercises = new[] { new { ExerciseId = firstId }, new { ExerciseId = secondId } },
+        });
+        var workoutId = (await workoutResponse.Content.ReadFromJsonAsync<WorkoutDto>())!.PlannedWorkoutId;
+        await _client.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", new
+        {
+            Sets = 3,
+            LoggedExercises = new[]
+            {
+                new { ExerciseId = firstId, LoggedWeight = (string?)"40" },
+                new { ExerciseId = secondId, LoggedWeight = (string?)"60" },
+            },
+        });
+        await _client.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", new
+        {
+            Sets = 5,
+            LoggedExercises = new[]
+            {
+                new { ExerciseId = firstId, LoggedWeight = (string?)"45" },
+                new { ExerciseId = secondId, LoggedWeight = (string?)null },
+            },
+        });
+        var currentResponse = await _client.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", new
+        {
+            Sets = 5,
+            LoggedExercises = new[]
+            {
+                new { ExerciseId = firstId, LoggedWeight = (string?)"50" },
+                new { ExerciseId = secondId, LoggedWeight = (string?)"65" },
+            },
+        });
+        var current = (await currentResponse.Content.ReadFromJsonAsync<SessionDetailDto>())!;
+
+        var detail = await _client.GetFromJsonAsync<SessionDetailWithPreviousDto>(
+            $"/api/sessions/{current.WorkoutSessionId}");
+
+        Assert.Equal(5, detail!.Exercises.Single(ex => ex.ExerciseId == firstId).PreviousSets);
+        Assert.Equal(3, detail.Exercises.Single(ex => ex.ExerciseId == secondId).PreviousSets);
+    }
+
+    [Fact]
+    public async Task GetSessionDetail_UsesExactlyTwoDatabaseQueries()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Query Budget Detail", "Press");
+        var session = await CreateSessionAsync(workoutId, exerciseId, "60", 6, 3);
+        _fixture.ResetCommandCount();
+
+        var response = await _client.GetAsync($"/api/sessions/{session.WorkoutSessionId}");
+
+        response.EnsureSuccessStatusCode();
+        Assert.Equal(2, _fixture.ExecutedCommandCount);
     }
 
     [Fact]
@@ -994,6 +1209,7 @@ public class SessionApiTests : IAsyncLifetime
             $"/api/workouts/{workoutId}/sessions",
             new
             {
+                Sets = 3,
                 LoggedExercises = new[]
                 {
                     new { ExerciseId = exerciseIdA, LoggedWeight = "85 KG", Notes = (string?)null, Effort = (int?)8 },
@@ -1030,6 +1246,7 @@ public class SessionApiTests : IAsyncLifetime
             $"/api/workouts/{workoutId}/sessions",
             new
             {
+                Sets = 3,
                 OverallEffort = 7,
                 LoggedExercises = new[]
                 {
@@ -1056,6 +1273,7 @@ public class SessionApiTests : IAsyncLifetime
             $"/api/workouts/{workoutId}/sessions",
             new
             {
+                Sets = 3,
                 OverallEffort = (int?)null,
                 LoggedExercises = new[]
                 {
@@ -1081,6 +1299,7 @@ public class SessionApiTests : IAsyncLifetime
             $"/api/workouts/{workoutId}/sessions",
             new
             {
+                Sets = 3,
                 LoggedExercises = new[]
                 {
                     new { ExerciseId = exerciseId, LoggedWeight = (string?)null, Notes = (string?)null, Effort = (int?)null }
@@ -1104,13 +1323,13 @@ public class SessionApiTests : IAsyncLifetime
         // Too low
         var responseLow = await _client.PostAsJsonAsync(
             $"/api/workouts/{workoutId}/sessions",
-            new { OverallEffort = 0, LoggedExercises = new[] { new { ExerciseId = exerciseId } } });
+            new { Sets = 3, OverallEffort = 0, LoggedExercises = new[] { new { ExerciseId = exerciseId } } });
         Assert.Equal(HttpStatusCode.BadRequest, responseLow.StatusCode);
 
         // Too high
         var responseHigh = await _client.PostAsJsonAsync(
             $"/api/workouts/{workoutId}/sessions",
-            new { OverallEffort = 11, LoggedExercises = new[] { new { ExerciseId = exerciseId } } });
+            new { Sets = 3, OverallEffort = 11, LoggedExercises = new[] { new { ExerciseId = exerciseId } } });
         Assert.Equal(HttpStatusCode.BadRequest, responseHigh.StatusCode);
     }
 
@@ -1121,7 +1340,7 @@ public class SessionApiTests : IAsyncLifetime
 
         var postResp = await _client.PostAsJsonAsync(
             $"/api/workouts/{workoutId}/sessions",
-            new { OverallEffort = 5, LoggedExercises = new[] { new { ExerciseId = exerciseId } } });
+            new { Sets = 3, OverallEffort = 5, LoggedExercises = new[] { new { ExerciseId = exerciseId } } });
         postResp.EnsureSuccessStatusCode();
 
         var response = await _client.GetAsync("/api/sessions");
@@ -1229,6 +1448,99 @@ public class SessionApiTests : IAsyncLifetime
         var updatedExercise = Assert.Single(detail.Exercises);
         Assert.Null(updatedExercise.LoggedWeight);
         Assert.Null(updatedExercise.Effort);
+    }
+
+    [Fact]
+    public async Task UpdateSession_OmittedSetsPreservesValue()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Preserve Sets", "Curl");
+        var session = await CreateSessionAsync(workoutId, exerciseId, "20", 5, 5);
+
+        var response = await _client.PutAsJsonAsync(
+            $"/api/sessions/{session.WorkoutSessionId}",
+            new { OverallEffort = (int?)null, LoggedExercises = Array.Empty<object>() });
+
+        response.EnsureSuccessStatusCode();
+        Assert.Equal(5, (await response.Content.ReadFromJsonAsync<SessionDetailWithPreviousDto>())?.Sets);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(3)]
+    [InlineData(5)]
+    public async Task UpdateSession_ExplicitSetsValueReplacesOrClears(int? sets)
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync($"Replace Sets {sets}", Guid.NewGuid().ToString());
+        var session = await CreateSessionAsync(workoutId, exerciseId, "20", 5, 3);
+
+        var response = await _client.PutAsJsonAsync(
+            $"/api/sessions/{session.WorkoutSessionId}",
+            new { Sets = sets, OverallEffort = (int?)null, LoggedExercises = Array.Empty<object>() });
+
+        response.EnsureSuccessStatusCode();
+        Assert.Equal(sets, (await response.Content.ReadFromJsonAsync<SessionDetailWithPreviousDto>())?.Sets);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(4)]
+    [InlineData(6)]
+    public async Task UpdateSession_RejectsInvalidSets(int sets)
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync($"Reject Sets {sets}", Guid.NewGuid().ToString());
+        var session = await CreateSessionAsync(workoutId, exerciseId);
+
+        var response = await _client.PutAsJsonAsync(
+            $"/api/sessions/{session.WorkoutSessionId}",
+            new { Sets = sets, LoggedExercises = Array.Empty<object>() });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("Sets must be 3 or 5.", (await response.Content.ReadFromJsonAsync<ErrorDto>())?.Error);
+    }
+
+    [Fact]
+    public async Task CreateSession_UsesOneTopLevelSetsFieldAndMeetsLocalPerformanceBudget()
+    {
+        var exerciseIds = new List<Guid>();
+        for (var index = 0; index < 25; index++)
+        {
+            var response = await _client.PostAsJsonAsync("/api/exercises", new { Name = $"Performance Exercise {index}" });
+            response.EnsureSuccessStatusCode();
+            exerciseIds.Add((await response.Content.ReadFromJsonAsync<ExerciseDto>())!.ExerciseId);
+        }
+
+        var workoutResponse = await _client.PostAsJsonAsync("/api/workouts", new
+        {
+            Name = "Performance Workout",
+            Exercises = exerciseIds.Select(id => new { ExerciseId = id }).ToArray(),
+        });
+        workoutResponse.EnsureSuccessStatusCode();
+        var workout = (await workoutResponse.Content.ReadFromJsonAsync<WorkoutDto>())!;
+        var payload = new
+        {
+            Sets = 5,
+            LoggedExercises = exerciseIds.Select(id => new
+            {
+                ExerciseId = id,
+                LoggedWeight = "50",
+                Effort = (int?)5,
+            }).ToArray(),
+        };
+        var json = System.Text.Json.JsonSerializer.Serialize(payload);
+        using var document = System.Text.Json.JsonDocument.Parse(json);
+        Assert.True(document.RootElement.TryGetProperty("Sets", out _));
+        Assert.All(document.RootElement.GetProperty("LoggedExercises").EnumerateArray(), exercise =>
+            Assert.False(exercise.TryGetProperty("Sets", out _)));
+
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        var createResponse = await _client.PostAsJsonAsync(
+            $"/api/workouts/{workout.PlannedWorkoutId}/sessions",
+            payload);
+        stopwatch.Stop();
+
+        createResponse.EnsureSuccessStatusCode();
+        Assert.True(stopwatch.ElapsedMilliseconds < 2000,
+            $"Session creation took {stopwatch.ElapsedMilliseconds}ms, expected < 2000ms.");
     }
 
     [Theory]
@@ -1564,12 +1876,13 @@ public class SessionApiTests : IAsyncLifetime
         await CreateSessionAsync(workoutId, exerciseId, null, null);
 
     private async Task<SessionDetailDto> CreateSessionAsync(
-        Guid workoutId, Guid exerciseId, string? loggedWeight, int? effort)
+        Guid workoutId, Guid exerciseId, string? loggedWeight, int? effort, int sets = 3)
     {
         var response = await _client.PostAsJsonAsync(
             $"/api/workouts/{workoutId}/sessions",
             new
             {
+                Sets = sets,
                 LoggedExercises = new[]
                 {
                     new { ExerciseId = exerciseId, LoggedWeight = loggedWeight, Notes = (string?)null, Effort = effort }
@@ -1586,6 +1899,7 @@ public class SessionApiTests : IAsyncLifetime
             $"/api/workouts/{workoutId}/sessions",
             new
             {
+                Sets = 3,
                 OverallEffort = overallEffort,
                 LoggedExercises = new[]
                 {
@@ -1600,12 +1914,12 @@ public class SessionApiTests : IAsyncLifetime
     private sealed record WorkoutDto(Guid PlannedWorkoutId, string Name, int ExerciseCount);
     private sealed record WorkoutDetailDto(Guid PlannedWorkoutId, string Name, int ExerciseCount, List<WorkoutExerciseDto> Exercises);
     private sealed record WorkoutExerciseDto(Guid ExerciseId, string Name, string? TargetReps, string? TargetWeight);
-    private sealed record SessionDto(Guid WorkoutSessionId, Guid? PlannedWorkoutId, string? WorkoutName);
-    private sealed record SessionDetailDto(Guid WorkoutSessionId, Guid PlannedWorkoutId, string WorkoutName, List<SessionLoggedExerciseDto> LoggedExercises);
+    private sealed record SessionDto(Guid WorkoutSessionId, Guid? PlannedWorkoutId, string? WorkoutName, int? Sets);
+    private sealed record SessionDetailDto(Guid WorkoutSessionId, Guid PlannedWorkoutId, string WorkoutName, int? Sets, List<SessionLoggedExerciseDto> LoggedExercises);
     private sealed record SessionLoggedExerciseDto(Guid LoggedExerciseId, Guid ExerciseId, string? LoggedWeight, string? Notes, int? Effort, int? Sequence);
     private sealed record SessionWithDetailDto(Guid WorkoutSessionId, Guid? PlannedWorkoutId, string? WorkoutName, List<SessionLoggedExerciseDto> LoggedExercises);
     private sealed record PreviousPerformanceDto(bool HasPreviousSession, DateTime? CompletedAt, List<PreviousExerciseDataDto> Exercises);
-    private sealed record PreviousExerciseDataDto(Guid ExerciseId, string? LoggedWeight, int? Effort, int? Sequence, DateTime? CompletedAt);
+    private sealed record PreviousExerciseDataDto(Guid ExerciseId, string? LoggedWeight, int? Effort, int? Sequence, int? Sets, DateTime? CompletedAt);
     private sealed record LatestSessionDto(bool HasSession, string? WorkoutName, DateTime? CompletedAt);
     private sealed record ErrorDto(string Error);
     private sealed record SessionDetailWithPreviousDto(
@@ -1614,6 +1928,7 @@ public class SessionApiTests : IAsyncLifetime
         string? WorkoutName,
         DateTime CompletedAt,
         int? OverallEffort,
+        int? Sets,
         int? PreviousOverallEffort,
         List<SessionExerciseWithPreviousDto> Exercises);
     private sealed record SessionExerciseWithPreviousDto(
@@ -1623,7 +1938,8 @@ public class SessionApiTests : IAsyncLifetime
         string? LoggedWeight,
         int? Effort,
         string? PreviousWeight,
-        int? PreviousEffort);
+        int? PreviousEffort,
+        int? PreviousSets);
     private sealed record SessionTrendsDto(List<SessionTrendsDataPointDto> DataPoints);
     private sealed record SessionTrendsDataPointDto(
         DateTime CompletedAt,
