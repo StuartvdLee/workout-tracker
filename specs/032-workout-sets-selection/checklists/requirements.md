@@ -31,7 +31,7 @@
 
 ## Notes
 
-- Assumptions documented inline: sets stored once per session (not per exercise); pre-existing sessions have no sets and render with the existing no-data indicator; sets is required before starting a workout.
+- Assumptions documented inline: sets stored once per session (not per exercise); pre-existing sessions have no sets and render with the existing no-data indicator; sets is always supplied when starting a workout, defaulting to 3.
 - All specification-quality items passed on the initial validation iteration.
 - Delivery verification completed in PR #159: release build, TypeScript build, 92 frontend tests, 167 backend tests, 281 Playwright tests, and whitespace validation passed.
 - The manual comparative p95 baseline remains a documented pre-release follow-up; no separate baseline commit was available for this branch.

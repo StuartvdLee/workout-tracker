@@ -54,8 +54,7 @@ export function render(container: HTMLElement): void {
             aria-describedby="sets-error"
             required
           >
-            <option value="" disabled selected>Select sets</option>
-            <option value="3">3</option>
+            <option value="3" selected>3</option>
             <option value="5">5</option>
           </select>
         </div>

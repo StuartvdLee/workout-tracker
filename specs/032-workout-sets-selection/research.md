@@ -22,7 +22,7 @@
 **Alternatives considered**:
 - Create the database session when Start is clicked: rejected because the current lifecycle persists only completed/saved sessions and premature creation would require abandoned-session cleanup.
 - `sessionStorage`: rejected because URL state is already the project convention and is easier to test and reason about.
-- Default sets to 3 or 5: rejected because the specification requires an explicit selection.
+- Placeholder option with no preselected value: superseded; the start page and Workouts start modal now default to 3 (the most common choice) to remove an extra tap, while 5 remains selectable and server-side validation is unchanged.
 
 ## Decision 3: Extend existing contracts rather than add routes
 

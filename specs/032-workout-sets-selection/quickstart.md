@@ -10,7 +10,7 @@
 
 1. Open the `Let's go!` page.
 2. Select a workout.
-3. Select 3 or 5 from `Sets`.
+3. Leave `Sets` at its default of 3, or select 5.
 4. Start the workout.
 5. Complete and save it; the selected value is stored once on the workout session.
 

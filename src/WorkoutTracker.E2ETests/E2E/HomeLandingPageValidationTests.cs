@@ -44,17 +44,17 @@ public class HomeLandingPageValidationTests
     }
 
     [Fact]
-    public async Task ClickStartWithoutSets_ShowsSetsErrorAndFocusesSets()
+    public async Task ClickStartWithoutChangingSets_UsesDefaultOfThree()
     {
         var page = await CreatePageAsync();
         await page.Locator("#workout-select").SelectOptionAsync(new SelectOptionValue { Label = "Push" });
 
+        Assert.Equal("3", await page.Locator("#sets-select").InputValueAsync());
+
         await page.Locator("button[type='submit']").ClickAsync();
 
-        await Expect(page.Locator("#sets-error")).ToHaveTextAsync("Please select sets");
-        Assert.Equal("sets-select", await page.EvaluateAsync<string>("document.activeElement?.id ?? ''"));
-
-        await page.Locator("#sets-select").SelectOptionAsync("5");
+        await page.WaitForURLAsync(url => url.Contains("/active-session"));
+        Assert.Contains("sets=3", page.Url);
         await Expect(page.Locator("#sets-error")).ToBeHiddenAsync();
         await page.CloseAsync();
     }
