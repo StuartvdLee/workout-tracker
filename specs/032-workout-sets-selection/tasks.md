@@ -40,20 +40,20 @@
 
 ## Phase 3: User Story 1 - Choose Sets Before Starting a Workout (Priority: P1) 🎯 MVP
 
-**Goal**: Require the user to choose 3 or 5 Sets on the "Let's go!" page, carry that value into the active workout, and persist it once when the session is saved.
+**Goal**: Offer 3 or 5 Sets on the "Let's go!" page with 3 as the default, carry that value into the active workout, and persist it once when the session is saved.
 
-**Independent Test**: Select a workout and 3 or 5 Sets, start and save the workout, and verify the created session stores the selected value; verify missing or invalid Sets cannot start or create a session.
+**Independent Test**: Select a workout, keep the default of 3 Sets or choose 5, start and save the workout, and verify the created session stores the selected value; verify invalid Sets cannot start or create a session.
 
 ### Tests for User Story 1 ⚠️
 
 - [X] T007 [P] [US1] Add API integration tests for create persistence of 3 and 5, create/list response fields, rejection of missing/null/out-of-range Sets, and database-constraint enforcement in `src/WorkoutTracker.UnitTests/Api/SessionApiTests.cs`
-- [X] T008 [P] [US1] Add start-page E2E tests for the `Sets` label, placeholder, exact 3/5 options, field order, and reuse of workout-select CSS classes in `src/WorkoutTracker.E2ETests/E2E/HomeLandingPageSelectionTests.cs`
-- [X] T009 [P] [US1] Add E2E tests for missing-Sets validation, focus and error recovery, unchanged workout-first validation, failed workout-list loading, and loading/disabled behavior in `src/WorkoutTracker.E2ETests/E2E/HomeLandingPageValidationTests.cs`
+- [X] T008 [P] [US1] Add start-page E2E tests for the `Sets` label, default value of 3, exact 3/5 options, field order, and reuse of workout-select CSS classes in `src/WorkoutTracker.E2ETests/E2E/HomeLandingPageSelectionTests.cs`
+- [X] T009 [P] [US1] Add E2E tests for starting with the default Sets value of 3, unchanged workout-first validation, failed workout-list loading, and loading/disabled behavior in `src/WorkoutTracker.E2ETests/E2E/HomeLandingPageValidationTests.cs`
 - [X] T010 [US1] Add E2E tests proving start navigation retains `sets` alongside `id` and optional `order`, save forwards one top-level Sets value, and malformed or missing direct query values cannot save in `src/WorkoutTracker.E2ETests/E2E/WorkoutHistoryTests.cs`
 
 ### Implementation for User Story 1
 
-- [X] T011 [P] [US1] Render the required `Sets` dropdown directly below workout selection, offer only 3 and 5 with no default, reuse loading/disabled and error styles, validate the selection, and append `sets` alongside `id` and optional `order` in `src/WorkoutTracker.Web/wwwroot/ts/pages/home.ts`
+- [X] T011 [P] [US1] Render the required `Sets` dropdown directly below workout selection, offer only 3 and 5 with 3 selected by default, reuse loading/disabled and error styles, validate the selection, and append `sets` alongside `id` and optional `order` in `src/WorkoutTracker.Web/wwwroot/ts/pages/home.ts`
 - [X] T012 [P] [US1] Parse `sets` into validated session-level state, reject malformed or missing direct-entry values, retain the value through the active workout, and send it once as a top-level create field in `src/WorkoutTracker.Web/wwwroot/ts/pages/active-session.ts`
 - [X] T013 [US1] Extend `SessionCreateRequest`, server validation, `WorkoutSession` creation, the create response, and session-list projection with Sets in `src/WorkoutTracker.Api/Program.cs`
 - [X] T014 [US1] Run and fix the US1 tests in `src/WorkoutTracker.UnitTests/Api/SessionApiTests.cs`, `src/WorkoutTracker.E2ETests/E2E/HomeLandingPageSelectionTests.cs`, `src/WorkoutTracker.E2ETests/E2E/HomeLandingPageValidationTests.cs`, and `src/WorkoutTracker.E2ETests/E2E/WorkoutHistoryTests.cs`

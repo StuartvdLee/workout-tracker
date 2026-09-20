@@ -9,8 +9,7 @@ Add a field directly below `Select your workout`:
 ```html
 <label class="workout-form__label" for="sets-select">Sets</label>
 <select class="workout-form__select" id="sets-select" required>
-  <option value="" disabled selected>Select sets</option>
-  <option value="3">3</option>
+  <option value="3" selected>3</option>
   <option value="5">5</option>
 </select>
 ```
@@ -18,12 +17,11 @@ Add a field directly below `Select your workout`:
 Rules:
 
 - Reuse the existing workout form label, select, spacing, focus, disabled, and error styles.
-- No value is preselected.
-- Start requires both a valid workout and sets value.
-- Missing sets shows `Please select sets` using the existing form error treatment and focuses/marks the sets control.
+- `3` is preselected by default; `5` is the only other option and there is no placeholder option.
+- Start requires a valid workout; sets is always valid because of the default, and an invalid value still shows `Please select sets` using the existing form error treatment and focuses/marks the sets control.
 - Valid navigation includes `sets=3` or `sets=5` together with existing `id` and optional randomized `order` parameters.
 - No additional fetch is introduced.
-- The Workouts-page Start modal also requires Sets before either original-order or randomized navigation, including single-exercise workouts.
+- The Workouts-page Start modal uses the same options and default of 3, resetting to 3 each time it closes, for both original-order and randomized navigation, including single-exercise workouts.
 
 ## Active Session (`Last time`)
 

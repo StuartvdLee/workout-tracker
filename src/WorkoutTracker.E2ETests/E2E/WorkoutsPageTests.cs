@@ -901,7 +901,7 @@ public class WorkoutsPageTests
     }
 
     [Fact]
-    public async Task PrestartModal_RequiresSetsBeforeStarting()
+    public async Task PrestartModal_DefaultsSetsToThree()
     {
         var page = await CreatePageAsync();
         try
@@ -910,11 +910,13 @@ public class WorkoutsPageTests
             await NavigateToWorkoutsAsync(page);
 
             await page.Locator(".workout-list__start-btn").First.ClickAsync();
+            await Expect(page.Locator("#workout-prestart-backdrop")).ToBeVisibleAsync();
+            Assert.Equal("3", await page.Locator("#prestart-sets").InputValueAsync());
+            Assert.Equal(["3", "5"], await page.Locator("#prestart-sets option").AllTextContentsAsync());
+
             await page.Locator("#prestart-no").ClickAsync();
 
-            await Expect(page.Locator("#prestart-error")).ToHaveTextAsync("Please select sets");
-            await Expect(page.Locator("#prestart-sets")).ToBeFocusedAsync();
-            await Expect(page.Locator("#workout-prestart-backdrop")).ToBeVisibleAsync();
+            await Expect(page).ToHaveURLAsync(new Regex(@"/active-session\?id=.*&sets=3"));
         }
         finally
         {

@@ -61,7 +61,7 @@ When viewing a previous workout in History, the user sees a "Sets" column and a 
 
 - What happens when a session was recorded before sets existed? Sets values are treated as absent and rendered with the existing no-data indicator (history) or omitted (current workout "Last time").
 - What happens if a sets value outside the allowed set (3 or 5) is submitted? The system rejects it and the session is not created or updated.
-- What happens when the workout list fails to load? The sets dropdown remains usable but starting a workout is blocked by the existing workout-selection error handling.
+- What happens when the workout list fails to load? The sets dropdown remains usable with its default of 3, but starting a workout is blocked by the existing workout-selection error handling.
 - What happens when the user encounters a slow network, slow device, or delayed backend response? The sets dropdown follows the same loading and disabled-state behaviour as the workout dropdown, and starting a workout remains blocked until the request resolves.
 - How does the experience stay consistent across loading, empty, success, and failure states? Sets reuses the existing select, validation-message, table-cell, and no-data patterns without introducing new visual treatments.
 
@@ -70,8 +70,8 @@ When viewing a previous workout in History, the user sees a "Sets" column and a 
 ### Functional Requirements
 
 - **FR-001**: The "Let's go!" page MUST present a dropdown labelled "Sets" positioned directly below the "Select your workout" dropdown, using the same label, select, and spacing styles.
-- **FR-002**: The "Sets" dropdown MUST offer exactly two selectable values, 3 and 5, with no value pre-selected and a placeholder option consistent with the workout dropdown.
-- **FR-003**: Users MUST be able to start a workout only when both a workout and a sets value are selected; otherwise a validation message is shown in the existing style.
+- **FR-002**: The "Sets" dropdown MUST offer exactly two selectable values, 3 and 5, with 3 pre-selected as the default so a workout can be started without changing the field.
+- **FR-003**: Users MUST be able to start a workout once a workout is selected, using the default sets value of 3 unless they change it; a missing or invalid sets value is still rejected with a validation message in the existing style.
 - **FR-004**: The selected sets value MUST apply to all exercises in the started session and be stored once per session rather than per exercise.
 - **FR-005**: The system MUST persist the sets value with the workout session so it is available in later sessions and in history.
 - **FR-006**: The current workout view MUST include sets from the latest prior session containing usable weight or effort for that exercise in the "Last time" information, formatted as "3 sets" or "5 sets", using the same source session and separator as the displayed weight and effort values.

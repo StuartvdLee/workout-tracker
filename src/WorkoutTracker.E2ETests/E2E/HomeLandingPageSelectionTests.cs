@@ -64,8 +64,8 @@ public class HomeLandingPageSelectionTests
 
         await Expect(page.Locator("label[for='sets-select']")).ToHaveTextAsync("Sets");
         await Expect(sets).ToHaveClassAsync("workout-form__select");
-        Assert.Equal("", await sets.InputValueAsync());
-        Assert.Equal(["Select sets", "3", "5"], await sets.Locator("option").AllTextContentsAsync());
+        Assert.Equal("3", await sets.InputValueAsync());
+        Assert.Equal(["3", "5"], await sets.Locator("option").AllTextContentsAsync());
         Assert.Equal(
             "sets-select",
             await page.Locator(".workout-form__group").Nth(1).Locator("select").GetAttributeAsync("id"));

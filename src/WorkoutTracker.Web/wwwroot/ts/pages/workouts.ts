@@ -138,8 +138,7 @@ export async function render(container: HTMLElement): Promise<void> {
           <div class="workout-form__group">
             <label class="workout-form__label" for="prestart-sets">Sets</label>
             <select class="workout-form__select" id="prestart-sets" aria-describedby="prestart-error" required>
-              <option value="" disabled selected>Select sets</option>
-              <option value="3">3</option>
+              <option value="3" selected>3</option>
               <option value="5">5</option>
             </select>
           </div>
@@ -971,7 +970,7 @@ function closePreStartModal(): void {
   const setsSelect = document.getElementById("prestart-sets") as HTMLSelectElement | null;
   const errorEl = document.getElementById("prestart-error") as HTMLElement | null;
   if (backdrop) backdrop.style.display = "none";
-  if (setsSelect) setsSelect.value = "";
+  if (setsSelect) setsSelect.value = "3";
   if (errorEl) errorEl.textContent = "";
 
   const triggerBtn = prestartTriggerBtn;
