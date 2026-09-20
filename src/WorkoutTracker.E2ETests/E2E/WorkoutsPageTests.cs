@@ -933,12 +933,18 @@ public class WorkoutsPageTests
             await CreateTwoExerciseWorkoutViaApiAsync(page);
             await NavigateToWorkoutsAsync(page);
 
-            await page.Locator(".workout-list__start-btn").First.ClickAsync();
+            var startButton = page.Locator(".workout-list__start-btn").First;
+            await startButton.ClickAsync();
             await page.WaitForSelectorAsync("#workout-prestart-backdrop", new() { State = WaitForSelectorState.Visible });
+            await page.Locator("#prestart-sets").SelectOptionAsync("5");
             await page.Locator("#prestart-close").ClickAsync();
 
             await Expect(page.Locator("#workout-prestart-backdrop")).ToBeHiddenAsync();
             await Expect(page.Locator(".workouts-page")).ToBeVisibleAsync();
+
+            await startButton.ClickAsync();
+            await Expect(page.Locator("#workout-prestart-backdrop")).ToBeVisibleAsync();
+            Assert.Equal("3", await page.Locator("#prestart-sets").InputValueAsync());
         }
         finally
         {
