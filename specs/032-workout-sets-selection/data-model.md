@@ -25,7 +25,8 @@ public int? Sets { get; set; }
 - Every `LoggedExercise` in that session displays the parent session's current sets value.
 - A previous sets value displayed for an exercise comes from the historical session selected as that exercise's latest usable weight-or-effort comparison.
 - Per-exercise sets are never persisted.
-- Updating sets changes the one parent session value and therefore changes the displayed current sets value for every exercise row.
+- Updating sets changes the one parent session value and therefore changes the displayed current sets value for every exercise row, including the sets bar drawn for that session on the history detail graph.
+- Each history detail graph data point represents one session and therefore carries exactly one sets value, independent of the selected exercise.
 
 ## EF Core Configuration
 
@@ -77,6 +78,10 @@ Add presence-aware Sets input so the endpoint distinguishes an omitted property 
 - `sets: 3` or `sets: 5`: replace the stored value.
 - Any other value: reject the request.
 
+### Session trends projection
+
+Extend the `session-trends` projection so each session data point carries the session-level `Sets` value alongside `CompletedAt` and `OverallEffort`. No new query, join, or per-exercise field is added: `Sets` is already loaded with the session row selected by the existing bounded newest-first projection.
+
 ### Historical comparison records
 
 Extend historical session/comparison projection so `LatestExerciseComparison` carries `Sets` from the source `HistoricalSessionData`. Keep the existing weight-or-effort usable-comparison predicate unchanged; Sets alone does not make a historical exercise row selectable.
@@ -88,6 +93,7 @@ Extend historical session/comparison projection so `LatestExerciseComparison` ca
 | Create new session | 3 or 5 | Missing, `null`, non-integer, or any other integer |
 | Update existing session | Omitted (preserve), 3 or 5 (replace), explicit `null` (clear) | Non-integer or any other integer |
 | Read legacy session | `null` | N/A; render as absent/no-data |
+| Read session trends | `null`, 3, or 5 per data point | N/A; `null` renders no sets bar for that session |
 
 ## State Transitions
 

@@ -751,6 +751,62 @@ public class WebAppFixture : WebApplicationFactory<Program>
             }
         });
 
+        // Mock API endpoint for session trends (chart data across a workout's sessions)
+        app.MapGet("/api/workouts/{workoutId}/session-trends", (string workoutId) =>
+        {
+            bool workoutExists;
+            lock (_workoutsLock)
+            {
+                workoutExists = _workouts.Any(w =>
+                    string.Equals(w.PlannedWorkoutId, workoutId, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (!workoutExists)
+            {
+                return Results.Json(new { error = "Workout not found." }, statusCode: 404);
+            }
+
+            List<MockWorkoutSession> sessionSnapshot;
+            lock (_sessionsLock)
+            {
+                sessionSnapshot = [.. _sessions];
+            }
+
+            List<MockExercise> exerciseSnapshot;
+            lock (_exercisesLock)
+            {
+                exerciseSnapshot = [.. _exercises];
+            }
+
+            var dataPoints = sessionSnapshot
+                .Where(s => string.Equals(s.PlannedWorkoutId, workoutId, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(s => s.CompletedAt)
+                .ThenByDescending(s => s.SessionId)
+                .Take(50)
+                .Reverse()
+                .Select(s => new
+                {
+                    s.CompletedAt,
+                    OverallEffort = s.OverallEffort,
+                    Sets = s.Sets,
+                    Exercises = s.LoggedExercises.Select(le =>
+                    {
+                        var ex = exerciseSnapshot.FirstOrDefault(e =>
+                            string.Equals(e.ExerciseId, le.ExerciseId, StringComparison.OrdinalIgnoreCase));
+                        return new
+                        {
+                            le.ExerciseId,
+                            ExerciseName = ex?.Name ?? "",
+                            le.LoggedWeight,
+                            le.Effort,
+                        };
+                    }).ToList(),
+                })
+                .ToList();
+
+            return Results.Ok(new { DataPoints = dataPoints });
+        });
+
         // Mock API endpoint to list all sessions
         app.MapGet("/api/sessions", () =>
         {

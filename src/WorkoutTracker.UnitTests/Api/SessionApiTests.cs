@@ -1763,6 +1763,23 @@ public class SessionApiTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task GetSessionTrends_ReturnsSetsForEachDataPoint()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Trend Sets Workout", "Trend Sets Exercise");
+        await CreateSessionAsync(workoutId, exerciseId, "60", 5, sets: 3);
+        await CreateSessionAsync(workoutId, exerciseId, "65", 6, sets: 5);
+
+        var response = await _client.GetAsync($"/api/workouts/{workoutId}/session-trends");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var result = await response.Content.ReadFromJsonAsync<SessionTrendsDto>();
+        Assert.NotNull(result);
+        Assert.Equal(2, result.DataPoints.Count);
+        Assert.Equal(3, result.DataPoints[0].Sets);
+        Assert.Equal(5, result.DataPoints[1].Sets);
+    }
+
+    [Fact]
     public async Task GetSessionTrends_LoggedWeightIsAlwaysSingleNumericStringOrNull()
     {
         var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Weight Invariant Workout", "Weight Invariant Exercise");
@@ -1944,6 +1961,7 @@ public class SessionApiTests : IAsyncLifetime
     private sealed record SessionTrendsDataPointDto(
         DateTime CompletedAt,
         int? OverallEffort,
+        int? Sets,
         List<SessionTrendsExerciseDto> Exercises);
     private sealed record SessionTrendsExerciseDto(
         Guid ExerciseId,

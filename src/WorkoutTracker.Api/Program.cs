@@ -483,6 +483,7 @@ app.MapGet("/api/workouts/{workoutId:guid}/session-trends", async (Guid workoutI
         {
             CompletedAt = EF.Property<DateTime>(ws, "CompletedAt"),
             ws.OverallEffort,
+            ws.Sets,
             Exercises = ws.LoggedExercises
                 .OrderBy(le => le.Sequence)
                 .Select(le => new
@@ -504,6 +505,7 @@ app.MapGet("/api/workouts/{workoutId:guid}/session-trends", async (Guid workoutI
         {
             completedAt = s.CompletedAt,
             overallEffort = s.OverallEffort,
+            sets = s.Sets,
             exercises = s.Exercises.Select(e => new
             {
                 exerciseId = e.ExerciseId,

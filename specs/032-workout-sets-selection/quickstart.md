@@ -29,6 +29,14 @@
 4. Confirm all Sets controls synchronize.
 5. Save and reload; every row displays the updated session-wide value.
 
+### Read the stats graph
+
+1. Open a completed workout from History that has several sessions.
+2. With `Overall Session Effort` selected, confirm a `Sets` bar is drawn behind each session's effort point, taller for 5 sets than for 3, with a `Sets` legend entry and no sets axis or numeric labels.
+3. Select an individual exercise and confirm the `Sets` line is plotted alongside weight and effort with the same legend entry.
+4. Confirm switching selections issues no new network request.
+5. Confirm a workout whose sessions never recorded sets shows no sets line, axis, or legend entry.
+
 ## Implementation Order
 
 1. Add `WorkoutSession.Sets`, EF configuration, and migration.
@@ -39,6 +47,7 @@
 6. Extend session-detail view/edit tables and synchronized session-level state.
 7. Update integration, unit, and Playwright tests.
 8. Verify no additional HTTP requests are introduced.
+9. Project session Sets into the `session-trends` response and plot it as a third chart series in `session-detail.ts`.
 
 ## Validation Commands
 
@@ -73,6 +82,7 @@ dotnet run --project src/WorkoutTracker.E2ETests/WorkoutTracker.E2ETests.csproj 
 - Automated Tier 2 local latency ceilings PB-08 to PB-10 pass.
 - Tier 3 comparative run is **not recorded**: the branch has no separate pre-feature baseline commit. Run it before release using the procedure in `plan.md` and record both p95 values, the delta, the machine, and both commit SHAs.
 - Existing workout start, random order, save, history, edit, legacy-field, and table-layout regression behaviors pass.
+- The stats graph draws `Sets` bars with a legend entry for every selection when sets data exists, draws no bar for sessions without sets, and omits the bars and legend entry entirely when no session recorded sets. Set counts above the bar baseline raise the reference instead of overflowing the plot area.
 
 ## Delivered Validation Evidence
 
@@ -83,6 +93,21 @@ dotnet run --project src/WorkoutTracker.E2ETests/WorkoutTracker.E2ETests.csproj 
 - TypeScript build: passed.
 - No separate npm lint script exists in the repository; TypeScript compilation was used as the frontend static check.
 - `git diff --check`: passed.
+
+## Extension: Sets on the history detail stats graph
+
+Added after PR #159 for User Story 4 / FR-012 to FR-017.
+
+- `GET /api/workouts/{workoutId}/session-trends` now returns a nullable session-level `sets` per data point.
+- `session-detail.ts` renders it as background bars for both the overall and per-exercise selections, with no sets axis and no numeric labels. `computeSetsBarMax` in `utils.ts` sets the full-height reference: a fixed baseline of `6`, raised only when a session recorded more, so heights stay comparable and never overflow the plot area.
+- `WebAppFixture.cs` gained the previously missing `session-trends` mock route; without it the E2E chart always fell back to single-session data.
+
+### Delivered Validation Evidence (extension)
+
+- Frontend tests: 96 passed.
+- Backend tests: 168 passed.
+- Playwright E2E tests: 290 passed.
+- TypeScript build: passed.
 
 ## Additional Start Path
 
