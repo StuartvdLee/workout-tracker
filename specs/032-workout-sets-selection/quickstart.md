@@ -33,9 +33,9 @@
 
 1. Open a completed workout from History that has several sessions.
 2. With `Overall Session Effort` selected, confirm a `Sets` bar is drawn behind each session's effort point, taller for 5 sets than for 3, with a `Sets` legend entry and no sets axis or numeric labels.
-3. Select an individual exercise and confirm the `Sets` line is plotted alongside weight and effort with the same legend entry.
+3. Select an individual exercise and confirm the `Sets` bars are shown alongside weight and effort with the same legend entry.
 4. Confirm switching selections issues no new network request.
-5. Confirm a workout whose sessions never recorded sets shows no sets line, axis, or legend entry.
+5. Confirm a workout whose sessions never recorded sets shows no sets bars, axis, or legend entry.
 
 ## Implementation Order
 
