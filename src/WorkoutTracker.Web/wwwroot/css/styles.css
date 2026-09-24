@@ -11,6 +11,7 @@
   --color-white: #ffffff;
   --color-border: #d1d5db;
   --color-border-focus: #2563eb;
+  --color-chart-sets: #059669;
 
   --font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-size-base: 1rem;
@@ -43,6 +44,7 @@
   --color-bg: #111827;
   --color-white: #1f2937;
   --color-border: #374151;
+  --color-chart-sets: #34d399;
 }
 
 /* === Reset === */
@@ -2569,6 +2571,11 @@ body.is-dragging .workout-selected__drag-handle {
   stroke: var(--color-error);
 }
 
+.session-chart__bar--sets {
+  fill: var(--color-chart-sets);
+  opacity: 0.25;
+}
+
 .session-chart__legend {
   display: flex;
   gap: var(--spacing-md);
@@ -2595,6 +2602,10 @@ body.is-dragging .workout-selected__drag-handle {
 
 .session-chart__legend-swatch--effort {
   background: var(--color-error);
+}
+
+.session-chart__legend-swatch--sets {
+  background: var(--color-chart-sets);
 }
 
 /* =============================================

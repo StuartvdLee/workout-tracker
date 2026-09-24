@@ -95,6 +95,19 @@ export function buildYTicks(min: number, max: number, tickCount: number): number
   return ticks;
 }
 
+// Baseline value that maps to a full-height sets bar. Fixing it keeps bar heights
+// comparable across charts, so 3 sets always looks the same size. Higher recorded
+// counts raise the reference instead of overflowing the plot area.
+export const SETS_BAR_BASELINE_MAX = 6;
+
+// Returns the value a full-height sets bar represents, or null when no session
+// recorded sets. Bars are drawn from zero, so heights stay proportional to counts.
+export function computeSetsBarMax(setsValues: readonly (number | null)[]): number | null {
+  const numeric = setsValues.filter((v): v is number => v !== null);
+  if (numeric.length === 0) return null;
+  return Math.max(...numeric, SETS_BAR_BASELINE_MAX);
+}
+
 // Returns an array the same length as dates. Labels are shown at evenly spaced indices up to
 // maxLabels (always including the last); intermediate positions get null (no label rendered).
 // Shown dates are formatted as "DD MMM" (e.g. "01 Apr").

@@ -2379,8 +2379,101 @@ public class WorkoutHistoryTests
         }
     }
 
-    // --- T013: Empty state when exercise has no data ---
+    // --- Sets series on the chart ---
 
+    [Fact]
+    public async Task SessionDetailPage_Chart_ShowsSetsSeriesOnOverallAndExerciseSelections()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await SeedExerciseAsync(page, "Bench Press Sets");
+            var exercisesResponse = await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/exercises");
+            var exercisesJson = await exercisesResponse.JsonAsync();
+            var exerciseId = exercisesJson?.EnumerateArray()
+                .First(e => e.GetProperty("name").GetString() == "Bench Press Sets")
+                .GetProperty("exerciseId").GetString()!;
+
+            var createResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts", new()
+            {
+                DataObject = new { name = "Sets Chart Workout", exercises = new[] { new { exerciseId } } },
+            });
+            var workoutData = await createResponse.JsonAsync();
+            var workoutId = workoutData?.GetProperty("plannedWorkoutId").GetString()!;
+
+            await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new { sets = 3, overallEffort = 5, loggedExercises = new[] { new { exerciseId, loggedWeight = "80", effort = 5 } } },
+            });
+            var sessionResp = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new { sets = 5, overallEffort = 7, loggedExercises = new[] { new { exerciseId, loggedWeight = "90", effort = 7 } } },
+            });
+            var sessionData = await sessionResp.JsonAsync();
+            var sessionId = sessionData?.GetProperty("workoutSessionId").GetString()!;
+
+            await page.GotoAsync($"{_webApp.BaseUrl}/history/session?id={sessionId}");
+            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+            var selectEl = page.Locator("#session-chart-select");
+            await Expect(selectEl).ToBeEnabledAsync(new() { Timeout = 15000 });
+
+            // Overall selection renders one sets bar per session with its own legend entry
+            await Expect(page.Locator(".session-chart__bar--sets")).ToHaveCountAsync(2, new() { Timeout = 15000 });
+            await Expect(page.Locator(".session-chart__legend-swatch--sets")).ToBeVisibleAsync();
+
+            // Per-exercise selection also renders the sets bars
+            await selectEl.SelectOptionAsync(new SelectOptionValue { Label = "Bench Press Sets" });
+            await Expect(page.Locator(".session-chart__bar--sets")).ToHaveCountAsync(2);
+            await Expect(page.Locator(".session-chart__legend-swatch--sets")).ToBeVisibleAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task SessionDetailPage_Chart_OmitsSetsSeries_WhenNoSessionRecordedSets()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await SeedExerciseAsync(page, "Legacy Row");
+            var exercisesResponse = await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/exercises");
+            var exercisesJson = await exercisesResponse.JsonAsync();
+            var exerciseId = exercisesJson?.EnumerateArray()
+                .First(e => e.GetProperty("name").GetString() == "Legacy Row")
+                .GetProperty("exerciseId").GetString()!;
+
+            var createResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts", new()
+            {
+                DataObject = new { name = "Legacy Sets Workout", exercises = new[] { new { exerciseId } } },
+            });
+            var workoutData = await createResponse.JsonAsync();
+            var workoutId = workoutData?.GetProperty("plannedWorkoutId").GetString()!;
+
+            var sessionResp = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts/{workoutId}/sessions", new()
+            {
+                DataObject = new { overallEffort = 6, loggedExercises = new[] { new { exerciseId, loggedWeight = "60", effort = 6 } } },
+            });
+            var sessionData = await sessionResp.JsonAsync();
+            var sessionId = sessionData?.GetProperty("workoutSessionId").GetString()!;
+
+            await page.GotoAsync($"{_webApp.BaseUrl}/history/session?id={sessionId}");
+            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+            await Expect(page.Locator("#session-chart-select")).ToBeEnabledAsync(new() { Timeout = 15000 });
+            await Expect(page.Locator(".session-chart__svg")).ToBeVisibleAsync();
+            await Expect(page.Locator(".session-chart__bar--sets")).ToHaveCountAsync(0);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    // --- T013: Empty state when exercise has no data ---
     [Fact]
     public async Task SessionDetailPage_Chart_ShowsEmptyState_WhenExerciseHasNoWeightData()
     {

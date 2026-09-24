@@ -1,5 +1,5 @@
 import { navigate } from "../router.js";
-import { getEffortLabel, normaliseValue, buildYTicks, buildXLabels } from "../utils.js";
+import { getEffortLabel, normaliseValue, buildYTicks, buildXLabels, computeSetsBarMax } from "../utils.js";
 
 let isDeleting = false;
 let isSavingSessionEdit = false;
@@ -39,6 +39,7 @@ interface SessionTrendsExercise {
 interface SessionTrendsDataPoint {
   readonly completedAt: string;
   readonly overallEffort: number | null;
+  readonly sets?: number | null;
   readonly exercises: SessionTrendsExercise[];
 }
 
@@ -590,6 +591,7 @@ async function initChartSection(session: SessionDetailWithPrevious, contentEl: H
       {
         completedAt: session.completedAt,
         overallEffort: session.overallEffort,
+        sets: session.sets ?? null,
         exercises: session.exercises.map(ex => ({
           exerciseId: ex.exerciseId,
           exerciseName: ex.exerciseName,
@@ -648,6 +650,7 @@ function renderChartForSelection(selection: string, trends: SessionTrends, bodyE
   }
 
   const dates = dp.map(d => d.completedAt);
+  const setsValues = dp.map(d => d.sets ?? null);
   let values: (number | null)[];
   let yMin: number;
   let yMax: number;
@@ -668,7 +671,9 @@ function renderChartForSelection(selection: string, trends: SessionTrends, bodyE
       yMax,
       "session-chart__line--effort",
       "session-chart__point--effort",
-      "Overall session effort"
+      "Overall session effort",
+      setsValues,
+      "Overall Effort"
     );
     return;
   }
@@ -710,7 +715,58 @@ function renderChartForSelection(selection: string, trends: SessionTrends, bodyE
   const resolvedExerciseName = selectedExerciseName
     ?? dp.flatMap(d => d.exercises).find(matchesSelection)?.exerciseName
     ?? "exercise";
-  bodyEl.innerHTML = renderCombinedExerciseSvg(dates, weightValues, effortValues, resolvedExerciseName);
+  bodyEl.innerHTML = renderCombinedExerciseSvg(dates, weightValues, effortValues, setsValues, resolvedExerciseName);
+}
+
+// Chart geometry. Sets render as background bars inside the plot area, so no
+// extra horizontal room is needed beyond the original weight/effort axes.
+const CHART_VIEW_WIDTH = 600;
+const CHART_PLOT_LEFT = 50;
+const CHART_PLOT_RIGHT = 580;
+const CHART_BASELINE_Y = 220;
+const CHART_SETS_BAR_MAX_WIDTH = 28;
+
+function chartXOf(index: number, count: number): number {
+  return count > 1
+    ? CHART_PLOT_LEFT + (index / (count - 1)) * (CHART_PLOT_RIGHT - CHART_PLOT_LEFT)
+    : (CHART_PLOT_LEFT + CHART_PLOT_RIGHT) / 2;
+}
+
+// Renders sets as background bars rising from the plot floor, so the count is read
+// from bar height alone. Returns "" when no session in range recorded sets (e.g.
+// sessions predating the sets feature).
+function buildSetsBars(
+  setsValues: readonly (number | null)[],
+  xOf: (index: number) => number,
+  count: number
+): string {
+  const barMax = computeSetsBarMax(setsValues);
+  if (barMax === null) return "";
+
+  const spacing = count > 1
+    ? (CHART_PLOT_RIGHT - CHART_PLOT_LEFT) / (count - 1)
+    : CHART_PLOT_RIGHT - CHART_PLOT_LEFT;
+  const width = Math.max(2, Math.min(CHART_SETS_BAR_MAX_WIDTH, spacing * 0.6));
+
+  return setsValues.map((value, index) => {
+    if (value === null) return "";
+    const y = normaliseValue(value, 0, barMax);
+    // Clamp so the first and last bars stay inside the plot area.
+    const x = Math.min(Math.max(xOf(index) - width / 2, CHART_PLOT_LEFT), CHART_PLOT_RIGHT - width);
+    return `<rect class="session-chart__bar session-chart__bar--sets" x="${x.toFixed(1)}" ` +
+      `y="${y.toFixed(1)}" width="${width.toFixed(1)}" height="${(CHART_BASELINE_Y - y).toFixed(1)}"/>`;
+  }).join("");
+}
+
+function buildLegend(items: readonly { modifier: string; label: string }[]): string {
+  if (items.length === 0) return "";
+  const itemEls = items
+    .map(item =>
+      `<span class="session-chart__legend-item">` +
+      `<span class="session-chart__legend-swatch session-chart__legend-swatch--${item.modifier}"></span>` +
+      `${escapeHtml(item.label)}</span>`)
+    .join("");
+  return `<div class="session-chart__legend" aria-hidden="true">${itemEls}</div>`;
 }
 
 function renderLineSvg(
@@ -720,10 +776,12 @@ function renderLineSvg(
   yMax: number,
   lineModifierClass: string,
   pointModifierClass: string,
-  ariaLabel: string
+  ariaLabel: string,
+  setsValues: readonly (number | null)[],
+  primaryLegendLabel: string
 ): string {
   const n = dates.length;
-  const xOf = (i: number): number => n > 1 ? 50 + (i / (n - 1)) * 530 : 315;
+  const xOf = (i: number): number => chartXOf(i, n);
 
   const polylines = buildPolylineSegments(values, yMin, yMax, xOf);
 
@@ -739,7 +797,7 @@ function renderLineSvg(
   const yTickLines = yTicks.map(t => {
     const y = normaliseValue(t, yMin, yMax).toFixed(1);
     const label = Number.isInteger(t) ? `${t}` : t.toFixed(1);
-    return `<line class="session-chart__gridline" x1="50" y1="${y}" x2="580" y2="${y}"/>` +
+    return `<line class="session-chart__gridline" x1="${CHART_PLOT_LEFT}" y1="${y}" x2="${CHART_PLOT_RIGHT}" y2="${y}"/>` +
       `<text class="session-chart__tick-label" x="45" y="${y}" text-anchor="end" dominant-baseline="middle">${escapeHtml(label)}</text>`;
   }).join("");
 
@@ -759,10 +817,21 @@ function renderLineSvg(
     .map(pts => `<polyline class="session-chart__line ${lineModifierClass}" points="${pts}"/>`)
     .join("");
 
+  const setsBars = buildSetsBars(setsValues, xOf, n);
+  const legend = setsBars === ""
+    ? ""
+    : buildLegend([
+      { modifier: "effort", label: primaryLegendLabel },
+      { modifier: "sets", label: "Sets" },
+    ]);
+  const fullAriaLabel = setsBars === "" ? ariaLabel : `${ariaLabel} and sets`;
+
   return `<div class="session-chart__container">
-    <svg class="session-chart__svg" viewBox="0 0 600 260" role="img" aria-label="${escapeHtml(ariaLabel)}">
-      <line class="session-chart__axis-line" x1="50" y1="20" x2="50" y2="220"/>
-      <line class="session-chart__axis-line" x1="50" y1="220" x2="580" y2="220"/>
+    ${legend}
+    <svg class="session-chart__svg" viewBox="0 0 ${CHART_VIEW_WIDTH} 260" role="img" aria-label="${escapeHtml(fullAriaLabel)}">
+      ${setsBars}
+      <line class="session-chart__axis-line" x1="${CHART_PLOT_LEFT}" y1="20" x2="${CHART_PLOT_LEFT}" y2="220"/>
+      <line class="session-chart__axis-line" x1="${CHART_PLOT_LEFT}" y1="220" x2="${CHART_PLOT_RIGHT}" y2="220"/>
       ${yTickLines}
       ${xLabelEls}
       ${polylineEls}
@@ -775,10 +844,11 @@ function renderCombinedExerciseSvg(
   dates: readonly string[],
   weightValues: readonly (number | null)[],
   effortValues: readonly (number | null)[],
+  setsValues: readonly (number | null)[],
   exerciseName: string
 ): string {
   const n = dates.length;
-  const xOf = (i: number): number => n > 1 ? 50 + (i / (n - 1)) * 530 : 315;
+  const xOf = (i: number): number => chartXOf(i, n);
 
   const numericWeightValues = weightValues.filter((v): v is number => v !== null);
   const rawWeightMin = numericWeightValues.length > 0 ? Math.min(...numericWeightValues) : 0;
@@ -797,7 +867,7 @@ function renderCombinedExerciseSvg(
   const leftTickEls = leftTicks.map(t => {
     const y = normaliseValue(t, weightMin, weightMax).toFixed(1);
     const label = Number.isInteger(t) ? `${t}` : t.toFixed(1);
-    return `<line class="session-chart__gridline" x1="50" y1="${y}" x2="580" y2="${y}"/>` +
+    return `<line class="session-chart__gridline" x1="${CHART_PLOT_LEFT}" y1="${y}" x2="${CHART_PLOT_RIGHT}" y2="${y}"/>` +
       `<text class="session-chart__tick-label" x="45" y="${y}" text-anchor="end" dominant-baseline="middle">${escapeHtml(label)}</text>`;
   }).join("");
 
@@ -805,7 +875,7 @@ function renderCombinedExerciseSvg(
   const rightTickEls = rightTicks.map(t => {
     const y = normaliseValue(t, effortMin, effortMax).toFixed(1);
     const label = Number.isInteger(t) ? `${t}` : t.toFixed(1);
-    return `<text class="session-chart__tick-label" x="585" y="${y}" text-anchor="start" dominant-baseline="middle">${escapeHtml(label)}</text>`;
+    return `<text class="session-chart__tick-label" x="${CHART_PLOT_RIGHT + 5}" y="${y}" text-anchor="start" dominant-baseline="middle">${escapeHtml(label)}</text>`;
   }).join("");
 
   const maxLabels = Math.min(n, 6);
@@ -826,15 +896,30 @@ function renderCombinedExerciseSvg(
     .map(pts => `<polyline class="session-chart__line session-chart__line--effort" points="${pts}"/>`)
     .join("");
 
+  const setsBars = buildSetsBars(setsValues, xOf, n);
+  const legend = buildLegend(
+    setsBars === ""
+      ? [
+        { modifier: "weight", label: "Weight" },
+        { modifier: "effort", label: "Effort" },
+      ]
+      : [
+        { modifier: "weight", label: "Weight" },
+        { modifier: "effort", label: "Effort" },
+        { modifier: "sets", label: "Sets" },
+      ]
+  );
+  const ariaLabel = setsBars === ""
+    ? `Weight and effort for ${exerciseName}`
+    : `Weight, effort and sets for ${exerciseName}`;
+
   return `<div class="session-chart__container">
-    <div class="session-chart__legend" aria-hidden="true">
-      <span class="session-chart__legend-item"><span class="session-chart__legend-swatch session-chart__legend-swatch--weight"></span>Weight</span>
-      <span class="session-chart__legend-item"><span class="session-chart__legend-swatch session-chart__legend-swatch--effort"></span>Effort</span>
-    </div>
-    <svg class="session-chart__svg" viewBox="0 0 600 260" role="img" aria-label="${escapeHtml(`Weight and effort for ${exerciseName}`)}">
-      <line class="session-chart__axis-line" x1="50" y1="20" x2="50" y2="220"/>
-      <line class="session-chart__axis-line" x1="580" y1="20" x2="580" y2="220"/>
-      <line class="session-chart__axis-line" x1="50" y1="220" x2="580" y2="220"/>
+    ${legend}
+    <svg class="session-chart__svg" viewBox="0 0 ${CHART_VIEW_WIDTH} 260" role="img" aria-label="${escapeHtml(ariaLabel)}">
+      ${setsBars}
+      <line class="session-chart__axis-line" x1="${CHART_PLOT_LEFT}" y1="20" x2="${CHART_PLOT_LEFT}" y2="220"/>
+      <line class="session-chart__axis-line" x1="${CHART_PLOT_RIGHT}" y1="20" x2="${CHART_PLOT_RIGHT}" y2="220"/>
+      <line class="session-chart__axis-line" x1="${CHART_PLOT_LEFT}" y1="220" x2="${CHART_PLOT_RIGHT}" y2="220"/>
       ${leftTickEls}
       ${rightTickEls}
       ${xLabelEls}

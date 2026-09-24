@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { reorder, shuffle, applyOrder, getEffortColour, normaliseValue, buildYTicks, buildXLabels } from '../utils';
+import { reorder, shuffle, applyOrder, getEffortColour, normaliseValue, buildYTicks, buildXLabels, computeSetsBarMax } from '../utils';
 
 describe('getEffortColour', () => {
   it('returns #22C55E for value 1 (Easy)', () => {
@@ -230,6 +230,27 @@ describe('buildYTicks', () => {
 
   it('returns 3 evenly spaced ticks', () => {
     expect(buildYTicks(0, 100, 3)).toEqual([0, 50, 100]);
+  });
+});
+
+describe('computeSetsBarMax', () => {
+  it('returns null when no set counts were recorded', () => {
+    expect(computeSetsBarMax([])).toBeNull();
+    expect(computeSetsBarMax([null, null])).toBeNull();
+  });
+
+  it('uses the baseline reference for the usual 3 and 5 set counts', () => {
+    expect(computeSetsBarMax([3, 5, null, 3])).toBe(6);
+  });
+
+  it('keeps bar heights comparable by ignoring the observed minimum', () => {
+    expect(computeSetsBarMax([3])).toBe(6);
+    expect(computeSetsBarMax([5])).toBe(6);
+  });
+
+  it('raises the reference so counts above the baseline still fit', () => {
+    expect(computeSetsBarMax([3, 8])).toBe(8);
+    expect(computeSetsBarMax([12])).toBe(12);
   });
 });
 

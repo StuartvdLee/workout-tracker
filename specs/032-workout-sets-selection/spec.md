@@ -57,13 +57,32 @@ When viewing a previous workout in History, the user sees a "Sets" column and a 
 
 ---
 
-### Edge Cases
+### User Story 4 - See sets on the previous-workout stats graph (Priority: P3)
 
-- What happens when a session was recorded before sets existed? Sets values are treated as absent and rendered with the existing no-data indicator (history) or omitted (current workout "Last time").
+When viewing the stats graph on a previous workout's history detail page, the user sees the number of sets recorded for each session as background bars sized by set count, for both the overall session effort view and each per-exercise view.
+
+**Why this priority**: Seeing how sets changed alongside weight and effort makes the trend graph interpretable, but it depends on sets already being captured (US1) and shown in history (US3).
+
+**Independent Test**: Open the history detail page for a workout with at least two sessions that recorded different sets values and confirm the graph shows differently sized sets bars with a legend entry, for every selection in the "Show:" dropdown.
+
+**Acceptance Scenarios**:
+
+1. **Given** a workout with sessions that recorded sets, **When** the user views the graph with "Overall Session Effort" selected, **Then** a sets bar is shown behind the effort series for each session, sized by its set count, with a legend entry labelled "Sets" and no sets axis or numeric value labels.
+2. **Given** the same workout, **When** the user selects an individual exercise in the graph dropdown, **Then** the sets bars are shown behind that exercise's weight and effort series, with a legend entry.
+3. **Given** some sessions in the graph recorded sets and others did not, **When** the user views the graph, **Then** a bar is shown only for the sessions that recorded sets and the others show no bar rather than a zero-height bar or an error.
+4. **Given** no session shown in the graph recorded sets, **When** the user views the graph, **Then** no sets bars or sets legend entry are shown and the existing weight and effort presentation is unchanged.
+5. **Given** a session recorded more sets than the bar reference normally shows, **When** the user views the graph, **Then** the reference grows to include that value so every bar stays within the plot area and relative heights stay accurate.
+
+---
+
+
+- What happens if a session recorded a set count higher than the currently selectable values (for example from historical or imported data)? The graph's bar reference extends to include it so every bar stays inside the plot area with accurate relative heights.
+- What happens when a session was recorded before sets existed? Sets values are treated as absent and rendered with the existing no-data indicator (history), omitted (current workout "Last time"), or left as a gap in the graph's sets series.
 - What happens if a sets value outside the allowed set (3 or 5) is submitted? The system rejects it and the session is not created or updated.
 - What happens when the workout list fails to load? The sets dropdown remains usable with its default of 3, but starting a workout is blocked by the existing workout-selection error handling.
 - What happens when the user encounters a slow network, slow device, or delayed backend response? The sets dropdown follows the same loading and disabled-state behaviour as the workout dropdown, and starting a workout remains blocked until the request resolves.
-- How does the experience stay consistent across loading, empty, success, and failure states? Sets reuses the existing select, validation-message, table-cell, and no-data patterns without introducing new visual treatments.
+- What happens when only one session is available to the graph? The sets series renders as a single marker with no connecting line, matching how weight and effort already behave.
+- How does the experience stay consistent across loading, empty, success, and failure states? Sets reuses the existing select, validation-message, table-cell, chart-series, and no-data patterns without introducing new visual treatments.
 
 ## Requirements *(mandatory)*
 
@@ -80,6 +99,12 @@ When viewing a previous workout in History, the user sees a "Sets" column and a 
 - **FR-009**: The history detail view MUST show the established no-data indicator when a sets or previous-sets value is unavailable.
 - **FR-010**: Editing a past session MUST allow changing the session sets value using the same interaction pattern as editing weight and effort, and MUST persist the change for all exercises in that session.
 - **FR-011**: Existing sessions recorded before this feature MUST continue to display and be editable without error when no sets value exists.
+- **FR-012**: The stats graph on the history detail view MUST show the sets recorded for each session shown, as vertical bars whose height is proportional to the set count, for every selection offered by the graph's "Show:" control.
+- **FR-016**: The sets bars MUST accommodate every set count shown, including counts higher than those currently selectable, keeping each bar within the graph's plot area.
+- **FR-017**: The graph MUST NOT render a sets axis, sets scale labels, or numeric set values on or above the bars; the set count is conveyed by bar height alone.
+- **FR-013**: The sets series MUST be identified in the graph legend using the label "Sets", and the legend MUST also identify the other plotted series for the selection being shown.
+- **FR-014**: The graph MUST omit sets from a session that has no recorded sets, rendering it as a gap in the sets series rather than as a zero value or an error.
+- **FR-015**: The graph MUST omit the sets series, its scale, and its legend entry entirely when no session shown in the graph recorded sets, leaving the existing presentation unchanged.
 
 ### Security & Privacy Requirements
 
@@ -89,20 +114,22 @@ When viewing a previous workout in History, the user sees a "Sets" column and a 
 
 ### User Experience Consistency Requirements
 
-- **UX-001**: The sets dropdown, table columns, and "Last time" text MUST reuse the existing select, table, and summary-line patterns without introducing new visual styles.
-- **UX-002**: Loading, empty (no sets recorded), success, and error states MUST be defined for the "Let's go!" page, the current workout view, and the history detail view, reusing existing state treatments.
-- **UX-003**: The term "Sets" MUST be used consistently in labels, column headers, and summary text, with the "Prev. Sets" header matching the existing "Prev." header convention.
+- **UX-001**: The sets dropdown, table columns, "Last time" text, and graph series MUST reuse the existing select, table, summary-line, and chart line/point/legend patterns without introducing new visual styles.
+- **UX-002**: Loading, empty (no sets recorded), success, and error states MUST be defined for the "Let's go!" page, the current workout view, the history detail view, and the history detail graph, reusing existing state treatments.
+- **UX-003**: The term "Sets" MUST be used consistently in labels, column headers, summary text, and the graph legend, with the "Prev. Sets" header matching the existing "Prev." header convention.
+- **UX-004**: The sets bars MUST be visually distinguishable from the existing weight and effort series without relying on colour alone, and MUST NOT obscure them.
 
 ### Performance Requirements
 
 - **PR-001**: For sessions containing up to 25 exercises, the p95 duration of starting a workout and loading a history detail view MUST regress by no more than 10% or 100 milliseconds, whichever allowance is greater, compared with the pre-feature baseline measured in the same environment.
-- **PR-002**: Sets data adds a single value per session and introduces no additional per-exercise lookups, repeated queries, or new hot paths.
+- **PR-002**: Sets data adds a single value per session and introduces no additional per-exercise lookups, repeated queries, or new hot paths. The graph's sets series reuses the data already loaded for the graph and triggers no additional request.
 - **PR-003**: Performance MUST be verified with at least 20 warmed measurements per affected flow and by confirming that starting a workout and loading history detail issue no additional data-fetch round trips compared with the current behaviour.
 
 ### Key Entities *(include if feature involves data)*
 
 - **Workout Session**: An instance of a performed workout; gains a single sets attribute (3 or 5, or absent for historical sessions) that applies to all of its exercises.
 - **Logged Exercise**: An exercise recorded within a session; its displayed sets value derives from its parent session's sets attribute, and its "previous sets" derives from the latest prior session selected as the usable weight-or-effort comparison for that exercise.
+- **Session Trend Point**: One completed session represented on the history detail graph; carries the session's completion date, overall effort, sets, and per-exercise weight and effort values.
 
 ## Success Criteria *(mandatory)*
 
@@ -112,7 +139,9 @@ When viewing a previous workout in History, the user sees a "Sets" column and a 
 - **SC-002**: 100% of newly started sessions have a recorded sets value of 3 or 5.
 - **SC-003**: For every exercise whose latest usable weight-or-effort comparison session recorded sets, the "Last time" line shows the sets value from that same source session in 100% of cases.
 - **SC-004**: 100% of history detail views for sessions predating this feature render without errors and show the standard no-data indicator for sets.
-- **SC-005**: 100% of affected flows use the existing select, table, validation, and no-data patterns with no new visual treatments introduced.
+- **SC-005**: 100% of affected flows use the existing select, table, validation, chart, and no-data patterns with no new visual treatments introduced.
+- **SC-007**: For every graph selection on a workout whose sessions recorded sets, the sets series is plotted with a legend entry in 100% of cases, and no additional data request is made when the selection changes.
+- **SC-008**: Every set count shown on the graph, including counts above the currently selectable values, renders as a bar contained within the graph's plot area in 100% of cases, with no sets axis or numeric set labels shown.
 - **SC-006**: Across at least 20 warmed measurements for sessions with up to 25 exercises, the p95 duration of starting a workout and opening history detail regresses by no more than 10% or 100 milliseconds, whichever allowance is greater, with no additional data-fetch round trips.
 
 ## Delivery Verification
@@ -122,3 +151,10 @@ When viewing a previous workout in History, the user sees a "Sets" column and a 
 - **Verified behavior**: New sessions require and persist Sets 3 or 5; active-workout comparisons and history current/previous Sets render correctly; legacy missing Sets is omitted or shown with the existing no-data marker; session-level editing remains synchronized.
 - **Not completed**: The manual pre-feature versus feature p95 baseline procedure in PR-001/SC-006 was not run because there is no separate pre-feature baseline commit for this branch. Automated request-count, query-count, selector-bound, and local latency smoke budgets passed.
 - **Tooling note**: The repository has no separate npm `lint` script; TypeScript compilation and the existing frontend test suite were run instead.
+
+### Extension: Sets on the history detail graph (User Story 4)
+
+- **Implemented**: Added after PR #159 as an extension to this feature.
+- **Scope**: `GET /api/workouts/{workoutId}/session-trends` now returns a nullable session-level `sets` value per data point, and the history detail chart renders it as background "Sets" bars for both the overall-effort and per-exercise selections. No sets axis or numeric labels are drawn; bar height is measured from zero against a reference of at least `6` sets, which grows when a session recorded more.
+- **Verified**: Frontend tests passed (96); backend tests passed (168); Playwright E2E tests passed (290); TypeScript build passed.
+- **Verified behavior**: Sets plots for sessions that recorded it, breaks across sessions that did not, and is omitted entirely (series, axis, and legend entry) when no session in range recorded sets. No additional data request is introduced; the series is derived from the data the graph already loads.

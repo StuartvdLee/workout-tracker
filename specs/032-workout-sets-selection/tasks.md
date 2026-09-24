@@ -110,6 +110,25 @@
 
 ---
 
+## Phase 5a: User Story 4 - See Sets on the Previous-Workout Stats Graph (Priority: P3)
+
+**Purpose**: Plot each session's Sets as a distinct series on the history detail stats graph, for every graph selection. Extension added after PR #159.
+
+**Independent Test**: Open the history detail page for a workout with several sessions that recorded different Sets values and confirm differently sized `Sets` bars with a legend entry render for both the overall-effort and per-exercise selections, with no sets axis or numeric labels.
+
+- [X] T040 [US4] Add the missing `GET /api/workouts/{workoutId}/session-trends` mock route, returning session-level `sets` per data point, in `src/WorkoutTracker.E2ETests/Infrastructure/WebAppFixture.cs` (prerequisite: the chart previously always fell back to single-session data in E2E)
+- [X] T041 [US4] Add an API test asserting `sets` is projected once per `session-trends` data point in `src/WorkoutTracker.UnitTests/Api/SessionApiTests.cs`
+- [X] T042 [US4] Add Playwright tests asserting the `Sets` bars and legend entry render for the overall and per-exercise selections, and are absent when no session recorded Sets, in `src/WorkoutTracker.E2ETests/E2E/WorkoutHistoryTests.cs`
+- [X] T043 [US4] Project the session-level `Sets` value into each `session-trends` data point in `src/WorkoutTracker.Api/Program.cs`
+- [X] T044 [US4] Add `sets` to the trends data-point interface and fallback trend point, extract shared chart geometry constants, and render the Sets bars in both chart renderers via a shared `buildSetsBars` helper in `src/WorkoutTracker.Web/wwwroot/ts/pages/session-detail.ts`
+- [X] T047 [US4] Add `computeSetsBarMax` (fixed baseline of `6`, raised only by higher recorded counts) in `src/WorkoutTracker.Web/wwwroot/ts/utils.ts` with unit tests in `src/WorkoutTracker.Web/wwwroot/ts/__tests__/utils.test.ts`, and use it from `buildSetsBars` so bar heights stay comparable and never overflow the plot area
+- [X] T045 [P] [US4] Add `--color-chart-sets` (light and dark), `.session-chart__bar--sets` (reduced-opacity fill), and `.session-chart__legend-swatch--sets` in `src/WorkoutTracker.Web/wwwroot/css/styles.css`
+- [X] T046 [US4] Run and fix the US4 API and chart E2E tests in `src/WorkoutTracker.UnitTests/Api/SessionApiTests.cs` and `src/WorkoutTracker.E2ETests/E2E/WorkoutHistoryTests.cs`
+
+**Checkpoint**: The stats graph shows Sets alongside effort and weight, breaks across sessions without Sets, and omits the series entirely for workouts that never recorded Sets.
+
+---
+
 ## Phase 6: Polish & Cross-Cutting Concerns
 
 **Purpose**: Complete accessibility, documentation, security, deterministic performance gates, comparative measurements, and full regression validation.
@@ -135,6 +154,7 @@
 - **Phase 3 — US1**: Depends on Phase 2. Write and observe T007-T010 failing before T011-T013; T014 validates the story.
 - **Phase 4 — US2**: Depends on Phase 2. T016 depends on T015; T017 and T018 can be written in parallel. Integrated delivery should follow US1 so users can create Sets data.
 - **Phase 5 — US3**: Depends on Phase 2. T023 precedes T024 because both edit the same E2E file; T025 and T026 precede frontend integration validation.
+- **Phase 5a — US4**: Depends on Phase 2 for stored Sets data and on Phase 5 for the session-detail page structure. T040 precedes T042 because the chart cannot render multi-session data in E2E without the mock route; T041 and T042 are written before T043 and T044.
 - **Phase 6 — Polish**: Depends on all stories selected for delivery. T036 depends on the completed API paths; T039 completed against the delivered implementation. T038 is a deferred pre-release follow-up because no separate pre-feature baseline commit exists.
 
 ### User Story Dependency Graph
@@ -142,9 +162,9 @@
 ```text
 Setup → Foundational ─┬→ US1 (P1 / MVP)
                       ├→ US2 (P2)
-                      └→ US3 (P3)
+                      └→ US3 (P3) → US4 (P3)
 
-Recommended integrated delivery: US1 → US2 → US3 → Polish
+Recommended integrated delivery: US1 → US2 → US3 → US4 → Polish
 ```
 
 US2 and US3 are independently testable after Foundational by seeding historical sessions directly, even though normal product usage creates their Sets data through US1.
@@ -157,6 +177,7 @@ US2 and US3 are independently testable after Foundational by seeding historical 
 - T015 and T017 can proceed in parallel; T016 follows T015, while T018 changes a separate E2E file.
 - T022 can proceed in parallel with T023; T024 follows T023 in the shared E2E file.
 - T025/T026 backend work can proceed in parallel with the initial T027 frontend view implementation if the API contract is held fixed.
+- T045 changes only `styles.css` and can proceed in parallel with T043 and T044.
 - T031, T032, T034, and T035 change separate files and can proceed in parallel.
 - Different user stories can be assigned concurrently after Phase 2 because fixtures can seed each story's required state.
 
@@ -225,7 +246,8 @@ Task T029: Responsive table styling in styles.css
 2. **US1 / MVP**: Explicitly select and persist 3 or 5 Sets for every new workout.
 3. **US2**: Display the selected comparison session's Sets in active-workout `Last time`.
 4. **US3**: Display and edit current/previous Sets in workout history.
-5. **Polish**: Accessibility, documentation, security, deterministic budgets, comparative p95 evidence, and regression validation.
+5. **US4**: Plot Sets as a third series on the history detail stats graph.
+6. **Polish**: Accessibility, documentation, security, deterministic budgets, comparative p95 evidence, and regression validation.
 
 ### Parallel Team Strategy
 
@@ -236,8 +258,8 @@ Task T029: Responsive table styling in styles.css
 
 ## Delivery Record
 
-- PR #159 contains the delivered implementation.
-- T001-T037 and T039 are complete.
+- PR #159 contains the delivered implementation of T001-T037 and T039.
+- T040-T047 were delivered later as the User Story 4 stats-graph extension, verified by 96 frontend tests, 168 backend tests, 290 Playwright tests, and a passing TypeScript build.
 - T038 remains intentionally open as a pre-release comparative p95 measurement, not as an implementation blocker.
 - Delivered follow-up fixes include missing/undefined legacy Sets rendering, explicit detail-table column widths to prevent header overlap, and Sets selection for every Workouts-page Start path.
 
@@ -245,7 +267,7 @@ Task T029: Responsive table styling in styles.css
 
 - `[P]` means the task changes a different file and has no dependency on unfinished work.
 - Confirm story tests fail for the intended reason before production implementation.
-- Keep Sets as one nullable `WorkoutSession` property; never add it to `LoggedExercise`.
+- Keep Sets as one nullable `WorkoutSession` property; never add it to `LoggedExercise`, and emit it once per `session-trends` data point rather than per exercise.
 - New sessions require 3 or 5; null exists only for legacy and explicit historical-edit compatibility.
 - Preserve the weight-or-effort usability predicate; Sets alone must never select a historical row.
 - Reuse existing routes, styles, errors, loading states, and no-data markup rather than adding parallel patterns.

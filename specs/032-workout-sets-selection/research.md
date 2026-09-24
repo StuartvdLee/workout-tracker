@@ -67,8 +67,38 @@
 
 **Rationale**: These are cross-layer user journeys and critical data-selection rules, matching the constitution and prior plans.
 
+For the graph extension, add an API integration test asserting `sets` is projected per `session-trends` data point, and Playwright tests asserting the sets series and legend entry render for both the overall and per-exercise selections and are absent when no session recorded sets. The E2E mock web host also needs a `session-trends` route: it previously had none, so the chart fell back to single-session data and multi-session chart behavior was never exercised.
+
 No `NEEDS CLARIFICATION` markers remain.
+
+## Decision 8: Show sets as background bars with no sets axis
+
+**Decision**: Extend the existing `session-trends` response with one nullable session-level `sets` value per data point, and render it in `session-detail.ts` as vertical background bars, one per session, rising from the plot floor to a height proportional to the set count. Draw no sets axis, tick labels, or numeric value labels: the count is read from bar height alone. Bar height is measured from zero against a full-height reference of `6` sets, raised only when a session recorded more. Apply it to both the overall-effort selection and each per-exercise selection, add a `Sets` legend entry, and keep the chart's original `0 0 600 260` `viewBox` and `x=50`-`x=580` plot area.
+
+**Rationale**: Sets is session-level, so it is meaningful under every chart selection, and bars let the user correlate changes in sets with changes in weight and effort at a glance. Bars occupy the chart background, so no horizontal room is needed for an extra axis and the weight and effort lines stay the visual focus. A count of 3 or 5 is a small magnitude that reads directly from relative bar height, so a numeric axis would add clutter without adding information. A fixed `6`-set reference keeps heights comparable across selections and workouts, while raising it for larger counts keeps every bar inside the plot area. Bars also differ in shape from the two line series, so sets stays distinguishable without relying on colour alone.
+
+**Alternatives considered**:
+- Plot sets as a third line/point series on an offset right-hand axis: rejected because a third axis crowded the chart, forced a wider `viewBox`, and gave a two-value measure more visual weight than the metrics being trended.
+- Label each bar with its numeric set count: rejected because the labels collide at the 50-session cap, and relative bar height already conveys 3 versus 5.
+- Append sets to the x-axis date labels: rejected because it crowds the date row and does not show the trend as a trend.
+- Share the existing effort axis: rejected because the `0`-`10` effort scale compresses the 3-versus-5 difference and implies the two values are comparable.
+- Scale bars to the observed min/max: rejected because a constant-sets workout would render every bar at full height and a small change would look dramatic. The fixed `6`-set reference keeps sessions comparable.
+- Cap the bar reference at `6`: rejected because any count above six would overflow the plot area; the reference rises instead (`computeSetsBarMax` in `utils.ts`).
+- Draw bars over the lines: rejected because the filled shapes would obscure the weight and effort series; bars are rendered first and filled at reduced opacity.
+- Show sets only on per-exercise selections: rejected because sets applies to the whole session and is equally relevant to the overall-effort view.
+
+## Decision 9: Omit the sets bars entirely when no session recorded sets
+
+**Decision**: When every data point in range has `sets: null`, render no bars and no legend entry, and leave the overall-effort chart without a legend exactly as before. When only some data points lack sets, render a bar only for the sessions that recorded one.
+
+**Rationale**: This matches how the chart already handles missing weight and effort, avoids advertising empty data on pre-feature workouts, and keeps `FR-015` verifiable with a simple element-count assertion.
+
+**Alternatives considered**:
+- Always draw the legend: rejected because it advertises data that does not exist for legacy workouts.
+- Treat missing sets as zero: rejected because it fabricates data and a zero-height bar is indistinguishable from no bar while still implying a recorded value.
 
 ## Delivered Verification
 
 The decisions were implemented and covered by the API, selector-unit, frontend, and Playwright suites. The delivered implementation also added defensive handling for missing legacy `sets`/`previousSets` fields and fixed responsive detail-table column sizing after visual verification.
+
+Decisions 8 and 9 were implemented as an extension after PR #159 and are covered by an added `session-trends` API test and two added Playwright chart tests. Implementing them also required adding the missing `GET /api/workouts/{workoutId}/session-trends` mock route to `WebAppFixture.cs`.

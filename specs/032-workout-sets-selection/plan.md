@@ -5,7 +5,7 @@
 
 ## Summary
 
-Add an explicit 3-or-5 Sets selection below the workout selector before an active workout begins. Carry the selected session-wide value through the existing active-session query-string flow and persist it as a nullable, constrained `WorkoutSession.Sets` column when the session is saved. Extend the current previous-performance and session-detail contracts so active workouts show `3 sets` or `5 sets` in `Last time`, and historical workout tables show current and previous Sets columns. Historical edit mode updates one synchronized session-level value. Existing routes, proxy behavior, UI classes, latest-usable historical selection, and legacy-null rendering are reused.
+Add an explicit 3-or-5 Sets selection below the workout selector before an active workout begins. Carry the selected session-wide value through the existing active-session query-string flow and persist it as a nullable, constrained `WorkoutSession.Sets` column when the session is saved. Extend the current previous-performance and session-detail contracts so active workouts show `3 sets` or `5 sets` in `Last time`, and historical workout tables show current and previous Sets columns. Historical edit mode updates one synchronized session-level value. The history detail stats graph also shows each session's sets as background bars sized by set count, with no sets axis, for both the overall-effort and per-exercise selections. Existing routes, proxy behavior, UI classes, latest-usable historical selection, and legacy-null rendering are reused.
 
 ## Technical Context
 
@@ -16,8 +16,8 @@ Add an explicit 3-or-5 Sets selection below the workout selector before an activ
 **Target Platform**: Web browser (mobile-first responsive UI)
 **Project Type**: Web application (SPA-style frontend served by ASP.NET Core / .NET Aspire orchestration)
 **Performance Goals**: Automated request-count, query-count, selector-bound, and local latency budgets passed; the manual 20-warm-iteration comparative p95 baseline remains a pre-release follow-up because this branch has no separate pre-feature baseline commit. See **Performance Budgets & Measurement Design**.
-**Constraints**: No external JS/CSS frameworks; strict TypeScript; values restricted to 3 or 5 for new sessions; legacy rows remain nullable; one sets value per session despite repeated table display; preserve existing random-order query flow, BEM classes, no-data marker, edit/discard behavior, and latest-usable historical comparison semantics
-**Scale/Scope**: One model/configuration/migration, existing API session routes and selector records, start/active/detail TypeScript pages, limited responsive CSS, API/unit/E2E tests; no new project or endpoint
+**Constraints**: No external JS/CSS frameworks; strict TypeScript; values restricted to 3 or 5 for new sessions; legacy rows remain nullable; one sets value per session despite repeated table and per-data-point chart display; preserve existing random-order query flow, BEM classes, no-data marker, edit/discard behavior, hand-rolled SVG charting, and latest-usable historical comparison semantics
+**Scale/Scope**: One model/configuration/migration, existing API session and session-trends routes and selector records, start/active/detail TypeScript pages, limited responsive and chart-series CSS, API/unit/E2E tests; no new project or endpoint
 
 ## Constitution Check
 
@@ -64,12 +64,14 @@ src/WorkoutTracker.Api/
 src/WorkoutTracker.Web/
 └── wwwroot/
     ├── css/
-    │   └── styles.css                              # MODIFIED only for detail-table responsiveness
+    │   └── styles.css                              # MODIFIED for detail-table responsiveness and
+    │                                                # the Sets chart series colour/legend
     └── ts/
         └── pages/
             ├── home.ts                             # MODIFIED: Sets select/validation/query param
             ├── active-session.ts                   # MODIFIED: parse/save sets and render Last time
-            └── session-detail.ts                   # MODIFIED: Sets/Prev. Sets view and synchronized edit
+            └── session-detail.ts                   # MODIFIED: Sets/Prev. Sets view, synchronized edit,
+                                                    # and the stats-graph Sets series
 
 src/WorkoutTracker.UnitTests/
 └── Api/
@@ -78,9 +80,11 @@ src/WorkoutTracker.UnitTests/
 
 src/WorkoutTracker.E2ETests/
 ├── Infrastructure/
-│   └── WebAppFixture.cs                            # MODIFIED: mocks include sets fields
+│   └── WebAppFixture.cs                            # MODIFIED: mocks include sets fields; adds the
+│                                                    # missing session-trends mock route
 └── E2E/
-    ├── WorkoutHistoryTests.cs                      # MODIFIED: start, active, history/edit journeys
+    ├── WorkoutHistoryTests.cs                      # MODIFIED: start, active, history/edit and
+    │                                                # stats-graph Sets-series journeys
     └── HomeLandingPagePerformanceTests.cs          # MODIFIED: request-count and latency budgets
 ```
 
@@ -127,6 +131,7 @@ These are environment-independent and MUST be asserted in tests.
 | PB-05 | Database round trips in session detail | Exactly 2 (session projection, bounded prior-session scan) | `SessionApiTests.cs` |
 | PB-06 | Historical sessions scanned | Capped at the existing `MaxSessionsToScan` value of 200 | `PreviousExerciseDataSelectorTests.cs` |
 | PB-07 | Sets values transported per session | Exactly 1 top-level field; 0 per logged exercise | `SessionApiTests.cs` |
+| PB-11 | Sets values transported per `session-trends` data point | Exactly 1 top-level field; 0 per exercise | `SessionApiTests.cs` |
 
 PB-01 through PB-03 are implemented with Playwright's `page.Request` counter, following the existing `HomePage_NoExternalNetworkRequests` pattern. PB-04 and PB-05 are asserted with an EF Core command interceptor or logged-command counter registered in the test host.
 
@@ -191,10 +196,31 @@ Each case constructs `HistoricalSessionData` values newest-first and asserts on 
 - **Code Quality** ✅ — Design extends existing session storage, endpoints, selector records, page modules, and typed edit state. It avoids duplicated per-exercise persistence and new abstractions.
 - **Testing** ✅ — API, dedicated selector-unit, and Playwright coverage explicitly proves allowed values, legacy nulls, source-session comparison consistency, older weight/effort fallback preservation, omitted-versus-null updates, required start selection, and synchronized historical editing. The selector test matrix and its `InternalsVisibleTo` prerequisite are specified in **Selector Test Design**.
 - **Security** ✅ — Client and server validate untrusted values, the database enforces the invariant, and no authorization/trust boundary changes are introduced.
-- **User Experience Consistency** ✅ — Existing form, summary, table, no-data, error, and discard interactions are preserved; all new copy and states are defined.
-- **Performance** ✅ — All data is added to existing bounded queries and payloads with no new round trips or N+1 access. PB-01 to PB-07 were verified by automated tests and PB-08 to PB-10 passed as local regression tripwires. The Tier 3 comparative p95 procedure remains explicitly unverified and is documented as a pre-release follow-up.
+- **User Experience Consistency** ✅ — Existing form, summary, table, chart, no-data, error, and discard interactions are preserved; all new copy and states are defined. The Sets bars reuse the established legend classes and differ from the weight and effort lines in shape as well as colour, so they do not rely on colour alone.
+- **Performance** ✅ — All data is added to existing bounded queries and payloads with no new round trips or N+1 access. The chart Sets series reuses the single existing trends response and adds no request when the selection changes. PB-01 to PB-07 were verified by automated tests and PB-08 to PB-10 passed as local regression tripwires. The Tier 3 comparative p95 procedure remains explicitly unverified and is documented as a pre-release follow-up.
 
 No constitution violations. Implementation is complete for PR #159; only the optional pre-release comparative baseline remains.
+
+## Extension: Sets on the history detail stats graph
+
+Added after PR #159 to satisfy User Story 4 and FR-012 to FR-017.
+
+### Design
+
+- `GET /api/workouts/{workoutId}/session-trends` projects the already-loaded session-level `Sets` value into each data point. No new query, join, or endpoint.
+- `session-detail.ts` renders `Sets` bars in both chart renderers using shared geometry constants (`CHART_VIEW_WIDTH`, `CHART_PLOT_LEFT`, `CHART_PLOT_RIGHT`, `CHART_BASELINE_Y`, `CHART_SETS_BAR_MAX_WIDTH`) and a shared `buildSetsBars` helper, so the two renderers cannot drift.
+- No sets axis is drawn. `computeSetsBarMax` in `utils.ts` returns the value a full-height bar represents: a fixed baseline of `6`, raised only when a session recorded more, so identical counts always render at identical heights and no bar overflows the plot area. Bars are drawn first in the SVG so the weight and effort lines stay readable on top, and the chart keeps its original `0 0 600 260` `viewBox` and `x=50`-`x=580` plot area.
+- `buildSetsBars` returns an empty string when every data point has a null sets value, which removes the bars and the legend entry together; individual null values simply render no bar.
+- `styles.css` adds `--color-chart-sets` (with a dark-theme override) plus `.session-chart__bar--sets` and `.session-chart__legend-swatch--sets`. The bars are filled at reduced opacity so the lines plotted over them stay legible.
+- Changing the chart selection issues no request: the change handler re-renders from the already-fetched in-memory `currentTrends` value, so PB-01 to PB-03 are unaffected.
+
+### Test-infrastructure prerequisite
+
+`WebAppFixture.cs` had no `session-trends` mock route, so the chart silently fell back to single-session data in every E2E test and multi-session chart behavior was untested. The extension adds the mock route, which is required for any assertion about a plotted line rather than a lone point.
+
+### Verification
+
+Frontend tests 96 passed; backend tests 168 passed; Playwright E2E tests 290 passed; TypeScript build passed.
 
 ## Complexity Tracking
 
