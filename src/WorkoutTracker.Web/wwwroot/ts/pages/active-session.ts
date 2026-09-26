@@ -35,6 +35,10 @@ interface PreviousPerformance {
   readonly exercises: PreviousExerciseData[];
 }
 
+interface SessionCreateResponse {
+  readonly workoutSessionId: string;
+}
+
 let workout: WorkoutDetail | null = null;
 let logEntries: Map<string, LogEntry> = new Map();
 let isSaving = false;
@@ -797,8 +801,9 @@ async function handleSave(overallEffort: number | null): Promise<void> {
     });
 
     if (response.ok) {
+      const session: SessionCreateResponse = await response.json();
       hasChanges = false;
-      navigate("/history");
+      navigate(`/history/session?id=${encodeURIComponent(session.workoutSessionId)}`);
     } else {
       const data = await response.json();
       if (apiErrorEl) {

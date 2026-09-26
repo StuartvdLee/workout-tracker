@@ -112,19 +112,20 @@ A user can delete a planned workout from the workouts list. Each workout row dis
 
 ### User Story 6 - Log a Completed Workout (Priority: P3)
 
-A user can start a new workout session from a planned workout template. From the planned workouts list, clicking a "Start Workout" button on a workout row opens a new view where the user performs the exercises. For each exercise, the user logs the actual reps performed and weight used. After completing (or stopping) the session, the user can save the workout session. Saving creates a completed workout record in history with the timestamp and logged data.
+A user can start a new workout session from a planned workout template. From the planned workouts list, clicking a "Start Workout" button on a workout row opens a new view where the user performs the exercises. For each exercise, the user logs the actual reps performed and weight used. After completing (or stopping) the session, the user can save the workout session. Saving creates a completed workout record in history with the timestamp and logged data, then opens that saved session's detail page so the user can immediately review its stats and graph.
 
 **Why this priority**: Logging completed workouts is essential for progress tracking and history, but it depends on planned workouts existing first. This enables the history feature.
 
-**Independent Test**: Can be fully tested by creating a planned workout, clicking "Start Workout", performing exercises with logging inputs, saving, and verifying the completed session appears in the history with the correct data and timestamp.
+**Independent Test**: Can be fully tested by creating a planned workout, clicking "Start Workout", performing exercises with logging inputs, saving, and verifying the app opens the saved session detail page and that the completed session still appears in the history with the correct data and timestamp.
 
 **Acceptance Scenarios**:
 
 1. **Given** the user views a planned workout, **When** they click "Start Workout", **Then** a new workout session view opens with all exercises from the template pre-populated and ready for logging.
 2. **Given** the user is in an active workout session, **When** they complete an exercise and enter the actual reps and weight performed, **Then** the session captures and stores this data.
-3. **Given** the user is in an active workout session, **When** they click "Save Workout", **Then** a completed workout record is created in history with the timestamp, linked to the planned workout template.
+3. **Given** the user is in an active workout session, **When** they click "Save Workout", **Then** a completed workout record is created in history with the timestamp, linked to the planned workout template, and the user is taken directly to `/history/session?id=<sessionId>`.
 4. **Given** the user is in an active workout session, **When** they click "Cancel" or navigates away, **Then** the user is prompted to confirm (to avoid accidental data loss), and if confirmed, the session is discarded without saving.
-5. **Given** a completed workout has been saved, **When** the user views the history, **Then** the completed workout appears with the planned workout name, timestamp, and the actual reps/weight logged.
+5. **Given** a completed workout has been saved, **When** the save completes, **Then** the saved session detail page displays the recorded workout data and the chart/statistics available for that session.
+6. **Given** a completed workout has been saved, **When** the user views the history, **Then** the completed workout appears with the planned workout name, timestamp, and the actual reps/weight logged.
 
 ---
 
@@ -194,6 +195,7 @@ The user can view all completed workout sessions in a history view. Each session
 - **FR-025**: System MUST allow users to log actual reps and weight performed for each exercise in the active session.
 - **FR-026**: System MUST validate that logged reps and weight values are numeric (or empty/optional).
 - **FR-027**: System MUST allow users to save a completed workout session via a "Save Workout" button, creating a persistent history record with timestamp.
+- **FR-027a**: After a completed workout session is saved successfully, the system MUST navigate directly to that saved session's detail page at `/history/session?id=<sessionId>`.
 - **FR-028**: System MUST allow users to cancel an active workout session without saving, with a confirmation prompt to prevent accidental loss.
 - **FR-029**: System MUST display all completed workout sessions in a History view in reverse chronological order (newest first).
 - **FR-030**: System MUST display the associated planned workout name, completion date/time, and logged exercise details for each completed session.

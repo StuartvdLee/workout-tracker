@@ -1272,12 +1272,11 @@ public class WorkoutHistoryTests
             await page.WaitForSelectorAsync(".active-session");
             await page.Locator("#session-save").ClickAsync();
             await page.Locator("#effort-modal-skip").ClickAsync();
-            await page.WaitForURLAsync(new Regex(".*/history.*"));
-
-            await page.Locator(".history-session__header").First.ClickAsync();
+            await page.WaitForURLAsync(new Regex(@".*/history/session\?id="));
             await page.WaitForSelectorAsync(".session-detail__table");
             await Expect(page.Locator(".session-detail__row").First.Locator(".session-detail__cell").Nth(3))
                 .ToHaveTextAsync("5");
+            await Expect(page.Locator("#session-chart-select")).ToBeEnabledAsync(new() { Timeout = 15000 });
         }
         finally
         {
@@ -1338,7 +1337,7 @@ public class WorkoutHistoryTests
             await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
             await page.Locator("#session-save").ClickAsync();
             await page.Locator("#effort-modal-skip").ClickAsync();
-            await page.WaitForURLAsync(new Regex(".*/history.*"));
+            await page.WaitForURLAsync(new Regex(@".*/history/session\?id="));
 
             using var document = System.Text.Json.JsonDocument.Parse(requestBody!);
             Assert.Equal(5, document.RootElement.GetProperty("sets").GetInt32());
@@ -1825,8 +1824,7 @@ public class WorkoutHistoryTests
             await page.Locator("#session-save").ClickAsync();
             await page.Locator("#effort-modal-skip").ClickAsync();
 
-            // Should navigate to history
-            await page.WaitForURLAsync(new Regex(".*/history.*"));
+            await page.WaitForURLAsync(new Regex(@".*/history/session\?id="));
 
             // Check most recent session has null overallEffort
             var sessionsResp = await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/sessions");
@@ -1942,7 +1940,7 @@ public class WorkoutHistoryTests
             await page.Locator("#overall-effort-slider").DispatchEventAsync("input");
             await page.Locator("#effort-modal-save").ClickAsync();
 
-            await page.WaitForURLAsync(new Regex(".*/history.*"));
+            await page.WaitForURLAsync(new Regex(@".*/history/session\?id="));
 
             var sessionsResp = await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/sessions");
             var sessionsJson = await sessionsResp.JsonAsync();
