@@ -61,7 +61,7 @@ jobs:
 
       - name: Upload unit test results
         if: always() && github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: unit-test-results
           path: src/WorkoutTracker.UnitTests/TestResults/
@@ -119,7 +119,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: e2e-test-results
           path: src/WorkoutTracker.E2ETests/TestResults/
