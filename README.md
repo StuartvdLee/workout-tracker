@@ -6,7 +6,7 @@ A fitness application for tracking workouts and exercise progress. Built with C#
 
 - **Exercises** — Create and manage exercises with muscle group tagging
 - **Planned Workouts** — Build reusable workout templates from your exercise library (create, edit, delete)
-- **Workout Logging** — Select 3 or 5 sets before starting a planned workout, then log weight and effort for each exercise
+- **Workout Logging** — Select 3 or 5 sets before starting a planned workout, log weight and effort, and change exercise order from anywhere while scrolling
 - **Previous Performance** — See weight, effort, and sets from each exercise's latest comparable session while training
 - **Workout History** — View completed workouts with current and previous weight, sets, and effort, and edit the session-wide sets value
 - **Workout Stats Graph** — Chart a workout's history by overall session effort or by individual exercise, with each session's sets shown as background bars behind the weight and effort lines
