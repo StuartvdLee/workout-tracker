@@ -246,6 +246,13 @@ public class WorkoutReorderTests
                 var topInset = width < 768 ? 56 : 0;
                 Assert.True(box.Y >= topInset && box.Y + box.Height <= height, $"Order button is outside the unobscured viewport at {fraction:P0}");
                 Assert.True(box.X >= 0 && box.X + box.Width <= width, $"Order button is outside the viewport at {fraction:P0}");
+                var overlapsTopbar = await page.EvaluateAsync<bool>(@"() => {
+                    const button = document.querySelector('#session-edit-order').getBoundingClientRect();
+                    const topbar = document.querySelector('.topbar').getBoundingClientRect();
+                    return button.left < topbar.right && button.right > topbar.left &&
+                        button.top < topbar.bottom && button.bottom > topbar.top;
+                }");
+                Assert.False(overlapsTopbar, $"Order button overlaps the topbar at {fraction:P0}");
                 var hit = await page.EvaluateAsync<bool>(@"() => {
                     const button = document.querySelector('#session-edit-order');
                     const box = button.getBoundingClientRect();

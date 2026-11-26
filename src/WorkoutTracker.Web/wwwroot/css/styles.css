@@ -1591,7 +1591,7 @@ body.is-dragging .workout-selected__drag-handle {
   align-items: center;
   justify-content: center;
   position: sticky;
-  top: var(--spacing-xs);
+  top: calc(var(--topbar-height) + var(--spacing-xs));
   width: var(--min-touch-target);
   min-height: var(--min-touch-target);
   background: var(--color-white);
@@ -1619,7 +1619,6 @@ body.is-dragging .workout-selected__drag-handle {
 
   .active-session__edit-order-btn {
     position: fixed;
-    top: calc(var(--topbar-height) + var(--spacing-xs));
     right: max(var(--spacing-md), env(safe-area-inset-right));
     z-index: 10;
     background: var(--color-primary);
