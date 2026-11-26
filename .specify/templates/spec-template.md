@@ -1,8 +1,11 @@
 # Feature Specification: [FEATURE NAME]
 
-**Feature Branch**: `[###-feature-name]`  
-**Created**: [DATE]  
-**Status**: Draft  
+**Feature Branch**: `[###-feature-name]`
+
+**Created**: [DATE]
+
+**Status**: Draft
+
 **Input**: User description: "$ARGUMENTS"
 
 ## User Scenarios & Testing *(mandatory)*
@@ -11,7 +14,7 @@
   IMPORTANT: User stories should be PRIORITIZED as user journeys ordered by importance.
   Each user story/journey must be INDEPENDENTLY TESTABLE - meaning if you implement just ONE of them,
   you should still have a viable MVP (Minimum Viable Product) that delivers value.
-  
+
   Assign priorities (P1, P2, P3, etc.) to each story, where P1 is the most critical.
   Think of each story as a standalone slice of functionality that can be:
   - Developed independently
@@ -74,10 +77,6 @@
 
 - What happens when [boundary condition]?
 - How does system handle [error scenario]?
-- What happens when the user encounters a slow network, slow device, or delayed
-  backend response?
-- How does the experience stay consistent across loading, empty, success, and
-  failure states?
 
 ## Requirements *(mandatory)*
 
@@ -89,7 +88,7 @@
 ### Functional Requirements
 
 - **FR-001**: System MUST [specific capability, e.g., "allow users to create accounts"]
-- **FR-002**: System MUST [specific capability, e.g., "validate email addresses"]  
+- **FR-002**: System MUST [specific capability, e.g., "validate email addresses"]
 - **FR-003**: Users MUST be able to [key interaction, e.g., "reset their password"]
 - **FR-004**: System MUST [data requirement, e.g., "persist user preferences"]
 - **FR-005**: System MUST [behavior, e.g., "log all security events"]
@@ -98,33 +97,6 @@
 
 - **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified - email/password, SSO, OAuth?]
 - **FR-007**: System MUST retain user data for [NEEDS CLARIFICATION: retention period not specified]
-
-### Security & Privacy Requirements
-
-- **SR-001**: System MUST validate and sanitize all external inputs relevant to
-  this feature.
-- **SR-002**: System MUST enforce authorization rules for protected actions and
-  data access.
-- **SR-003**: System MUST define how secrets, sensitive data, and third-party
-  integrations are handled for this feature.
-
-### User Experience Consistency Requirements
-
-- **UX-001**: Feature MUST reuse existing interaction and visual patterns, or
-  explicitly define the new standard it introduces.
-- **UX-002**: Feature MUST define loading, empty, success, and error states for
-  each affected user journey.
-- **UX-003**: Feature copy, terminology, and navigation cues MUST stay
-  consistent with the surrounding product experience.
-
-### Performance Requirements
-
-- **PR-001**: Feature MUST define measurable performance targets for the
-  primary user journey.
-- **PR-002**: Feature MUST identify any expected hot paths, heavy operations, or
-  scaling risks introduced by the change.
-- **PR-003**: Feature MUST define how performance will be verified before
-  release.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -144,7 +116,16 @@
 - **SC-002**: [Measurable metric, e.g., "System handles 1000 concurrent users without degradation"]
 - **SC-003**: [User satisfaction metric, e.g., "90% of users successfully complete primary task on first attempt"]
 - **SC-004**: [Business metric, e.g., "Reduce support tickets related to [X] by 50%"]
-- **SC-005**: [Consistency metric, e.g., "100% of affected flows use the same
-  state handling and interaction labels"]
-- **SC-006**: [Performance metric, e.g., "Primary workflow completes within
-  the stated p95 latency budget"]
+
+## Assumptions
+
+<!--
+  ACTION REQUIRED: The content in this section represents placeholders.
+  Fill them out with the right assumptions based on reasonable defaults
+  chosen when the feature description did not specify certain details.
+-->
+
+- [Assumption about target users, e.g., "Users have stable internet connectivity"]
+- [Assumption about scope boundaries, e.g., "Mobile support is out of scope for v1"]
+- [Assumption about data/environment, e.g., "Existing authentication system will be reused"]
+- [Dependency on existing system/service, e.g., "Requires access to the existing user profile API"]
