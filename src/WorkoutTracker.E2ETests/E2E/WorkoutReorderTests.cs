@@ -101,6 +101,30 @@ public class WorkoutReorderTests
         return workout;
     }
 
+    private async Task OpenLongCurrentWorkoutAsync(IPage page)
+    {
+        var exercises = new List<object>();
+        for (var index = 1; index <= 50; index++)
+        {
+            var response = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/exercises", new()
+            {
+                DataObject = new { name = index == 1 ? new string('W', 150) : $"Exercise {index:D2}", muscleIds = Array.Empty<string>() },
+            });
+            Assert.True(response.Ok, $"Exercise seed failed: {response.Status}");
+            var data = await response.JsonAsync();
+            exercises.Add(new { exerciseId = data?.GetProperty("exerciseId").GetString(), targetReps = "8", targetWeight = "20" });
+        }
+
+        var workoutResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts", new()
+        {
+            DataObject = new { name = "Long Workout", exercises },
+        });
+        Assert.True(workoutResponse.Ok, $"Workout seed failed: {workoutResponse.Status}");
+        var workout = await workoutResponse.JsonAsync();
+        await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workout?.GetProperty("plannedWorkoutId").GetString()}&sets=3");
+        await page.WaitForSelectorAsync(".active-session__exercise-item:nth-child(50)");
+    }
+
     private static async Task AddExerciseToFormAsync(IPage page, string exerciseName, string selectId = "workout-exercise-select")
     {
         await page.Locator($"#{selectId} option:not([disabled]):not([value=''])").First.WaitForAsync(
@@ -112,6 +136,212 @@ public class WorkoutReorderTests
     // Current workout: order editing
     // ──────────────────────────────────────────
 
+    [Theory]
+    [InlineData("light")]
+    [InlineData("dark")]
+    public async Task CurrentWorkout_EditOrder_FloatsAboveFullWidthContentOnMobile(string theme)
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.SetViewportSizeAsync(375, 667);
+            await OpenCurrentWorkoutWithThreeExercisesAsync(page);
+            await page.EvaluateAsync("(theme) => document.documentElement.setAttribute('data-theme', theme)", theme);
+
+            var geometry = await page.EvaluateAsync<System.Text.Json.JsonElement>(@"() => {
+                const workout = document.querySelector('.active-session').getBoundingClientRect();
+                const content = document.querySelector('.active-session__content').getBoundingClientRect();
+                const button = document.querySelector('#session-edit-order');
+                const style = getComputedStyle(button);
+                const surface = getComputedStyle(document.querySelector('.active-session__exercise-item')).backgroundColor;
+                const luminance = color => {
+                    const channels = color.match(/\d+/g).slice(0, 3).map(Number).map(value => {
+                        const c = value / 255;
+                        return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+                    });
+                    return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+                };
+                const contrast = (a, b) => {
+                    a = luminance(a); b = luminance(b);
+                    return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+                };
+                return { workoutWidth: workout.width, contentWidth: content.width,
+                    position: style.position, iconContrast: contrast(style.color, style.backgroundColor),
+                    edgeContrast: Math.max(contrast(style.backgroundColor, surface), contrast(style.borderColor, surface)) };
+            }");
+            Assert.InRange(Math.Abs(geometry.GetProperty("workoutWidth").GetDouble() - geometry.GetProperty("contentWidth").GetDouble()), 0, 1);
+            Assert.Equal("fixed", geometry.GetProperty("position").GetString());
+            Assert.True(geometry.GetProperty("iconContrast").GetDouble() >= 3);
+            Assert.True(geometry.GetProperty("edgeContrast").GetDouble() >= 3);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task CurrentWorkout_FloatingOrderButton_LeavesWorkoutControlsReachable()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.SetViewportSizeAsync(320, 568);
+            await OpenCurrentWorkoutWithThreeExercisesAsync(page);
+            foreach (var selector in new[] { ".active-session__input", ".active-session__effort-slider", "#session-save", "#session-cancel" })
+            {
+                var control = page.Locator(selector).First;
+                await control.EvaluateAsync("el => el.scrollIntoView({ block: 'center' })");
+                var reachable = await control.EvaluateAsync<bool>(@"el => {
+                    const rect = el.getBoundingClientRect();
+                    const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+                    return hit === el || el.contains(hit);
+                }");
+                Assert.True(reachable, $"{selector} is obstructed after scrolling into view");
+            }
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Theory]
+    [InlineData(320, 568, "light")]
+    [InlineData(320, 568, "dark")]
+    [InlineData(375, 667, "light")]
+    [InlineData(375, 667, "dark")]
+    [InlineData(768, 768, "dark")]
+    [InlineData(768, 768, "light")]
+    [InlineData(1024, 768, "light")]
+    [InlineData(1024, 768, "dark")]
+    [InlineData(640, 480, "light")]
+    public async Task CurrentWorkout_EditOrder_RemainsReachableWhileScrolling(int width, int height, string theme)
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.SetViewportSizeAsync(width, height);
+            await OpenLongCurrentWorkoutAsync(page);
+            await page.EvaluateAsync("(theme) => document.documentElement.setAttribute('data-theme', theme)", theme);
+            Assert.True(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= document.documentElement.clientWidth"));
+            Assert.True(await page.Locator("#session-edit-order").EvaluateAsync<bool>(@"button => {
+                const style = getComputedStyle(button);
+                const luminance = color => {
+                    const channels = color.match(/\d+/g).slice(0, 3).map(Number).map(value => {
+                        const c = value / 255;
+                        return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+                    });
+                    return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+                };
+                const a = luminance(style.color), b = luminance(style.backgroundColor);
+                return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05) >= 3;
+            }"));
+
+            foreach (var fraction in new[] { 0.0, 0.5, 1.0 })
+            {
+                await page.EvaluateAsync("(fraction) => window.scrollTo(0, (document.documentElement.scrollHeight - innerHeight) * fraction)", fraction);
+                var button = page.Locator("#session-edit-order");
+                var box = await button.BoundingBoxAsync() ?? throw new InvalidOperationException("Order button is missing");
+                var topInset = width < 768 ? 56 : 0;
+                Assert.True(box.Y >= topInset && box.Y + box.Height <= height, $"Order button is outside the unobscured viewport at {fraction:P0}");
+                Assert.True(box.X >= 0 && box.X + box.Width <= width, $"Order button is outside the viewport at {fraction:P0}");
+                var overlapsTopbar = await page.EvaluateAsync<bool>(@"() => {
+                    const button = document.querySelector('#session-edit-order').getBoundingClientRect();
+                    const topbar = document.querySelector('.topbar').getBoundingClientRect();
+                    return button.left < topbar.right && button.right > topbar.left &&
+                        button.top < topbar.bottom && button.bottom > topbar.top;
+                }");
+                Assert.False(overlapsTopbar, $"Order button overlaps the topbar at {fraction:P0}");
+                var hit = await page.EvaluateAsync<bool>(@"() => {
+                    const button = document.querySelector('#session-edit-order');
+                    const box = button.getBoundingClientRect();
+                    const target = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+                    return button && target && (button === target || button.contains(target));
+                }");
+                Assert.True(hit, $"Order button is obstructed at {fraction:P0}");
+                var overlapsContent = await page.EvaluateAsync<bool>(@"() => {
+                    const button = document.querySelector('#session-edit-order').getBoundingClientRect();
+                    return [...document.querySelectorAll('.active-session__input, .active-session__effort-slider, #session-save, #session-cancel')]
+                        .some(element => {
+                            const rect = element.getBoundingClientRect();
+                            return rect.left < button.right && rect.right > button.left &&
+                                rect.top < button.bottom && rect.bottom > button.top;
+                        });
+                }");
+                if (width >= 768)
+                {
+                    Assert.False(overlapsContent, $"Order button covers a workout control at {fraction:P0}");
+                }
+
+                await page.Mouse.ClickAsync(box.X + box.Width / 2, box.Y + box.Height / 2);
+                await Expect(page.Locator("#session-order-list")).ToBeVisibleAsync();
+                Assert.True(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= document.documentElement.clientWidth"));
+                await page.Locator("#session-cancel").ClickAsync();
+                await Expect(page.Locator(".active-session__exercise-item")).ToHaveCountAsync(50);
+            }
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Theory]
+    [InlineData("Enter")]
+    [InlineData("Space")]
+    public async Task CurrentWorkout_EditOrder_IconIsAccessibleByKeyboard(string key)
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await OpenCurrentWorkoutWithThreeExercisesAsync(page);
+            var button = page.GetByRole(AriaRole.Button, new() { Name = "Edit order", Exact = true });
+            await Expect(button).ToBeVisibleAsync();
+            await Expect(button).ToHaveTextAsync("");
+            await Expect(button.Locator("svg")).ToHaveAttributeAsync("aria-hidden", "true");
+            var box = await button.BoundingBoxAsync() ?? throw new InvalidOperationException("Order button is missing");
+            Assert.True(box.Width >= 44 && box.Height >= 44);
+            await button.FocusAsync();
+            Assert.True(await button.EvaluateAsync<bool>("el => el.matches(':focus-visible') && getComputedStyle(el).outlineStyle !== 'none'"));
+            await page.Keyboard.PressAsync(key);
+            await Expect(page.Locator("#session-order-list")).ToBeVisibleAsync();
+            await Expect(page.Locator("#session-order-list .workout-selected__drag-handle").First).ToBeFocusedAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task CurrentWorkout_EditOrder_IsReachableByTouchAtBottom()
+    {
+        WebAppFixture.ResetExercises();
+        WebAppFixture.ResetWorkouts();
+        var page = await _playwright.Browser.NewPageAsync(new BrowserNewPageOptions
+        {
+            ViewportSize = new ViewportSize { Width = 375, Height = 667 },
+            HasTouch = true,
+            IsMobile = true,
+        });
+        try
+        {
+            await page.GotoAsync(_webApp.BaseUrl);
+            await OpenLongCurrentWorkoutAsync(page);
+            await page.EvaluateAsync("() => window.scrollTo(0, document.documentElement.scrollHeight)");
+            var box = await page.Locator("#session-edit-order").BoundingBoxAsync()
+                ?? throw new InvalidOperationException("Order button is missing");
+            Assert.InRange(box.Y, 56, 667 - box.Height);
+            await page.Touchscreen.TapAsync(box.X + box.Width / 2, box.Y + box.Height / 2);
+            await Expect(page.Locator("#session-order-list")).ToBeVisibleAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
     [Fact]
     public async Task CurrentWorkout_EditOrder_CollapsesExercisesToNameOnlyRows()
     {
@@ -120,7 +350,7 @@ public class WorkoutReorderTests
         {
             await OpenCurrentWorkoutWithThreeExercisesAsync(page);
 
-            await Expect(page.Locator("#session-edit-order")).ToHaveTextAsync("Edit order");
+            await Expect(page.GetByRole(AriaRole.Button, new() { Name = "Edit order", Exact = true })).ToBeVisibleAsync();
             await page.Locator("#session-edit-order").ClickAsync();
 
             await Expect(page.Locator("#session-edit-order")).ToBeHiddenAsync();
@@ -216,13 +446,18 @@ public class WorkoutReorderTests
                 }
             };
 
+            await page.SetViewportSizeAsync(375, 667);
             var workout = await OpenCurrentWorkoutWithThreeExercisesAsync(page);
 
             await page.Locator($"#weight-{workout.BenchPressId}").FillAsync("80");
             await page.Locator($"#effort-{workout.BenchPressId}").FillAsync("7");
             await page.Locator($"#effort-{workout.BenchPressId}").DispatchEventAsync("input");
 
-            await page.Locator("#session-edit-order").ClickAsync();
+            await page.EvaluateAsync("() => window.scrollTo(0, document.documentElement.scrollHeight)");
+            var orderButton = await page.Locator("#session-edit-order").BoundingBoxAsync()
+                ?? throw new InvalidOperationException("Order button is missing");
+            Assert.InRange(orderButton.Y, 56, 667 - orderButton.Height);
+            await page.Mouse.ClickAsync(orderButton.X + orderButton.Width / 2, orderButton.Y + orderButton.Height / 2);
             await page.WaitForSelectorAsync("#session-order-list li:nth-child(3)");
             await DragToEndAsync(page, "#session-order-list", 1, 3);
             await page.Locator("#session-save").ClickAsync();
@@ -259,6 +494,9 @@ public class WorkoutReorderTests
             await page.Locator("#session-cancel").ClickAsync();
             await Expect(page.Locator("#discard-title")).ToHaveTextAsync("Discard changes?");
             await Expect(page.Locator("#discard-cancel")).ToHaveTextAsync("Keep editing");
+            await page.Locator("#discard-cancel").ClickAsync();
+            await Expect(page.Locator("#session-order-list")).ToBeVisibleAsync();
+            await page.Locator("#session-cancel").ClickAsync();
             await page.Locator("#discard-confirm").ClickAsync();
 
             await page.WaitForSelectorAsync(".active-session__exercise-item:nth-child(3)");
@@ -268,6 +506,172 @@ public class WorkoutReorderTests
             await Expect(exerciseItems.Nth(2).Locator(".active-session__exercise-name")).ToHaveTextAsync("Deadlift");
             await Expect(page.Locator("#session-save")).ToHaveTextAsync("Save Workout");
             await Expect(page.Locator("#session-edit-order")).ToBeVisibleAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task CurrentWorkout_OrderControl_PreservesAvailabilityAfterErrors()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var workout = await CreateThreeExerciseWorkoutViaApiAsync(page);
+            await page.RouteAsync($"**/api/workouts/{workout.WorkoutId}", route => route.FulfillAsync(new() { Status = 500 }));
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workout.WorkoutId}&sets=3");
+            await Expect(page.Locator("#session-error")).ToContainTextAsync("Failed to load workout");
+            await Expect(page.Locator("#session-edit-order")).ToBeHiddenAsync();
+            await page.UnrouteAsync($"**/api/workouts/{workout.WorkoutId}");
+
+            await page.RouteAsync("**/previous-performance", route => route.FulfillAsync(new() { Status = 500 }));
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workout.WorkoutId}&sets=3");
+            await Expect(page.Locator(".active-session__previous-error").First).ToBeVisibleAsync();
+            await Expect(page.Locator("#session-edit-order")).ToBeVisibleAsync();
+
+            await page.RouteAsync("**/sessions", route => route.FulfillAsync(new()
+            {
+                Status = 500,
+                ContentType = "application/json",
+                Body = "{\"error\":\"Save failed\"}",
+            }));
+            await page.Locator("#session-save").ClickAsync();
+            await Expect(page.Locator("#effort-backdrop")).ToBeVisibleAsync();
+            await Expect(page.Locator("#effort-modal-save")).ToBeFocusedAsync();
+            Assert.True(await page.EvaluateAsync<bool>(@"() => {
+                const button = document.querySelector('#session-edit-order').getBoundingClientRect();
+                const hit = document.elementFromPoint(button.x + button.width / 2, button.y + button.height / 2);
+                return document.querySelector('#effort-backdrop').contains(hit);
+            }"));
+            await page.Locator("#effort-modal-skip").ClickAsync();
+            await Expect(page.Locator("#session-api-error")).ToHaveTextAsync("Save failed");
+            await Expect(page.Locator("#session-edit-order")).ToBeVisibleAsync();
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task CurrentWorkout_OrderControl_IsHiddenDuringLoading()
+    {
+        var page = await CreatePageAsync();
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        try
+        {
+            var workout = await CreateThreeExerciseWorkoutViaApiAsync(page);
+            await page.RouteAsync($"**/api/workouts/{workout.WorkoutId}", async route =>
+            {
+                await release.Task;
+                await route.ContinueAsync();
+            });
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workout.WorkoutId}&sets=3", new()
+            {
+                WaitUntil = WaitUntilState.DOMContentLoaded,
+            });
+            await Expect(page.Locator("#session-edit-order")).ToBeHiddenAsync();
+            release.TrySetResult();
+            await Expect(page.Locator("#session-edit-order")).ToBeVisibleAsync();
+        }
+        finally
+        {
+            release.TrySetResult();
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task CurrentWorkout_OrderControl_MeetsScrollAndTransitionBudgets()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await OpenLongCurrentWorkoutAsync(page);
+            var requestCount = 0;
+            page.Request += (_, _) => requestCount++;
+            var results = await page.EvaluateAsync<System.Text.Json.JsonElement>(@"async () => {
+                const frame = () => new Promise(resolve => requestAnimationFrame(resolve));
+                const settle = async () => { await frame(); await frame(); };
+                const scrollSamples = [], entrySamples = [], exitSamples = [];
+                const maxScroll = document.documentElement.scrollHeight - innerHeight;
+                for (let i = 0; i < 20; i++) {
+                    const start = performance.now();
+                    window.scrollTo(0, maxScroll * i / 19);
+                    await settle();
+                    const elapsed = performance.now() - start;
+                    const button = document.querySelector('#session-edit-order');
+                    const rect = button.getBoundingClientRect();
+                    const style = getComputedStyle(button);
+                    const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+                    scrollSamples.push({ elapsed, reachable: rect.top >= 0 && rect.bottom <= innerHeight &&
+                        style.visibility === 'visible' && Number(style.opacity) > 0 && (hit === button || button.contains(hit)) });
+                }
+                for (let i = 0; i < 20; i++) {
+                    let start = performance.now();
+                    document.querySelector('#session-edit-order').click();
+                    await settle();
+                    entrySamples.push({ elapsed: performance.now() - start, ready: !!document.querySelector('#session-order-list') });
+                    start = performance.now();
+                    document.querySelector('#session-save').click();
+                    await settle();
+                    exitSamples.push({ elapsed: performance.now() - start, ready: document.querySelectorAll('.active-session__exercise-item').length === 50 });
+                }
+                return { scrollSamples, entrySamples, exitSamples };
+            }");
+            Console.WriteLine($"Performance samples: {results}");
+            var scroll = results.GetProperty("scrollSamples").EnumerateArray().ToArray();
+            var entries = results.GetProperty("entrySamples").EnumerateArray().ToArray();
+            var exits = results.GetProperty("exitSamples").EnumerateArray().ToArray();
+            Assert.All(scroll, sample => Assert.True(sample.GetProperty("reachable").GetBoolean()));
+            Assert.True(scroll.Count(sample => sample.GetProperty("elapsed").GetDouble() <= 100) >= 19);
+            Assert.All(entries, sample => Assert.True(sample.GetProperty("ready").GetBoolean()));
+            Assert.All(exits, sample => Assert.True(sample.GetProperty("ready").GetBoolean()));
+            Assert.True(entries.Count(sample => sample.GetProperty("elapsed").GetDouble() <= 1000) >= 19);
+            Assert.True(exits.Count(sample => sample.GetProperty("elapsed").GetDouble() <= 1000) >= 19);
+            Assert.Equal(0, requestCount);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    public async Task CurrentWorkout_OrderControl_HandlesEmptyAndSingleExercise(int count)
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var workout = await CreateThreeExerciseWorkoutViaApiAsync(page);
+            var exercises = count == 0 ? "[]" : $"[{{\"exerciseId\":\"{workout.BenchPressId}\",\"name\":\"Bench Press\",\"targetReps\":null,\"targetWeight\":null}}]";
+            await page.RouteAsync($"**/api/workouts/{workout.WorkoutId}", route => route.FulfillAsync(new()
+            {
+                Status = 200,
+                ContentType = "application/json",
+                Body = $"{{\"plannedWorkoutId\":\"{workout.WorkoutId}\",\"name\":\"Test\",\"exercises\":{exercises}}}",
+            }));
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workout.WorkoutId}&sets=3");
+            await Expect(page.Locator("#session-title")).ToHaveTextAsync("Test");
+            var button = page.Locator("#session-edit-order");
+            if (count == 0)
+            {
+                await Expect(button).ToBeHiddenAsync();
+                return;
+            }
+
+            await Expect(button).ToBeVisibleAsync();
+            await button.ClickAsync();
+            await Expect(page.Locator("#session-order-list li")).ToHaveCountAsync(1);
+            await Expect(page.Locator("#session-order-list .workout-selected__drag-handle")).ToHaveCountAsync(0);
+            await Expect(page.Locator("#session-save")).ToBeFocusedAsync();
+            await page.Locator("#session-cancel").ClickAsync();
+            await Expect(page.Locator("#discard-backdrop")).ToBeHiddenAsync();
+            await Expect(button).ToBeVisibleAsync();
         }
         finally
         {

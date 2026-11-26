@@ -57,8 +57,7 @@ Thumbs.db
 *.swp
 
 # Environment
-.env
-.env.*
+.env*
 
 # Test results
 TestResults/

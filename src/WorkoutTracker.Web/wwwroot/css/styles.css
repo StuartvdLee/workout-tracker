@@ -1560,6 +1560,16 @@ body.is-dragging .workout-selected__drag-handle {
   padding-top: var(--spacing-xl);
 }
 
+.active-session__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--min-touch-target);
+  gap: var(--spacing-xs);
+}
+
+.active-session__content {
+  min-width: 0;
+}
+
 .active-session__header {
   display: flex;
   align-items: center;
@@ -1573,27 +1583,58 @@ body.is-dragging .workout-selected__drag-handle {
   font-weight: 700;
   color: var(--color-text);
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .active-session__edit-order-btn {
-  flex-shrink: 0;
-  background: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: sticky;
+  top: calc(var(--topbar-height) + var(--spacing-xs));
+  width: var(--min-touch-target);
+  min-height: var(--min-touch-target);
+  background: var(--color-white);
   border: none;
+  border-radius: var(--radius);
   font: inherit;
-  font-size: var(--font-size-sm);
-  color: var(--color-primary);
+  color: var(--color-text);
   cursor: pointer;
   padding: 0;
-  align-self: flex-end;
 }
 
 .active-session__edit-order-btn:hover {
-  text-decoration: underline;
+  background: var(--color-primary-light);
 }
 
 .active-session__edit-order-btn:focus-visible {
   outline: 2px solid var(--color-border-focus);
   outline-offset: 2px;
+}
+
+@media (max-width: 767px) {
+  .active-session__layout {
+    display: block;
+  }
+
+  .active-session__edit-order-btn {
+    position: fixed;
+    right: max(var(--spacing-md), env(safe-area-inset-right));
+    z-index: 10;
+    background: var(--color-primary);
+    border: 2px solid #fff;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .active-session__edit-order-btn:hover {
+    background: var(--color-primary-hover);
+  }
+
+  .active-session__edit-order-btn:focus-visible {
+    outline-color: var(--color-text);
+    outline-offset: 3px;
+  }
 }
 
 @media (min-width: 768px) {
@@ -1646,6 +1687,7 @@ body.is-dragging .workout-selected__drag-handle {
 
 .active-session__order-name {
   font-size: var(--font-size-base);
+  overflow-wrap: anywhere;
 }
 
 .active-session__exercise-item {
@@ -1662,6 +1704,7 @@ body.is-dragging .workout-selected__drag-handle {
   font-weight: 600;
   font-size: var(--font-size-base);
   color: var(--color-text);
+  overflow-wrap: anywhere;
 }
 
 .active-session__exercise-targets {
@@ -1714,6 +1757,7 @@ body.is-dragging .workout-selected__drag-handle {
 
 .active-session__input {
   width: 100%;
+  min-width: 0;
   min-height: var(--min-touch-target);
   padding: var(--spacing-sm) var(--spacing-md);
   font-size: var(--font-size-base);

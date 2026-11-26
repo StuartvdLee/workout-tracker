@@ -85,16 +85,26 @@ export async function render(container: HTMLElement): Promise<void> {
 
   container.innerHTML = `
     <div class="active-session">
-      <div class="active-session__header">
-        <h1 class="active-session__title" id="session-title">Loading...</h1>
-        <button class="active-session__edit-order-btn" type="button" id="session-edit-order" style="display:none;">Edit order</button>
-      </div>
-      <div class="active-session__exercises" id="session-exercises" role="form" aria-label="Log workout exercises"></div>
-      <div class="active-session__error" id="session-error" role="alert" aria-live="polite"></div>
-      <div class="active-session__api-error" id="session-api-error" role="alert" aria-live="polite"></div>
-      <div class="active-session__actions">
-        <button class="active-session__save-btn" type="button" id="session-save">Save Workout</button>
-        <button class="active-session__cancel-btn" type="button" id="session-cancel">Cancel</button>
+      <div class="active-session__layout">
+        <div class="active-session__content">
+          <div class="active-session__header">
+            <h1 class="active-session__title" id="session-title">Loading...</h1>
+          </div>
+          <div class="active-session__exercises" id="session-exercises" role="form" aria-label="Log workout exercises"></div>
+          <div class="active-session__error" id="session-error" role="alert" aria-live="polite"></div>
+          <div class="active-session__api-error" id="session-api-error" role="alert" aria-live="polite"></div>
+          <div class="active-session__actions">
+            <button class="active-session__save-btn" type="button" id="session-save">Save Workout</button>
+            <button class="active-session__cancel-btn" type="button" id="session-cancel">Cancel</button>
+          </div>
+        </div>
+        <div class="active-session__order-rail">
+          <button class="active-session__edit-order-btn" type="button" id="session-edit-order" aria-label="Edit order" title="Edit order" style="display:none;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 6h10M3 12h10M3 18h10M18 3v18M15 6l3-3 3 3M15 18l3 3 3-3"/>
+            </svg>
+          </button>
+        </div>
       </div>
       <div class="discard-modal-backdrop" id="discard-backdrop" style="display:none;">
         <div class="discard-modal" role="alertdialog" aria-modal="true" aria-labelledby="discard-title" aria-describedby="discard-desc">
@@ -639,6 +649,9 @@ function toggleOrderEditing(): void {
   isOrderEditing = true;
   updateOrderEditingControls();
   renderOrderEditor();
+  const firstHandle = document.querySelector<HTMLButtonElement>("#session-order-list .workout-selected__drag-handle");
+  const doneBtn = document.getElementById("session-save");
+  (firstHandle ?? doneBtn)?.focus();
 }
 
 function finishOrderEditing(): void {
