@@ -99,6 +99,7 @@ public class HomeLandingPagePerformanceTests
             new SelectOptionValue { Index = 1 });
         await page.Locator("#sets-select").SelectOptionAsync("3");
         await page.Locator("button[type='submit']").ClickAsync();
+        await Assertions.Expect(page.Locator("#session-title")).ToHaveTextAsync("Request Budget Workout");
         await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
         Assert.Equal(2, apiRequests.Count);
