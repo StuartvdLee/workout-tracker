@@ -108,6 +108,14 @@ export async function render(container: HTMLElement): Promise<void> {
   }
   sessionSets = setsParam === "3" || setsParam === "5" ? Number(setsParam) as 3 | 5 : null;
   if (draft) sessionSets = draft.sets;
+  if (sessionSets === null) {
+    container.innerHTML = `
+      <div class="active-session">
+        <p role="alert">Sets must be 3 or 5. <a href="/">Return to Let's go! and select sets.</a></p>
+      </div>
+    `;
+    return;
+  }
 
   // Reset state
   workout = null;
@@ -329,7 +337,9 @@ function saveDraft(): boolean {
   if (!draft || !workout || draft.completion) return false;
   const entries = Object.fromEntries([...logEntries].map(([id, entry]) => [id, { ...entry }]));
   const updated: ActiveWorkoutDraft = {
-    ...draft, exerciseOrder: workout.exercises.map(exercise => exercise.exerciseId), entries,
+    ...draft,
+    exerciseOrder: (orderBeforeEditing ?? workout.exercises).map(exercise => exercise.exerciseId),
+    entries,
   };
   const status = document.getElementById("draft-status");
   const retry = document.getElementById("draft-retry") as HTMLButtonElement | null;
