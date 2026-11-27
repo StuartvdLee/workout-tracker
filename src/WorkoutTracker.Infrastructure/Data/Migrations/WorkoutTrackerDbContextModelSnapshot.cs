@@ -18,7 +18,7 @@ namespace WorkoutTracker.Infrastructure.Data.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("workout_tracker")
-                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("ProductVersion", "10.0.14")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -311,6 +311,60 @@ namespace WorkoutTracker.Infrastructure.Data.Migrations
                         .HasDatabaseName("ix_workouts_workout_type_id");
 
                     b.ToTable("workouts", "workout_tracker");
+                });
+
+            modelBuilder.Entity("WorkoutTracker.Infrastructure.Data.Models.WorkoutCompletionReceipt", b =>
+                {
+                    b.Property<Guid>("OperationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("operation_id");
+
+                    b.Property<string>("RequestFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(67)
+                        .HasColumnType("character varying(67)")
+                        .HasColumnName("request_fingerprint");
+
+                    b.Property<Guid>("WorkoutId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("workout_id");
+
+                    b.Property<Guid>("WorkoutSessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("workout_session_id");
+
+                    b.HasKey("OperationId")
+                        .HasName("pk_workout_completion_receipts");
+
+                    b.ToTable("workout_completion_receipts", "workout_tracker");
+                });
+
+            modelBuilder.Entity("WorkoutTracker.Infrastructure.Data.Models.WorkoutCompletionRejection", b =>
+                {
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("operation_id");
+
+                    b.Property<string>("RequestFingerprint")
+                        .HasMaxLength(67)
+                        .HasColumnType("character varying(67)")
+                        .HasColumnName("request_fingerprint");
+
+                    b.Property<string>("Error")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("error");
+
+                    b.Property<int>("StatusCode")
+                        .HasColumnType("integer")
+                        .HasColumnName("status_code");
+
+                    b.HasKey("OperationId", "RequestFingerprint")
+                        .HasName("pk_workout_completion_rejections");
+
+                    b.ToTable("workout_completion_rejections", "workout_tracker");
                 });
 
             modelBuilder.Entity("WorkoutTracker.Infrastructure.Data.Models.WorkoutExercise", b =>

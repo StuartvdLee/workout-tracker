@@ -1003,7 +1003,7 @@ function handleYes(): void {
   const workoutId = prestartWorkout.plannedWorkoutId;
   const order = shuffle(prestartWorkout.exercises).map((ex) => ex.exerciseId).join(",");
   closePreStartModal();
-  navigate(`/active-session?id=${workoutId}&sets=${sets}&order=${order}`);
+  navigate(`/active-session?id=${workoutId}&sets=${sets}&order=${order}&start=1`);
 }
 
 function handleNo(): void {
@@ -1013,7 +1013,7 @@ function handleNo(): void {
 
   const workoutId = prestartWorkout.plannedWorkoutId;
   closePreStartModal();
-  navigate(`/active-session?id=${workoutId}&sets=${sets}`);
+  navigate(`/active-session?id=${workoutId}&sets=${sets}&start=1`);
 }
 
 // =============================================================================

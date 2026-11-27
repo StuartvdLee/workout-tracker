@@ -16,10 +16,25 @@ public class WorkoutTrackerDbContext(DbContextOptions<WorkoutTrackerDbContext> o
     public DbSet<PlannedWorkoutExercise> PlannedWorkoutExercises => Set<PlannedWorkoutExercise>();
     public DbSet<WorkoutSession> WorkoutSessions => Set<WorkoutSession>();
     public DbSet<LoggedExercise> LoggedExercises => Set<LoggedExercise>();
+    public DbSet<WorkoutCompletionReceipt> WorkoutCompletionReceipts => Set<WorkoutCompletionReceipt>();
+    public DbSet<WorkoutCompletionRejection> WorkoutCompletionRejections => Set<WorkoutCompletionRejection>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("workout_tracker");
+
+        modelBuilder.Entity<WorkoutCompletionReceipt>(entity =>
+        {
+            entity.HasKey(e => e.OperationId);
+            entity.Property(e => e.RequestFingerprint).IsRequired().HasMaxLength(67);
+        });
+
+        modelBuilder.Entity<WorkoutCompletionRejection>(entity =>
+        {
+            entity.HasKey(e => new { e.OperationId, e.RequestFingerprint });
+            entity.Property(e => e.RequestFingerprint).HasMaxLength(67);
+            entity.Property(e => e.Error).IsRequired().HasMaxLength(200);
+        });
 
         modelBuilder.Entity<WorkoutType>(entity =>
         {

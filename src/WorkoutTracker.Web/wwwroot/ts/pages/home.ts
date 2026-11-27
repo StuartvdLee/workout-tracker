@@ -1,5 +1,12 @@
 import { navigate } from "../router.js";
 import { shuffle } from "../utils.js";
+import {
+  acquireDraftLock,
+  DRAFT_STORAGE_KEY,
+  readDraft,
+  removeDraft,
+  type DraftReadResult,
+} from "../active-workout-draft.js";
 
 interface PlannedWorkout {
   readonly plannedWorkoutId: string;
@@ -30,6 +37,7 @@ export function render(container: HTMLElement): void {
   container.innerHTML = `
     <div class="home-page">
       <h1 class="home-page__title">Let's go!</h1>
+      <div id="home-draft" aria-live="polite"></div>
       <form class="workout-form" id="workout-form" novalidate>
         <div class="workout-form__group">
           <label class="workout-form__label" for="workout-select">
@@ -92,9 +100,154 @@ export function render(container: HTMLElement): void {
   loadedWorkouts = new Map();
 
   initForm();
+  void showDraft();
   const formEl = document.getElementById("workout-form");
   if (formEl) {
     void loadLastWorkoutHint(formEl);
+  }
+}
+
+async function showDraft(): Promise<void> {
+  const target = document.getElementById("home-draft");
+  if (!target) return;
+  target.replaceChildren();
+  const loading = document.createElement("p");
+  loading.textContent = "Checking saved workout…";
+  target.appendChild(loading);
+
+  const lock = await acquireDraftLock();
+  if (lock.status !== "acquired") {
+    if (!document.contains(target)) return;
+    showDraftProblem(target, lock.status);
+    return;
+  }
+  if (!document.contains(target)) {
+    lock.release();
+    return;
+  }
+
+  let result: DraftReadResult;
+  let invalidValue: string | undefined;
+  try {
+    ({ result, invalidValue } = readDraftSnapshot());
+  } catch {
+    result = { status: "unavailable" };
+  } finally {
+    lock.release();
+  }
+  if (!document.contains(target)) return;
+
+  if (result.status === "invalid" || result.status === "unavailable") {
+    showDraftProblem(target, result.status, invalidValue);
+    return;
+  }
+  if (result.status !== "found") {
+    target.replaceChildren();
+    return;
+  }
+
+  showResumeButton(target, result.draft.workoutId, result.draft.sets, result.draft.draftId);
+}
+
+function showResumeButton(target: HTMLElement, workoutId: string, sets: 3 | 5, draftId: string): void {
+  const resume = document.createElement("button");
+  resume.type = "button";
+  resume.className = "workout-form__button";
+  resume.textContent = "Resume workout";
+  resume.addEventListener("click", () => {
+    navigate(`/active-session?id=${encodeURIComponent(workoutId)}&sets=${sets}&resume=${encodeURIComponent(draftId)}`);
+  });
+  target.replaceChildren();
+  target.appendChild(resume);
+}
+
+function readDraftSnapshot(): { result: DraftReadResult; invalidValue?: string } {
+  const before = localStorage.getItem(DRAFT_STORAGE_KEY);
+  const result = readDraft();
+  if (result.status !== "invalid") return { result };
+  const after = localStorage.getItem(DRAFT_STORAGE_KEY);
+  if (before === null || before !== after) throw new Error("Saved workout changed during inspection.");
+  return { result, invalidValue: before };
+}
+
+function showDraftProblem(
+  target: HTMLElement,
+  status: "invalid" | "unavailable" | "busy",
+  invalidValue?: string,
+  changed = false,
+): void {
+  const message = document.createElement("p");
+  message.className = "workout-form__error";
+  message.setAttribute("role", "alert");
+  message.setAttribute("aria-live", "polite");
+  message.textContent = status === "invalid"
+    ? changed
+      ? "Your saved workout data changed and is still invalid. Review it before clearing."
+      : "Your saved workout data is invalid and can’t be resumed."
+    : status === "busy"
+      ? "Your saved workout is in use in another tab. Try again in a moment."
+      : "Could not safely access saved workout data. Your saved workout has not been changed.";
+
+  const actions = document.createElement("div");
+  actions.className = "workout-form__actions";
+  const retry = document.createElement("button");
+  retry.type = "button";
+  retry.className = "workout-form__cancel";
+  retry.textContent = "Retry";
+  retry.addEventListener("click", () => void showDraft());
+  actions.appendChild(retry);
+
+  if (status === "invalid" && invalidValue !== undefined) {
+    const clear = document.createElement("button");
+    clear.type = "button";
+    clear.className = "workout-form__cancel";
+    clear.textContent = "Clear invalid saved workout";
+    clear.addEventListener("click", () => void clearInvalidDraft(target, invalidValue));
+    actions.appendChild(clear);
+  }
+
+  target.replaceChildren(message, actions);
+}
+
+async function clearInvalidDraft(target: HTMLElement, expectedValue: string): Promise<void> {
+  if (!document.contains(target)) return;
+  target.replaceChildren();
+  const loading = document.createElement("p");
+  loading.textContent = "Checking saved workout…";
+  target.appendChild(loading);
+
+  const lock = await acquireDraftLock();
+  if (!document.contains(target)) {
+    if (lock.status === "acquired") lock.release();
+    return;
+  }
+  if (lock.status !== "acquired") {
+    showDraftProblem(target, lock.status);
+    return;
+  }
+
+  let result: DraftReadResult;
+  let invalidValue: string | undefined;
+  try {
+    ({ result, invalidValue } = readDraftSnapshot());
+    if (result.status === "invalid" && invalidValue === expectedValue) {
+      removeDraft();
+      result = { status: "missing" };
+    }
+  } catch {
+    showDraftProblem(target, "unavailable");
+    return;
+  } finally {
+    lock.release();
+  }
+
+  if (!document.contains(target)) return;
+  if (result.status === "found") {
+    showResumeButton(target, result.draft.workoutId, result.draft.sets, result.draft.draftId);
+  } else if (result.status === "invalid" || result.status === "unavailable") {
+    showDraftProblem(target, result.status, invalidValue, result.status === "invalid");
+  } else {
+    target.replaceChildren();
   }
 }
 
@@ -232,21 +385,21 @@ async function handleStartWorkout(
   const isRandomise = toggleBtn?.getAttribute("aria-checked") === "true";
 
   if (!isRandomise) {
-    navigate(`/active-session?id=${selectedValue}&sets=${sets}`);
+    navigate(`/active-session?id=${selectedValue}&sets=${sets}&start=1`);
     return;
   }
 
   try {
     const response = await fetch(`/api/workouts/${selectedValue}`);
     if (!response.ok) {
-      navigate(`/active-session?id=${selectedValue}&sets=${sets}`);
+      navigate(`/active-session?id=${selectedValue}&sets=${sets}&start=1`);
       return;
     }
     const workout: WorkoutDetail = await response.json();
     const order = shuffle(workout.exercises).map((ex) => ex.exerciseId).join(",");
-    navigate(`/active-session?id=${selectedValue}&sets=${sets}&order=${order}`);
+    navigate(`/active-session?id=${selectedValue}&sets=${sets}&order=${order}&start=1`);
   } catch {
-    navigate(`/active-session?id=${selectedValue}&sets=${sets}`);
+    navigate(`/active-session?id=${selectedValue}&sets=${sets}&start=1`);
   }
 }
 
