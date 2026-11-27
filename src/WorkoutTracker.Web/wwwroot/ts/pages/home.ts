@@ -1,5 +1,6 @@
 import { navigate } from "../router.js";
 import { shuffle } from "../utils.js";
+import { acquireDraftLock, readDraft } from "../active-workout-draft.js";
 
 interface PlannedWorkout {
   readonly plannedWorkoutId: string;
@@ -30,6 +31,7 @@ export function render(container: HTMLElement): void {
   container.innerHTML = `
     <div class="home-page">
       <h1 class="home-page__title">Let's go!</h1>
+      <div id="home-draft" aria-live="polite"></div>
       <form class="workout-form" id="workout-form" novalidate>
         <div class="workout-form__group">
           <label class="workout-form__label" for="workout-select">
@@ -92,10 +94,29 @@ export function render(container: HTMLElement): void {
   loadedWorkouts = new Map();
 
   initForm();
+  void showDraft();
   const formEl = document.getElementById("workout-form");
   if (formEl) {
     void loadLastWorkoutHint(formEl);
   }
+}
+
+async function showDraft(): Promise<void> {
+  const target = document.getElementById("home-draft");
+  if (!target) return;
+  const lock = await acquireDraftLock();
+  if (lock.status !== "acquired") return;
+  const result = readDraft();
+  lock.release();
+  if (!document.contains(target) || result.status !== "found") return;
+  const resume = document.createElement("button");
+  resume.type = "button";
+  resume.className = "workout-form__button";
+  resume.textContent = "Resume workout";
+  resume.addEventListener("click", () => {
+    navigate(`/active-session?id=${encodeURIComponent(result.draft.workoutId)}&sets=${result.draft.sets}`);
+  });
+  target.appendChild(resume);
 }
 
 async function loadLastWorkoutHint(formEl: HTMLElement): Promise<void> {

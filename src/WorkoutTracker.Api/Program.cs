@@ -1,5 +1,8 @@
 using System.Text.Json;
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using WorkoutTracker.Infrastructure.Data;
 using WorkoutTracker.Infrastructure.Data.Models;
 
@@ -706,31 +709,109 @@ app.MapDelete("/api/workouts/{workoutId:guid}", async (Guid workoutId, WorkoutTr
 
 app.MapPost("/api/workouts/{workoutId:guid}/sessions", async (Guid workoutId, HttpContext context, WorkoutTrackerDbContext db) =>
 {
+    const long maxRequestBytes = 1_048_576;
+    if (context.Request.ContentLength > maxRequestBytes)
+        return Results.Json(new { error = "Workout completion request is too large." }, statusCode: 413);
+    var sizeFeature = context.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>();
+    if (sizeFeature is { IsReadOnly: false }) sizeFeature.MaxRequestBodySize = maxRequestBytes;
+    var body = await context.Request.ReadFromJsonAsync<SessionCreateRequest>();
+    if (body?.CompletionOperationId == Guid.Empty)
+        return Results.Json(new { error = "Completion operation ID must not be empty." }, statusCode: 400);
+
+    var fingerprint = body?.CompletionOperationId is not null
+        ? "s1:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
+        {
+            WorkoutId = workoutId,
+            body.Sets,
+            body.OverallEffort,
+            LoggedExercises = body.LoggedExercises ?? [],
+        }))))
+        : null;
+
+    async Task<IResult?> FindReceiptAsync()
+    {
+        var receipt = await db.WorkoutCompletionReceipts.AsNoTracking()
+            .FirstOrDefaultAsync(r => r.OperationId == body!.CompletionOperationId);
+        if (receipt is null) return null;
+
+        var exists = await db.WorkoutSessions.AnyAsync(s => s.WorkoutSessionId == receipt.WorkoutSessionId);
+        if (receipt.WorkoutId != workoutId || receipt.RequestFingerprint != fingerprint)
+            return receipt.WorkoutId == workoutId && exists
+                ? Results.Json(new { error = "Completion operation conflicts with an existing request.", receipt.WorkoutSessionId }, statusCode: 409)
+                : Results.Json(new { error = "Completion operation conflicts with an existing request." }, statusCode: 409);
+        return exists
+            ? Results.Ok(new { receipt.WorkoutSessionId })
+            : Results.Json(new { error = "The completed workout has been deleted." }, statusCode: 410);
+    }
+
+    async Task<IResult> CreateSessionAsync()
+    {
+    if (fingerprint is not null && await FindReceiptAsync() is { } replay)
+        return replay;
+
+    if (fingerprint is not null)
+    {
+        if (await db.WorkoutCompletionRejections.AsNoTracking().AnyAsync(
+            r => r.OperationId == body!.CompletionOperationId && !r.RequestFingerprint.StartsWith("s1:")))
+            return Results.Json(new { error = "This completion has a rejection recorded by an incompatible version and cannot be retried safely." }, statusCode: 409);
+
+        var rejection = await db.WorkoutCompletionRejections.AsNoTracking().FirstOrDefaultAsync(
+            r => r.OperationId == body!.CompletionOperationId && r.RequestFingerprint == fingerprint);
+        if (rejection is not null)
+            return Results.Json(new { error = rejection.Error, safeToEdit = true }, statusCode: rejection.StatusCode);
+    }
+
+    async Task<IResult> RejectAsync(string error, int statusCode = 400)
+    {
+        if (fingerprint is null)
+            return Results.Json(new { error }, statusCode: statusCode);
+        if (await db.WorkoutCompletionRejections.CountAsync(r => r.OperationId == body!.CompletionOperationId) >= 100)
+            return Results.Json(new { error = "Too many rejected attempts for this completion. The saved completion remains locked." }, statusCode: 429);
+        await db.Database.ExecuteSqlRawAsync(
+            "SELECT pg_advisory_xact_lock(hashtextextended('workout-tracker-rejection-cap', 0))");
+        if (await db.WorkoutCompletionRejections.CountAsync() >= 10_000)
+            return Results.Json(new { error = "Workout completion rejection storage is full. The saved completion remains locked." }, statusCode: 429);
+        db.WorkoutCompletionRejections.Add(new WorkoutCompletionRejection
+        {
+            OperationId = body!.CompletionOperationId!.Value,
+            RequestFingerprint = fingerprint,
+            Error = error,
+            StatusCode = statusCode,
+        });
+        await db.SaveChangesAsync();
+        return Results.Json(new { error, safeToEdit = true }, statusCode: statusCode);
+    }
+
     var workout = await db.PlannedWorkouts
         .FirstOrDefaultAsync(pw => pw.PlannedWorkoutId == workoutId);
 
     if (workout is null)
     {
-        return Results.Json(new { error = "Workout not found." }, statusCode: 404);
+        return await RejectAsync("Workout not found.", 404);
     }
 
-    var body = await context.Request.ReadFromJsonAsync<SessionCreateRequest>();
     var loggedExercises = body?.LoggedExercises ?? [];
 
     if (body?.Sets is not 3 and not 5)
-        return Results.Json(new { error = "Sets must be 3 or 5." }, statusCode: 400);
+        return await RejectAsync("Sets must be 3 or 5.");
+    if (loggedExercises.Length > 1_000)
+        return await RejectAsync("A completion must contain at most 1,000 exercises.");
 
     foreach (var item in loggedExercises)
     {
+        if (item is null)
+            return await RejectAsync("Logged exercises must not contain null entries.");
+        if (item.Notes is { Length: > 1_000 })
+            return await RejectAsync("Completion notes must not exceed 1,000 characters.");
         if (item.LoggedWeight is { Length: > 100 })
-            return Results.Json(new { error = "Logged weight must not exceed 100 characters." }, statusCode: 400);
+            return await RejectAsync("Logged weight must not exceed 100 characters.");
 
         if (item.Effort is not null && (item.Effort < 1 || item.Effort > 10))
-            return Results.Json(new { error = "Effort must be between 1 and 10." }, statusCode: 400);
+            return await RejectAsync("Effort must be between 1 and 10.");
     }
 
     if (body?.OverallEffort is not null && (body.OverallEffort < 1 || body.OverallEffort > 10))
-        return Results.Json(new { error = "Overall effort must be between 1 and 10." }, statusCode: 400);
+        return await RejectAsync("Overall effort must be between 1 and 10.");
 
     if (loggedExercises.Length > 0)
     {
@@ -743,7 +824,7 @@ app.MapPost("/api/workouts/{workoutId:guid}/sessions", async (Guid workoutId, Ht
         var invalidIds = loggedExerciseIds.Except(validPlannedExerciseIds).ToArray();
         if (invalidIds.Length > 0)
         {
-            return Results.Json(new { error = "One or more logged exercises are not part of this workout." }, statusCode: 400);
+            return await RejectAsync("One or more logged exercises are not part of this workout.");
         }
     }
 
@@ -771,7 +852,25 @@ app.MapPost("/api/workouts/{workoutId:guid}/sessions", async (Guid workoutId, Ht
     }
 
     db.WorkoutSessions.Add(session);
-    await db.SaveChangesAsync();
+    if (fingerprint is not null)
+        db.WorkoutCompletionReceipts.Add(new WorkoutCompletionReceipt
+        {
+            OperationId = body!.CompletionOperationId!.Value,
+            WorkoutId = workoutId,
+            WorkoutSessionId = session.WorkoutSessionId,
+            RequestFingerprint = fingerprint,
+        });
+    try
+    {
+        await db.SaveChangesAsync();
+    }
+    catch (DbUpdateException ex) when (ex.InnerException is PostgresException
+        { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: "pk_workout_completion_receipts" })
+    {
+        db.ChangeTracker.Clear();
+        return await FindReceiptAsync()
+            ?? throw new InvalidOperationException("The completion receipt was not found after a unique-key conflict.", ex);
+    }
 
     return Results.Json(new
     {
@@ -790,6 +889,21 @@ app.MapPost("/api/workouts/{workoutId:guid}/sessions", async (Guid workoutId, Ht
             le.Sequence,
         }).ToList(),
     }, statusCode: 201);
+    }
+
+    if (fingerprint is null)
+        return await CreateSessionAsync();
+
+    return await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+    {
+        db.ChangeTracker.Clear();
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        await db.Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT pg_advisory_xact_lock(hashtextextended({body!.CompletionOperationId!.Value.ToString()}, 0))");
+        var result = await CreateSessionAsync();
+        await transaction.CommitAsync();
+        return result;
+    });
 });
 
 app.MapGet("/api/sessions", async (WorkoutTrackerDbContext db) =>
@@ -972,6 +1086,7 @@ internal sealed class WorkoutExerciseItem
 
 internal sealed class SessionCreateRequest
 {
+    public Guid? CompletionOperationId { get; set; }
     public int? Sets { get; set; }
     public int? OverallEffort { get; set; }
     public SessionLoggedExerciseItem[] LoggedExercises { get; set; } = [];

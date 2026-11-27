@@ -1,8 +1,15 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
+using System.Text.Json;
+using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 using WorkoutTracker.Infrastructure.Data;
 using WorkoutTracker.Infrastructure.Data.Models;
 using Xunit;
@@ -53,6 +60,351 @@ public class SessionApiTests : IAsyncLifetime
     }
 
     // --- POST /api/workouts/{id}/sessions ---
+
+    [Fact]
+    public async Task CreateSession_RepeatedOperationCreatesOnlyOneSession()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Retry workout", "Retry exercise");
+        var operationId = Guid.NewGuid();
+        var payload = new
+        {
+            CompletionOperationId = operationId,
+            Sets = 3,
+            LoggedExercises = new[] { new { ExerciseId = exerciseId, LoggedWeight = "20", Effort = 5, Sequence = 0 } },
+        };
+        var first = await _client.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", payload);
+        var replay = await _client.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", payload);
+        var created = await first.Content.ReadFromJsonAsync<SessionDetailDto>();
+        var repeated = await replay.Content.ReadFromJsonAsync<SessionDetailDto>();
+        Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, replay.StatusCode);
+        Assert.Equal(created!.WorkoutSessionId, repeated!.WorkoutSessionId);
+        Assert.Single((await _client.GetFromJsonAsync<List<SessionDto>>("/api/sessions"))!);
+    }
+
+    [Fact]
+    public async Task CreateSession_ConcurrentRetriesAndDeletedSessionDoNotDuplicate()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Concurrent workout", "Concurrent exercise");
+        var payload = new { CompletionOperationId = Guid.NewGuid(), Sets = 3, LoggedExercises = new[] { new { ExerciseId = exerciseId } } };
+        var responses = await Task.WhenAll(
+            _client.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", payload),
+            _client.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", payload));
+        Assert.Contains(responses, response => response.StatusCode == HttpStatusCode.Created);
+        Assert.Contains(responses, response => response.StatusCode == HttpStatusCode.OK);
+        var session = await responses[0].Content.ReadFromJsonAsync<SessionDetailDto>();
+        Assert.NotNull(session);
+        Assert.Equal(HttpStatusCode.NoContent, (await _client.DeleteAsync($"/api/sessions/{session.WorkoutSessionId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.Gone, (await _client.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", payload)).StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateSession_OperationConflictsAndReplaysAfterWorkoutDeletion()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Original workout", "Original exercise");
+        var (otherId, _) = await CreateWorkoutWithExerciseAsync("Other workout", "Other exercise");
+        var operationId = Guid.NewGuid();
+        var payload = new { CompletionOperationId = operationId, Sets = 3, LoggedExercises = new[] { new { ExerciseId = exerciseId } } };
+        var created = await _client.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", payload);
+        var session = await created.Content.ReadFromJsonAsync<SessionDetailDto>();
+        var changed = new { CompletionOperationId = operationId, Sets = 5, LoggedExercises = new[] { new { ExerciseId = exerciseId } } };
+
+        var sameWorkoutConflict = await _client.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", changed);
+        Assert.Equal(HttpStatusCode.Conflict, sameWorkoutConflict.StatusCode);
+        using var sameWorkoutBody = JsonDocument.Parse(await sameWorkoutConflict.Content.ReadAsStringAsync());
+        Assert.Equal(session!.WorkoutSessionId, sameWorkoutBody.RootElement.GetProperty("workoutSessionId").GetGuid());
+        var otherWorkoutConflict = await _client.PostAsJsonAsync($"/api/workouts/{otherId}/sessions", payload);
+        Assert.Equal(HttpStatusCode.Conflict, otherWorkoutConflict.StatusCode);
+        using var otherWorkoutBody = JsonDocument.Parse(await otherWorkoutConflict.Content.ReadAsStringAsync());
+        Assert.False(otherWorkoutBody.RootElement.TryGetProperty("workoutSessionId", out _));
+
+        Assert.Equal(HttpStatusCode.NoContent, (await _client.DeleteAsync($"/api/workouts/{workoutId}")).StatusCode);
+        var replay = await _client.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", payload);
+        Assert.Equal(HttpStatusCode.OK, replay.StatusCode);
+        using var replayBody = JsonDocument.Parse(await replay.Content.ReadAsStringAsync());
+        Assert.Equal(session.WorkoutSessionId, replayBody.RootElement.GetProperty("workoutSessionId").GetGuid());
+        Assert.Single(replayBody.RootElement.EnumerateObject());
+    }
+
+    [Fact]
+    public async Task CreateSession_ConcurrentDifferentPayloadsYieldOneConflict()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Concurrent conflict", "Concurrent conflict exercise");
+        var operationId = Guid.NewGuid();
+        var responses = await Task.WhenAll(
+            _client.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", new { CompletionOperationId = operationId, Sets = 3, LoggedExercises = new[] { new { ExerciseId = exerciseId } } }),
+            _client.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", new { CompletionOperationId = operationId, Sets = 5, LoggedExercises = new[] { new { ExerciseId = exerciseId } } }));
+        Assert.Contains(responses, response => response.StatusCode == HttpStatusCode.Created);
+        Assert.Contains(responses, response => response.StatusCode == HttpStatusCode.Conflict);
+        Assert.Single((await _client.GetFromJsonAsync<List<SessionDto>>("/api/sessions"))!);
+    }
+
+    [Fact]
+    public async Task CreateSession_RejectedOperationIsFencedBeforeCorrection()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Rejected workout", "Rejected exercise");
+        var operationId = Guid.NewGuid();
+        var invalid = new { CompletionOperationId = operationId, Sets = 4, LoggedExercises = new[] { new { ExerciseId = exerciseId } } };
+        var corrected = new { CompletionOperationId = operationId, Sets = 3, LoggedExercises = new[] { new { ExerciseId = exerciseId } } };
+
+        var rejected = await _client.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", invalid);
+        Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
+        using var rejectedBody = JsonDocument.Parse(await rejected.Content.ReadAsStringAsync());
+        Assert.True(rejectedBody.RootElement.GetProperty("safeToEdit").GetBoolean());
+        var repeated = await _client.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", invalid);
+        Assert.Equal(HttpStatusCode.BadRequest, repeated.StatusCode);
+        using var repeatedBody = JsonDocument.Parse(await repeated.Content.ReadAsStringAsync());
+        Assert.True(repeatedBody.RootElement.GetProperty("safeToEdit").GetBoolean());
+        var created = await _client.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", corrected);
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await _client.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", invalid)).StatusCode);
+        Assert.Single((await _client.GetFromJsonAsync<List<SessionDto>>("/api/sessions"))!);
+    }
+
+    [Fact]
+    public async Task CreateSession_RejectedPayloadStaysFencedAfterTemplateChanges()
+    {
+        var (workoutId, originalId) = await CreateWorkoutWithExerciseAsync("Changing workout", "Original movement");
+        var exerciseResponse = await _client.PostAsJsonAsync("/api/exercises", new { Name = "Later movement" });
+        var laterId = (await exerciseResponse.Content.ReadFromJsonAsync<ExerciseDto>())!.ExerciseId;
+        var operationId = Guid.NewGuid();
+        var delayed = new { CompletionOperationId = operationId, Sets = 3, LoggedExercises = new[] { new { ExerciseId = laterId } } };
+        var rejected = await _client.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", delayed);
+        Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
+
+        var update = await _client.PutAsJsonAsync($"/api/workouts/{workoutId}", new
+        {
+            Name = "Changing workout",
+            Exercises = new[] { new { ExerciseId = originalId }, new { ExerciseId = laterId } },
+        });
+        Assert.Equal(HttpStatusCode.OK, update.StatusCode);
+        var replay = await _client.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", delayed);
+        Assert.Equal(HttpStatusCode.BadRequest, replay.StatusCode);
+        using var replayBody = JsonDocument.Parse(await replay.Content.ReadAsStringAsync());
+        Assert.True(replayBody.RootElement.GetProperty("safeToEdit").GetBoolean());
+        Assert.Empty((await _client.GetFromJsonAsync<List<SessionDto>>("/api/sessions"))!);
+
+        var corrected = new { CompletionOperationId = operationId, Sets = 5, LoggedExercises = new[] { new { ExerciseId = laterId } } };
+        Assert.Equal(HttpStatusCode.Created, (await _client.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", corrected)).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await _client.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", delayed)).StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateSession_IdempotentCompletionNeedsNoAdditionalConfiguration()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Unconfigured workout", "Unconfigured exercise");
+        var payload = new
+        {
+            CompletionOperationId = Guid.NewGuid(), Sets = 3, LoggedExercises = new[] { new { ExerciseId = exerciseId } },
+        };
+        Assert.Equal(HttpStatusCode.Created, (await _client.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", payload)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await _client.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", payload)).StatusCode);
+        Assert.Single((await _client.GetFromJsonAsync<List<SessionDto>>("/api/sessions"))!);
+    }
+
+    [Fact]
+    public async Task CreateSession_StoresVersionedSha256Fingerprint()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Protected workout", "Protected exercise");
+        var operationId = Guid.NewGuid();
+        var response = await _client.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", new
+        {
+            CompletionOperationId = operationId, Sets = 3,
+            LoggedExercises = new[] { new { ExerciseId = exerciseId, LoggedWeight = "25" } },
+        });
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        await using var scope = _fixture.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<WorkoutTrackerDbContext>();
+        var receipt = await db.WorkoutCompletionReceipts.SingleAsync(r => r.OperationId == operationId);
+        Assert.Matches("^s1:[0-9A-F]{64}$", receipt.RequestFingerprint);
+    }
+
+    [Fact]
+    public async Task CreateSession_LegacyRejectionCannotBeBypassed()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Legacy fence workout", "Legacy fence exercise");
+        var operationId = Guid.NewGuid();
+        await using (var scope = _fixture.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<WorkoutTrackerDbContext>();
+            await using var transaction = await db.Database.BeginTransactionAsync();
+            await db.Database.ExecuteSqlRawAsync("ALTER TABLE workout_tracker.workout_completion_rejections DROP CONSTRAINT ck_completion_rejection_fingerprint_version");
+            await db.Database.ExecuteSqlInterpolatedAsync(
+                $"INSERT INTO workout_tracker.workout_completion_rejections (operation_id, request_fingerprint, error, status_code) VALUES ({operationId}, {"v1:legacy"}, {"error"}, {400})");
+            await db.Database.ExecuteSqlRawAsync("ALTER TABLE workout_tracker.workout_completion_rejections ADD CONSTRAINT ck_completion_rejection_fingerprint_version CHECK (request_fingerprint LIKE 's1:%') NOT VALID");
+            await transaction.CommitAsync();
+        }
+        var corrected = new { CompletionOperationId = operationId, Sets = 3, LoggedExercises = new[] { new { ExerciseId = exerciseId } } };
+        var response = await _client.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", corrected);
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.False(body.RootElement.TryGetProperty("safeToEdit", out _));
+        Assert.Empty((await _client.GetFromJsonAsync<List<SessionDto>>("/api/sessions"))!);
+    }
+
+    [Fact]
+    public async Task CreateSession_DatabaseRejectsOlderFingerprintWrites()
+    {
+        await using var scope = _fixture.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<WorkoutTrackerDbContext>();
+        var exception = await Assert.ThrowsAsync<PostgresException>(() => db.Database.ExecuteSqlInterpolatedAsync(
+            $"INSERT INTO workout_tracker.workout_completion_rejections (operation_id, request_fingerprint, error, status_code) VALUES ({Guid.NewGuid()}, {"v1:legacy"}, {"error"}, {400})"));
+        Assert.Equal(PostgresErrorCodes.CheckViolation, exception.SqlState);
+    }
+
+    [Fact]
+    public async Task CreateSession_FingerprintMigrationCannotBeRolledBackPastRejection()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Rollback fence workout", "Rollback fence exercise");
+        var payload = new { CompletionOperationId = Guid.NewGuid(), Sets = 4, LoggedExercises = new[] { new { ExerciseId = exerciseId } } };
+        var endpoint = $"/api/workouts/{workoutId}/sessions";
+        Assert.Equal(HttpStatusCode.BadRequest, (await _client.PostAsJsonAsync(endpoint, payload)).StatusCode);
+        await using var scope = _fixture.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<WorkoutTrackerDbContext>();
+        await Assert.ThrowsAsync<NotSupportedException>(() =>
+            db.GetService<IMigrator>().MigrateAsync("20261127095856_ProtectCompletionFingerprintsAndFenceRejections"));
+        var replay = await _client.PostAsJsonAsync(endpoint, payload);
+        Assert.Equal(HttpStatusCode.BadRequest, replay.StatusCode);
+        using var body = JsonDocument.Parse(await replay.Content.ReadAsStringAsync());
+        Assert.True(body.RootElement.GetProperty("safeToEdit").GetBoolean());
+        var exception = await Assert.ThrowsAsync<PostgresException>(() => db.Database.ExecuteSqlInterpolatedAsync(
+            $"INSERT INTO workout_tracker.workout_completion_rejections (operation_id, request_fingerprint, error, status_code) VALUES ({Guid.NewGuid()}, {"v1:legacy"}, {"error"}, {400})"));
+        Assert.Equal(PostgresErrorCodes.CheckViolation, exception.SqlState);
+    }
+
+    [Fact]
+    public async Task CreateSession_RejectsOversizedAndInvalidCompletionInputs()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Bounded workout", "Bounded exercise");
+        var endpoint = $"/api/workouts/{workoutId}/sessions";
+        var tooMany = new { CompletionOperationId = Guid.NewGuid(), Sets = 3, LoggedExercises = Enumerable.Range(0, 1001).Select(_ => new { ExerciseId = exerciseId }).ToArray() };
+        Assert.Equal(HttpStatusCode.BadRequest, (await _client.PostAsJsonAsync(endpoint, tooMany)).StatusCode);
+        var excessiveNotes = new { CompletionOperationId = Guid.NewGuid(), Sets = 3, LoggedExercises = new[] { new { ExerciseId = exerciseId, Notes = new string('x', 1001) } } };
+        Assert.Equal(HttpStatusCode.BadRequest, (await _client.PostAsJsonAsync(endpoint, excessiveNotes)).StatusCode);
+        var nullEntry = new { CompletionOperationId = Guid.NewGuid(), Sets = 3, LoggedExercises = new object?[] { null } };
+        Assert.Equal(HttpStatusCode.BadRequest, (await _client.PostAsJsonAsync(endpoint, nullEntry)).StatusCode);
+        var legacyTooMany = new { Sets = 3, LoggedExercises = Enumerable.Range(0, 1001).Select(_ => new { ExerciseId = exerciseId }).ToArray() };
+        Assert.Equal(HttpStatusCode.BadRequest, (await _client.PostAsJsonAsync(endpoint, legacyTooMany)).StatusCode);
+        var legacyNotes = new { Sets = 3, LoggedExercises = new[] { new { ExerciseId = exerciseId, Notes = new string('x', 1001) } } };
+        Assert.Equal(HttpStatusCode.BadRequest, (await _client.PostAsJsonAsync(endpoint, legacyNotes)).StatusCode);
+        using var oversized = new StringContent(new string('x', 1_048_577), Encoding.UTF8, "application/json");
+        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, (await _client.PostAsync(endpoint, oversized)).StatusCode);
+        Assert.Empty((await _client.GetFromJsonAsync<List<SessionDto>>("/api/sessions"))!);
+    }
+
+    [Fact]
+    public async Task CreateSession_LimitsRejectedAttemptsWithoutBlockingValidCorrection()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Bounded rejections", "Bounded rejection exercise");
+        var endpoint = $"/api/workouts/{workoutId}/sessions";
+        var operationId = Guid.NewGuid();
+        for (var attempt = 0; attempt < 100; attempt++)
+        {
+            var invalid = new { CompletionOperationId = operationId, Sets = 4, OverallEffort = attempt, LoggedExercises = new[] { new { ExerciseId = exerciseId } } };
+            Assert.Equal(HttpStatusCode.BadRequest, (await _client.PostAsJsonAsync(endpoint, invalid)).StatusCode);
+        }
+        var excess = new { CompletionOperationId = operationId, Sets = 4, OverallEffort = 100, LoggedExercises = new[] { new { ExerciseId = exerciseId } } };
+        var response = await _client.PostAsJsonAsync(endpoint, excess);
+        Assert.Equal(HttpStatusCode.TooManyRequests, response.StatusCode);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.False(body.RootElement.TryGetProperty("safeToEdit", out _));
+        var corrected = new { CompletionOperationId = operationId, Sets = 3, LoggedExercises = new[] { new { ExerciseId = exerciseId } } };
+        Assert.Equal(HttpStatusCode.Created, (await _client.PostAsJsonAsync(endpoint, corrected)).StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateSession_ConcurrentRejectionsRespectGlobalFenceLimit()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Global limit workout", "Global limit exercise");
+        var endpoint = $"/api/workouts/{workoutId}/sessions";
+        var initial = new { CompletionOperationId = Guid.NewGuid(), Sets = 4, LoggedExercises = new[] { new { ExerciseId = exerciseId } } };
+        Assert.Equal(HttpStatusCode.BadRequest, (await _client.PostAsJsonAsync(endpoint, initial)).StatusCode);
+        await using (var scope = _fixture.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<WorkoutTrackerDbContext>();
+            await using var transaction = await db.Database.BeginTransactionAsync();
+            await db.Database.ExecuteSqlRawAsync("""
+                INSERT INTO workout_tracker.workout_completion_rejections (operation_id, request_fingerprint, error, status_code)
+                SELECT md5('global-limit-test-' || n::text)::uuid, 's1:test', 'error', 400
+                FROM generate_series(1, 9998) AS n
+                """);
+            await transaction.CommitAsync();
+        }
+        var first = new { CompletionOperationId = Guid.NewGuid(), Sets = 4, LoggedExercises = new[] { new { ExerciseId = exerciseId } } };
+        var second = new { CompletionOperationId = Guid.NewGuid(), Sets = 4, LoggedExercises = new[] { new { ExerciseId = exerciseId } } };
+        var responses = await Task.WhenAll(_client.PostAsJsonAsync(endpoint, first), _client.PostAsJsonAsync(endpoint, second));
+        Assert.Contains(responses, response => response.StatusCode == HttpStatusCode.BadRequest);
+        var limited = Assert.Single(responses, response => response.StatusCode == HttpStatusCode.TooManyRequests);
+        using var body = JsonDocument.Parse(await limited.Content.ReadAsStringAsync());
+        Assert.False(body.RootElement.TryGetProperty("safeToEdit", out _));
+        await using var finalScope = _fixture.Services.CreateAsyncScope();
+        var finalDb = finalScope.ServiceProvider.GetRequiredService<WorkoutTrackerDbContext>();
+        Assert.Equal(10_000, await finalDb.WorkoutCompletionRejections.CountAsync());
+    }
+
+    [Fact]
+    public async Task CreateSession_TransientCommitFailureRetriesWithCleanTracking()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Retry transaction workout", "Retry transaction exercise");
+        var interceptor = new FailFirstCommitInterceptor();
+        using var retryHost = _fixture.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+        {
+            var registrations = services.Where(d =>
+                d.ServiceType == typeof(WorkoutTrackerDbContext) ||
+                d.ServiceType == typeof(DbContextOptions<WorkoutTrackerDbContext>) ||
+                d.ServiceType == typeof(DbContextOptions) ||
+                (d.ServiceType.IsGenericType &&
+                 d.ServiceType.GetGenericTypeDefinition() == typeof(IDbContextOptionsConfiguration<>) &&
+                 d.ServiceType.GenericTypeArguments[0] == typeof(WorkoutTrackerDbContext))).ToList();
+            foreach (var registration in registrations) services.Remove(registration);
+            var connection = Environment.GetEnvironmentVariable("TEST_DB_CONNECTION")
+                ?? "Host=localhost;Port=5432;Database=workout_tracker_test;Username=postgres;Password=postgres";
+            services.AddDbContext<WorkoutTrackerDbContext>(options => options
+                .UseNpgsql(connection, npgsql => npgsql.EnableRetryOnFailure(1, TimeSpan.FromMilliseconds(10), null))
+                .UseSnakeCaseNamingConvention()
+                .AddInterceptors(interceptor));
+        }));
+        using var retryClient = retryHost.CreateClient();
+        var payload = new { CompletionOperationId = Guid.NewGuid(), Sets = 3, LoggedExercises = new[] { new { ExerciseId = exerciseId } } };
+        var response = await retryClient.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", payload);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal(2, interceptor.CommitAttempts);
+        Assert.Single((await _client.GetFromJsonAsync<List<SessionDto>>("/api/sessions"))!);
+        Assert.Equal(HttpStatusCode.OK, (await retryClient.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", payload)).StatusCode);
+    }
+
+    private sealed class FailFirstCommitInterceptor : DbTransactionInterceptor
+    {
+        private int _attempts;
+        public int CommitAttempts => _attempts;
+
+        public override ValueTask<InterceptionResult> TransactionCommittingAsync(
+            DbTransaction transaction, TransactionEventData eventData, InterceptionResult result, CancellationToken cancellationToken = default)
+        {
+            if (Interlocked.Increment(ref _attempts) == 1) throw new TimeoutException("Simulated transient commit failure.");
+            return ValueTask.FromResult(result);
+        }
+    }
+
+    [Fact]
+    public async Task CreateSession_ReplayAfterHistoryEditReturnsOnlyOriginalId()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Edit replay", "Edit replay exercise");
+        var payload = new { CompletionOperationId = Guid.NewGuid(), Sets = 3, LoggedExercises = new[] { new { ExerciseId = exerciseId, LoggedWeight = "20" } } };
+        var created = await (await _client.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", payload)).Content.ReadFromJsonAsync<SessionDetailDto>();
+        var logged = Assert.Single(created!.LoggedExercises);
+        var update = await _client.PutAsJsonAsync($"/api/sessions/{created.WorkoutSessionId}", new
+        {
+            OverallEffort = 5,
+            LoggedExercises = new[] { new { logged.LoggedExerciseId, LoggedWeight = "30", Effort = (int?)6 } },
+        });
+        Assert.Equal(HttpStatusCode.OK, update.StatusCode);
+        var replay = await _client.PostAsJsonAsync($"/api/workouts/{workoutId}/sessions", payload);
+        Assert.Equal(HttpStatusCode.OK, replay.StatusCode);
+        using var body = JsonDocument.Parse(await replay.Content.ReadAsStringAsync());
+        Assert.Single(body.RootElement.EnumerateObject());
+        Assert.Equal(created.WorkoutSessionId, body.RootElement.GetProperty("workoutSessionId").GetGuid());
+    }
 
     [Theory]
     [InlineData(3)]

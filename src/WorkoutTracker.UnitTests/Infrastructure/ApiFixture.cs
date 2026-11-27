@@ -127,6 +127,8 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
         await using var scope = Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<WorkoutTrackerDbContext>();
         // Delete in FK-safe order
+        await db.Database.ExecuteSqlRawAsync("DELETE FROM workout_tracker.workout_completion_rejections");
+        await db.Database.ExecuteSqlRawAsync("DELETE FROM workout_tracker.workout_completion_receipts");
         await db.Database.ExecuteSqlRawAsync("DELETE FROM workout_tracker.logged_exercises");
         await db.Database.ExecuteSqlRawAsync("DELETE FROM workout_tracker.workout_sessions");
         await db.Database.ExecuteSqlRawAsync("DELETE FROM workout_tracker.planned_workout_exercises");

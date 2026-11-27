@@ -282,8 +282,14 @@ app.MapDelete("/api/workouts/{workoutId:guid}", async (Guid workoutId, ILogger<P
     }
 });
 
-app.MapPost("/api/workouts/{workoutId:guid}/sessions", async (Guid workoutId, ILogger<Program> logger, HttpRequest request, IHttpClientFactory httpClientFactory) =>
+app.MapPost("/api/workouts/{workoutId:guid}/sessions", async (Guid workoutId, ILogger<Program> logger, HttpContext context, IHttpClientFactory httpClientFactory) =>
 {
+    const long maxRequestBytes = 1_048_576;
+    var request = context.Request;
+    if (request.ContentLength > maxRequestBytes)
+        return Results.Json(new { error = "Workout completion request is too large." }, statusCode: 413);
+    var sizeFeature = context.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>();
+    if (sizeFeature is { IsReadOnly: false }) sizeFeature.MaxRequestBodySize = maxRequestBytes;
     try
     {
         var client = httpClientFactory.CreateClient("api");
@@ -292,6 +298,10 @@ app.MapPost("/api/workouts/{workoutId:guid}/sessions", async (Guid workoutId, IL
         var response = await client.PostAsync($"/api/workouts/{workoutId}/sessions", content);
         var responseContent = await response.Content.ReadAsStringAsync();
         return Results.Content(responseContent, "application/json", statusCode: (int)response.StatusCode);
+    }
+    catch (BadHttpRequestException ex) when (ex.StatusCode == 413)
+    {
+        return Results.Json(new { error = "Workout completion request is too large." }, statusCode: 413);
     }
     catch (Exception ex)
     {

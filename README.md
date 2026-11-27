@@ -7,11 +7,14 @@ A fitness application for tracking workouts and exercise progress. Built with C#
 - **Exercises** — Create and manage exercises with muscle group tagging
 - **Planned Workouts** — Build reusable workout templates from your exercise library (create, edit, delete)
 - **Workout Logging** — Select 3 or 5 sets before starting a planned workout, log weight and effort, and change exercise order from anywhere while scrolling
+- **Workout Recovery** — Progress is saved in the same browser profile and restored after a refresh. Use Resume workout to continue, or explicitly discard it; retry if storage or completion fails.
 - **Previous Performance** — See weight, effort, and sets from each exercise's latest comparable session while training
 - **Workout History** — View completed workouts with current and previous weight, sets, and effort, and edit the session-wide sets value
 - **Workout Stats Graph** — Chart a workout's history by overall session effort or by individual exercise, with each session's sets shown as background bars behind the weight and effort lines
 
 Sessions created before sets tracking was introduced remain supported. Their sets values are shown with the standard no-data marker in history, omitted from active-workout previous-performance summaries, and left without a bar in the stats graph.
+
+Workout drafts stay on the device and require browser storage and Web Locks. A completion interrupted by a lost response must be retried with the saved draft; it is not duplicated. Completion receipts and rejection fences remain in the database even if the corresponding history entry is deleted.
 
 ## Prerequisites
 
@@ -29,7 +32,9 @@ The AppHost requires a persistent PostgreSQL password stored in user secrets. Ru
 dotnet user-secrets set "Parameters:postgresPassword" "<your-dev-password>"
 ```
 
-This password is stored locally and never committed to the repo.
+The password is stored locally and never committed to the repo.
+
+Completion requests are limited to 1 MiB, 1,000 exercises and 1,000 characters per note. Retained receipts and rejection fences grow over time, so monitor database storage. At most 100 distinct rejection fences are recorded per operation and 10,000 in total; once a limit is reached, new invalid attempts remain locked until capacity is increased, while valid corrections can still complete. Do not delete fences to recover capacity.
 
 ```bash
 cd src
@@ -74,6 +79,8 @@ dotnet ef database update \
 ```
 
 ### Reverting a Migration
+
+The workout-completion fingerprint transition is forward-only: rolling it back could bypass retained rejection fences.
 
 To revert the last applied migration:
 

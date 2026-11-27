@@ -1,6 +1,8 @@
-import { navigate } from "../router.js";
+import { navigate, onRouteCleanup } from "../router.js";
 import { initSortableList } from "../sortable-list.js";
 import { getEffortLabel, getEffortColour, applyOrder } from "../utils.js";
+import { acquireDraftLock, readDraft, removeDraft, writeDraft } from "../active-workout-draft.js";
+import type { ActiveWorkoutDraft, CompletionPayload } from "../active-workout-draft.js";
 
 interface WorkoutExercise {
   readonly exerciseId: string;
@@ -42,7 +44,6 @@ interface SessionCreateResponse {
 let workout: WorkoutDetail | null = null;
 let logEntries: Map<string, LogEntry> = new Map();
 let isSaving = false;
-let hasChanges = false;
 let exerciseOrder: string[] | null = null;
 let pendingOverallEffort: number | null = null;
 let isOrderEditing = false;
@@ -50,10 +51,20 @@ let orderBeforeEditing: WorkoutExercise[] | null = null;
 let hasOrderChanges = false;
 let currentPreviousData: Map<string, PreviousExerciseData> | "error" | null = null;
 let sessionSets: 3 | 5 | null = null;
+let draft: ActiveWorkoutDraft | null = null;
+let renderGeneration = 0;
 const MODAL_FOCUSABLE_SELECTOR =
   'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [contenteditable="true"], [tabindex]:not([tabindex="-1"])';
 
 export async function render(container: HTMLElement): Promise<void> {
+  const generation = ++renderGeneration;
+  let active = true;
+  let releaseLock: (() => void) | null = null;
+  onRouteCleanup(() => {
+    active = false;
+    if (renderGeneration === generation) renderGeneration++;
+    releaseLock?.();
+  });
   const params = new URLSearchParams(window.location.search);
   const workoutId = params.get("id");
   const setsParam = params.get("sets");
@@ -66,13 +77,42 @@ export async function render(container: HTMLElement): Promise<void> {
     `;
     return;
   }
+  container.textContent = "Checking saved workout...";
+  const lock = await acquireDraftLock();
+  if (!active) {
+    if (lock.status === "acquired") lock.release();
+    return;
+  }
+  if (lock.status !== "acquired") {
+    showRecovery(container, lock.status === "busy"
+      ? "This workout is open in another tab. Close it there and retry."
+      : "Workout recovery requires browser lock support. Enable it and retry.", false);
+    return;
+  }
+  releaseLock = lock.release;
+  const saved = readDraft();
+  if (saved.status === "invalid" || saved.status === "unavailable") {
+    showRecovery(container, saved.status === "invalid"
+      ? "The saved workout is invalid or too large. Clear it explicitly to start again."
+      : "Saved workout storage is unavailable. Check your browser settings and retry.", saved.status === "invalid");
+    return;
+  }
+  if (saved.status === "found" && saved.draft.workoutId !== workoutId) {
+    showRecovery(container, "Another workout is already in progress. Resume it or explicitly discard it.", true, saved.draft);
+    return;
+  }
+  draft = saved.status === "found" ? saved.draft : null;
+  if (draft?.completion) {
+    renderPendingScreen(container, draft, generation);
+    return;
+  }
   sessionSets = setsParam === "3" || setsParam === "5" ? Number(setsParam) as 3 | 5 : null;
+  if (draft) sessionSets = draft.sets;
 
   // Reset state
   workout = null;
   logEntries = new Map();
   isSaving = false;
-  hasChanges = false;
   exerciseOrder = null;
   pendingOverallEffort = null;
   isOrderEditing = false;
@@ -82,6 +122,78 @@ export async function render(container: HTMLElement): Promise<void> {
 
   const orderParam = params.get("order");
   exerciseOrder = orderParam ? orderParam.split(",").map(id => id.trim()).filter(id => id.length > 0) : null;
+  if (draft) {
+    exerciseOrder = draft.exerciseOrder;
+    logEntries = new Map(Object.entries(draft.entries).map(([id, entry]) => [id, { ...entry }]));
+  }
+
+  function renderPendingScreen(container: HTMLElement, pending: ActiveWorkoutDraft, generation: number): void {
+    container.innerHTML = `
+      <div class="active-session">
+        <p id="pending-status" role="status" aria-live="polite">A previous completion may have succeeded. Retry to check its result.</p>
+        <div id="pending-error" role="alert"></div>
+        <button class="active-session__save-btn" type="button" id="pending-retry">Retry completion</button>
+      </div>`;
+    const retry = container.querySelector<HTMLButtonElement>("#pending-retry")!;
+    const status = container.querySelector<HTMLElement>("#pending-status")!;
+    const error = container.querySelector<HTMLElement>("#pending-error")!;
+    let readyToEdit = false;
+    retry.addEventListener("click", async () => {
+      if (readyToEdit) {
+        window.location.reload();
+        return;
+      }
+      retry.disabled = true;
+      status.textContent = "Checking completion...";
+      error.textContent = "";
+      try {
+        const response = await fetch(`/api/workouts/${pending.workoutId}/sessions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(pending.completion),
+        });
+        if (generation !== renderGeneration) return;
+        const data: { workoutSessionId?: string; error?: string; safeToEdit?: boolean } = await response.json();
+        if (generation !== renderGeneration) return;
+        if (response.ok && typeof data.workoutSessionId === "string" && data.workoutSessionId) {
+          try {
+            removeDraft();
+            navigate(`/history/session?id=${encodeURIComponent(data.workoutSessionId)}`);
+          } catch {
+            status.textContent = "Workout completed, but its saved draft could not be removed. Retry cleanup.";
+          }
+        } else if ((response.status === 400 || response.status === 404) && data.safeToEdit === true) {
+          try {
+            writeDraft({ ...pending, completion: null });
+            error.textContent = data.error ?? "Completion was rejected.";
+            status.textContent = "The rejected attempt is safely blocked. You can edit or discard the workout.";
+            retry.textContent = "Edit workout";
+            readyToEdit = true;
+          } catch {
+            status.textContent = "The rejection was confirmed, but the draft could not be updated. Retry.";
+          }
+        } else {
+          status.textContent = response.status === 400
+            ? "Completion was rejected, but an earlier attempt may still be in flight. Your saved progress remains locked."
+            : response.status === 409 || response.status === 410
+            ? "This completion cannot be retried as a new workout. Your saved progress remains intact."
+            : "Completion may have succeeded. Retry to check its result.";
+          error.textContent = data.error ?? "The completion could not be confirmed.";
+          if (response.status === 410) offerDeletedCleanup(error);
+          if (response.status === 409 && data.workoutSessionId) {
+            const link = document.createElement("a");
+            link.href = `/history/session?id=${encodeURIComponent(data.workoutSessionId)}`;
+            link.textContent = " View completed workout";
+            error.appendChild(link);
+          }
+        }
+      } catch {
+        if (generation === renderGeneration) status.textContent = "Completion may have succeeded. Retry to check its result.";
+      } finally {
+        if (generation === renderGeneration) retry.disabled = false;
+      }
+    });
+  }
 
   container.innerHTML = `
     <div class="active-session">
@@ -93,6 +205,8 @@ export async function render(container: HTMLElement): Promise<void> {
           <div class="active-session__exercises" id="session-exercises" role="form" aria-label="Log workout exercises"></div>
           <div class="active-session__error" id="session-error" role="alert" aria-live="polite"></div>
           <div class="active-session__api-error" id="session-api-error" role="alert" aria-live="polite"></div>
+          <div id="draft-status" role="status" aria-live="polite"></div>
+          <button class="active-session__cancel-btn" type="button" id="draft-retry" style="display:none;">Retry saving progress</button>
           <div class="active-session__actions">
             <button class="active-session__save-btn" type="button" id="session-save">Save Workout</button>
             <button class="active-session__cancel-btn" type="button" id="session-cancel">Cancel</button>
@@ -145,7 +259,91 @@ export async function render(container: HTMLElement): Promise<void> {
   initEventListeners();
   initDiscardModal();
   initEffortModal();
-  await loadWorkout(workoutId);
+  document.getElementById("draft-retry")?.addEventListener("click", () => {
+    if (draft?.completion) void handleSave(draft.completion.overallEffort);
+    else saveDraft();
+  });
+  await loadWorkout(workoutId, () => active, container);
+}
+
+function offerDeletedCleanup(target: HTMLElement): void {
+  const clear = document.createElement("button");
+  clear.type = "button";
+  clear.className = "active-session__cancel-btn";
+  clear.textContent = "Clear deleted completion";
+  clear.addEventListener("click", () => {
+    if (!window.confirm("Clear this saved completion? Its history entry was already deleted.")) return;
+    try {
+      removeDraft();
+      navigate("/");
+    } catch {
+      target.textContent = "Could not clear the saved completion. Check storage and retry.";
+      offerDeletedCleanup(target);
+    }
+  });
+  target.appendChild(clear);
+}
+
+function showRecovery(container: HTMLElement, message: string, canClear: boolean, existing?: ActiveWorkoutDraft): void {
+  container.innerHTML = "";
+  const section = document.createElement("div");
+  section.className = "active-session";
+  const text = document.createElement("p");
+  text.setAttribute("role", "alert");
+  text.textContent = message;
+  section.appendChild(text);
+  if (existing && existing.workoutId !== new URLSearchParams(window.location.search).get("id")) {
+    const resume = document.createElement("button");
+    resume.type = "button";
+    resume.className = "active-session__save-btn";
+    resume.textContent = "Resume saved workout";
+    resume.addEventListener("click", () => navigate(`/active-session?id=${encodeURIComponent(existing.workoutId)}&sets=${existing.sets}`));
+    section.appendChild(resume);
+  }
+  if (canClear && !existing?.completion) {
+    const clear = document.createElement("button");
+    clear.type = "button";
+    clear.className = "active-session__cancel-btn";
+    clear.textContent = "Discard saved workout";
+    clear.addEventListener("click", () => {
+      if (!window.confirm("Discard the saved workout? This cannot be undone.")) return;
+      try {
+        removeDraft();
+        window.location.reload();
+      } catch {
+        text.textContent = "Could not discard the saved workout. Check storage and try again.";
+      }
+    });
+    section.appendChild(clear);
+  }
+  const retry = document.createElement("button");
+  retry.type = "button";
+  retry.className = "active-session__cancel-btn";
+  retry.textContent = "Retry";
+  retry.addEventListener("click", () => window.location.reload());
+  section.appendChild(retry);
+  container.appendChild(section);
+}
+
+function saveDraft(): boolean {
+  if (!draft || !workout || draft.completion) return false;
+  const entries = Object.fromEntries([...logEntries].map(([id, entry]) => [id, { ...entry }]));
+  const updated: ActiveWorkoutDraft = {
+    ...draft, exerciseOrder: workout.exercises.map(exercise => exercise.exerciseId), entries,
+  };
+  const status = document.getElementById("draft-status");
+  const retry = document.getElementById("draft-retry") as HTMLButtonElement | null;
+  try {
+    writeDraft(updated);
+    draft = updated;
+    if (status) status.textContent = "Progress saved on this browser.";
+    if (retry) retry.style.display = "none";
+    return true;
+  } catch {
+    if (status) status.textContent = "Progress could not be saved and may be lost on refresh.";
+    if (retry) retry.style.display = "";
+    return false;
+  }
 }
 
 function initEventListeners(): void {
@@ -155,9 +353,6 @@ function initEventListeners(): void {
 
   saveBtn?.addEventListener("click", () => {
     if (isOrderEditing) {
-      if (hasOrderChanges) {
-        hasChanges = true;
-      }
       finishOrderEditing();
     } else {
       openEffortModal();
@@ -184,7 +379,14 @@ function initDiscardModal(): void {
     if (isOrderEditing) {
       discardOrderChanges();
     } else {
-      navigate("/workouts");
+      try {
+        removeDraft();
+        navigate("/workouts");
+      } catch {
+        const error = document.getElementById("session-error");
+        if (error) error.textContent = "Could not discard the workout. Check storage and try again.";
+        closeDiscardModal();
+      }
     }
   });
 
@@ -377,7 +579,7 @@ function openDiscardModal(): void {
     if (continueBtn) continueBtn.textContent = "Keep editing";
   } else {
     if (titleEl) titleEl.textContent = "Discard Workout?";
-    if (descEl) descEl.textContent = "You have unsaved changes. Are you sure you want to discard this workout?";
+    if (descEl) descEl.textContent = "Discard this workout and its saved progress?";
     if (continueBtn) continueBtn.textContent = "Continue workout";
   }
 
@@ -390,7 +592,7 @@ function closeDiscardModal(): void {
   if (backdrop) backdrop.style.display = "none";
 }
 
-async function loadWorkout(workoutId: string): Promise<void> {
+async function loadWorkout(workoutId: string, isActive: () => boolean, container: HTMLElement): Promise<void> {
   const titleEl = document.getElementById("session-title") as HTMLElement | null;
   const errorEl = document.getElementById("session-error") as HTMLElement | null;
 
@@ -398,9 +600,14 @@ async function loadWorkout(workoutId: string): Promise<void> {
     fetch(`/api/workouts/${workoutId}`),
     fetch(`/api/workouts/${workoutId}/previous-performance`),
   ]);
+  if (!isActive()) return;
 
   // Handle workout fetch failure (blocks the whole page)
   if (workoutResult.status === "rejected" || !workoutResult.value.ok) {
+    if (draft) {
+      showRecovery(container, "The saved workout could not be loaded. Retry or explicitly discard it.", true, draft);
+      return;
+    }
     if (titleEl) titleEl.textContent = "Workout";
     if (errorEl) errorEl.textContent = "Failed to load workout. Please try again.";
     return;
@@ -412,6 +619,14 @@ async function loadWorkout(workoutId: string): Promise<void> {
     if (titleEl) titleEl.textContent = "Workout";
     if (errorEl) errorEl.textContent = "Failed to load workout. Please try again.";
     return;
+  }
+  if (!isActive()) return;
+  if (workout && draft) {
+    const ids = new Set(workout.exercises.map(exercise => exercise.exerciseId));
+    if (ids.size !== draft.exerciseOrder.length || !draft.exerciseOrder.every(id => ids.has(id))) {
+      showRecovery(container, "The workout exercises have changed. The saved progress cannot be restored safely.", true, draft);
+      return;
+    }
   }
 
   // Apply shuffled order if provided via ?order= URL param (T011).
@@ -441,8 +656,20 @@ async function loadWorkout(workoutId: string): Promise<void> {
     previousData = "error";
   }
 
+  if (!isActive()) return;
   currentPreviousData = previousData;
   renderExerciseInputs();
+  if (!draft && workout && sessionSets !== null) {
+    draft = {
+      version: 1, draftId: crypto.randomUUID(), workoutId, sets: sessionSets,
+      exerciseOrder: workout.exercises.map(exercise => exercise.exerciseId),
+      entries: Object.fromEntries([...logEntries].map(([id, entry]) => [id, { ...entry }])),
+      completion: null,
+    };
+    saveDraft();
+  } else if (draft?.completion) {
+    showPendingCompletion("A previous completion may have succeeded. Retry to reconcile it.");
+  }
 }
 
 function renderExerciseInputs(): void {
@@ -549,9 +776,9 @@ function renderExerciseInputs(): void {
     weightInput.value = existingEntry?.loggedWeight ?? "";
     weightInput.setAttribute("aria-label", `Weight in KG for ${exercise.name}`);
     weightInput.addEventListener("input", () => {
-      hasChanges = true;
       const entry = logEntries.get(exercise.exerciseId);
       if (entry) entry.loggedWeight = weightInput.value;
+      saveDraft();
     });
     weightGroup.appendChild(weightLabel);
     weightGroup.appendChild(weightInput);
@@ -609,7 +836,6 @@ function renderExerciseInputs(): void {
     }
 
     effortSlider.addEventListener("input", () => {
-      hasChanges = true;
       const value = parseInt(effortSlider.value, 10);
       const entry = logEntries.get(exercise.exerciseId);
       if (entry) entry.loggedEffort = value;
@@ -627,6 +853,7 @@ function renderExerciseInputs(): void {
       effortSlider.style.accentColor = colour;
       effortValueEl.style.color = colour;
       effortBandEl.style.color = colour;
+      saveDraft();
     });
 
     effortGroup.appendChild(effortLabel);
@@ -654,7 +881,7 @@ function toggleOrderEditing(): void {
   (firstHandle ?? doneBtn)?.focus();
 }
 
-function finishOrderEditing(): void {
+function finishOrderEditing(commit = true): void {
   if (!isOrderEditing) return;
 
   isOrderEditing = false;
@@ -662,6 +889,7 @@ function finishOrderEditing(): void {
   hasOrderChanges = false;
   updateOrderEditingControls();
   renderExerciseInputs();
+  if (commit) saveDraft();
 }
 
 function discardOrderChanges(): void {
@@ -669,7 +897,7 @@ function discardOrderChanges(): void {
 
   workout = { ...workout, exercises: [...orderBeforeEditing] };
   closeDiscardModal();
-  finishOrderEditing();
+  finishOrderEditing(false);
 }
 
 function hasCurrentOrderChanged(): boolean {
@@ -762,6 +990,7 @@ function buildOrderExerciseItem(exercise: WorkoutExercise, index: number, listLe
 
 async function handleSave(overallEffort: number | null): Promise<void> {
   if (isSaving || !workout) return;
+  const generation = renderGeneration;
 
   const saveBtn = document.getElementById("session-save") as HTMLButtonElement | null;
   const apiErrorEl = document.getElementById("session-api-error") as HTMLElement | null;
@@ -773,6 +1002,11 @@ async function handleSave(overallEffort: number | null): Promise<void> {
     if (apiErrorEl) apiErrorEl.textContent = "Sets must be 3 or 5. Return to Let's go! and select sets.";
     return;
   }
+  if (!draft) {
+    if (apiErrorEl) apiErrorEl.textContent = "The workout draft is not ready. Retry loading this workout.";
+    return;
+  }
+  if (!draft.completion && !saveDraft()) return;
 
   // Client-side weight validation
   const exercisesEl = document.getElementById("session-exercises");
@@ -807,31 +1041,106 @@ async function handleSave(overallEffort: number | null): Promise<void> {
       };
     });
 
+    let payload: CompletionPayload = draft.completion ?? {
+      completionOperationId: draft.draftId,
+      sets: sessionSets,
+      loggedExercises,
+      overallEffort,
+    };
+    if (!draft.completion) {
+      const frozen = { ...draft, completion: payload };
+      try {
+        writeDraft(frozen);
+        draft = frozen;
+      } catch {
+        if (apiErrorEl) apiErrorEl.textContent = "Could not save completion safely. Check browser storage and retry.";
+        return;
+      }
+    } else {
+      payload = draft.completion;
+    }
+    showPendingCompletion("Completing workout...");
     const response = await fetch(`/api/workouts/${workout.plannedWorkoutId}/sessions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sets: sessionSets, loggedExercises, overallEffort }),
+      body: JSON.stringify(payload),
     });
+    if (generation !== renderGeneration) return;
 
     if (response.ok) {
       const session: SessionCreateResponse = await response.json();
-      hasChanges = false;
+      if (generation !== renderGeneration) return;
+      if (typeof session.workoutSessionId !== "string" || !session.workoutSessionId) {
+        showPendingCompletion("The completion response was invalid. Retry to check its result.");
+        return;
+      }
+      try {
+        removeDraft();
+      } catch {
+        showPendingCompletion("Workout completed, but its saved draft could not be removed. Retry cleanup.");
+        return;
+      }
       navigate(`/history/session?id=${encodeURIComponent(session.workoutSessionId)}`);
     } else {
       const data = await response.json();
+      if (generation !== renderGeneration) return;
       if (apiErrorEl) {
         apiErrorEl.textContent = data.error || "An unexpected error occurred. Please try again.";
       }
+      if ((response.status === 400 || response.status === 404) && data.safeToEdit === true && draft) {
+        try {
+          const editable = { ...draft, completion: null };
+          writeDraft(editable);
+          draft = editable;
+          enableEditing();
+          const status = document.getElementById("draft-status");
+          if (status) status.textContent = "The rejected attempt is safely blocked. You can edit or discard the workout.";
+        } catch {
+          showPendingCompletion("The rejection was confirmed, but the draft could not be updated. Retry.");
+        }
+      } else {
+        showPendingCompletion(response.status === 400
+          ? "Completion was rejected, but an earlier attempt may still be in flight. Your saved progress remains locked."
+          : response.status === 409 || response.status === 410
+          ? "This completion cannot be retried as a new workout. Your saved progress remains intact."
+          : "Completion may have succeeded. Retry to check its result.");
+        if (response.status === 410 && apiErrorEl) offerDeletedCleanup(apiErrorEl);
+        if (response.status === 409 && typeof data.workoutSessionId === "string" && apiErrorEl) {
+          const link = document.createElement("a");
+          link.href = `/history/session?id=${encodeURIComponent(data.workoutSessionId)}`;
+          link.textContent = " View completed workout";
+          apiErrorEl.appendChild(link);
+        }
+      }
     }
   } catch {
-    if (apiErrorEl) {
-      apiErrorEl.textContent = "An unexpected error occurred. Please try again.";
-    }
+    if (generation === renderGeneration) showPendingCompletion("Completion may have succeeded. Retry to check its result.");
   } finally {
     isSaving = false;
     saveBtn.removeAttribute("aria-disabled");
     saveBtn.textContent = originalText ?? "Save Workout";
   }
+}
+
+function showPendingCompletion(message: string): void {
+  const status = document.getElementById("draft-status");
+  if (status) status.textContent = message;
+  const retry = document.getElementById("draft-retry") as HTMLButtonElement | null;
+  if (retry) {
+    retry.style.display = "";
+    retry.textContent = "Retry completion";
+  }
+  document.querySelectorAll<HTMLInputElement | HTMLButtonElement>(
+    "#session-exercises input, #session-save, #session-cancel, #session-edit-order",
+  ).forEach(element => { element.disabled = true; });
+}
+
+function enableEditing(): void {
+  document.querySelectorAll<HTMLInputElement | HTMLButtonElement>(
+    "#session-exercises input, #session-save, #session-cancel, #session-edit-order",
+  ).forEach(element => { element.disabled = false; });
+  const retry = document.getElementById("draft-retry");
+  if (retry) retry.style.display = "none";
 }
 
 function handleCancel(): void {
@@ -844,7 +1153,7 @@ function handleCancel(): void {
     return;
   }
 
-  if (hasChanges) {
+  if (draft) {
     openDiscardModal();
   } else {
     navigate("/workouts");

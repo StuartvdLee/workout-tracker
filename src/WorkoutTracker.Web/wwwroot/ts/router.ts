@@ -9,6 +9,11 @@ const routes: Route[] = [];
 let contentEl: HTMLElement | null = null;
 let onNavigateCallback: ((path: string) => void) | null = null;
 let navigationToken = 0;
+let routeCleanup: (() => void) | null = null;
+
+export function onRouteCleanup(cleanup: () => void): void {
+  routeCleanup = cleanup;
+}
 
 export function registerRoute(path: string, render: RenderFn): void {
   routes.push({ path, render });
@@ -45,6 +50,8 @@ async function renderCurrentRoute(): Promise<void> {
   }
 
   const token = ++navigationToken;
+  routeCleanup?.();
+  routeCleanup = null;
   const path = getCurrentPath();
   const route = routes.find((r) => r.path === path);
 

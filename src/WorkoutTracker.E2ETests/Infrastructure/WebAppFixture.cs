@@ -68,6 +68,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
     private static readonly List<MockPlannedWorkout> _workouts = [];
     private static readonly Lock _sessionsLock = new();
     private static readonly List<MockWorkoutSession> _sessions = [];
+    private static readonly Dictionary<string, (string WorkoutId, string Payload, string SessionId)> _receipts = [];
 
     public static void ResetExercises()
     {
@@ -80,7 +81,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
     public static void ResetWorkouts()
     {
         lock (_workoutsLock) { _workouts.Clear(); }
-        lock (_sessionsLock) { _sessions.Clear(); }
+        lock (_sessionsLock) { _sessions.Clear(); _receipts.Clear(); }
     }
 
     /// <summary>
@@ -664,6 +665,22 @@ public class WebAppFixture : WebApplicationFactory<Program>
         // Mock API endpoint to create a workout session
         app.MapPost("/api/workouts/{workoutId}/sessions", async (string workoutId, HttpRequest request) =>
         {
+            var body = await request.ReadFromJsonAsync<SessionRequest>();
+            var serialized = JsonSerializer.Serialize(body);
+            if (body?.CompletionOperationId is { } operationId)
+            {
+                lock (_sessionsLock)
+                {
+                    if (_receipts.TryGetValue(operationId, out var receipt))
+                    {
+                        if (receipt.WorkoutId != workoutId || receipt.Payload != serialized)
+                            return Results.Json(new { error = "Completion conflict." }, statusCode: 409);
+                        return _sessions.Any(s => s.SessionId == receipt.SessionId)
+                            ? Results.Json(new { workoutSessionId = receipt.SessionId }, statusCode: 200)
+                            : Results.Json(new { error = "The completed workout has been deleted." }, statusCode: 410);
+                    }
+                }
+            }
             lock (_workoutsLock)
             {
                 var workout = _workouts.FirstOrDefault(w =>
@@ -675,7 +692,6 @@ public class WebAppFixture : WebApplicationFactory<Program>
                 }
             }
 
-            var body = await request.ReadFromJsonAsync<SessionRequest>();
             var loggedExercises = (body?.LoggedExercises ?? [])
                 .Select(e => new MockLoggedExercise(Guid.NewGuid().ToString(), e.ExerciseId, e.LoggedReps, e.LoggedWeight, e.Notes, e.Effort, e.Sequence))
                 .ToList();
@@ -700,7 +716,17 @@ public class WebAppFixture : WebApplicationFactory<Program>
 
             lock (_sessionsLock)
             {
+                if (body?.CompletionOperationId is { } retryId && _receipts.TryGetValue(retryId, out var existing))
+                {
+                    if (existing.WorkoutId != workoutId || existing.Payload != serialized)
+                        return Results.Json(new { error = "Completion conflict." }, statusCode: 409);
+                    return _sessions.Any(s => s.SessionId == existing.SessionId)
+                        ? Results.Json(new { workoutSessionId = existing.SessionId }, statusCode: 200)
+                        : Results.Json(new { error = "The completed workout has been deleted." }, statusCode: 410);
+                }
                 _sessions.Add(session);
+                if (body?.CompletionOperationId is { } storedOperationId)
+                    _receipts[storedOperationId] = (workoutId, serialized, session.SessionId);
             }
 
             return Results.Json(
@@ -1208,6 +1234,7 @@ public class WebAppFixture : WebApplicationFactory<Program>
 
     private sealed class SessionRequest
     {
+        public string? CompletionOperationId { get; set; }
         public int? OverallEffort { get; set; }
         public int? Sets { get; set; }
         public SessionLoggedExerciseRequest[]? LoggedExercises { get; set; }
