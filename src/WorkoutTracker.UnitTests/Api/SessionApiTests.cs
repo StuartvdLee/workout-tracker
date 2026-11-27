@@ -59,6 +59,94 @@ public class SessionApiTests : IAsyncLifetime
         Assert.Single(sessions);
     }
 
+    [Fact]
+    public async Task GetWorkoutStatistics_FiltersHalfOpenRangeAndDeduplicatesExerciseAppearances()
+    {
+        var (workoutId, exerciseId) = await CreateWorkoutWithExerciseAsync("Stats workout", "Stats exercise");
+        var first = await CreateSessionWithOverallEffortAsync(workoutId, exerciseId, null, null, 7);
+        var second = await CreateSessionWithOverallEffortAsync(workoutId, exerciseId, null, null, 5);
+        var noEffort = await CreateSessionWithOverallEffortAsync(workoutId, exerciseId, null, null, null);
+        var atEnd = await CreateSessionWithOverallEffortAsync(workoutId, exerciseId, null, null, 9);
+        var earlier = await CreateSessionWithOverallEffortAsync(workoutId, exerciseId, null, null, null);
+        var startUtc = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc);
+        var endUtc = new DateTime(2026, 4, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        await SetCompletedAtAsync(first.WorkoutSessionId, startUtc);
+        await SetCompletedAtAsync(second.WorkoutSessionId, startUtc.AddDays(10));
+        await SetCompletedAtAsync(noEffort.WorkoutSessionId, startUtc.AddDays(5));
+        await SetCompletedAtAsync(atEnd.WorkoutSessionId, endUtc);
+        await SetCompletedAtAsync(earlier.WorkoutSessionId, startUtc.AddMonths(-2));
+
+        await using (var scope = _fixture.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<WorkoutTrackerDbContext>();
+            db.LoggedExercises.Add(new LoggedExercise
+            {
+                LoggedExerciseId = Guid.NewGuid(),
+                WorkoutSessionId = first.WorkoutSessionId,
+                ExerciseId = exerciseId,
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var response = await _client.GetAsync(
+            $"/api/statistics/workouts?startUtc={Uri.EscapeDataString(startUtc.ToString("O"))}&endUtc={Uri.EscapeDataString(endUtc.ToString("O"))}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var root = document.RootElement;
+        Assert.Equal(3, root.GetProperty("workoutCount").GetInt32());
+        var history = root.GetProperty("history");
+        Assert.Equal(4, history.GetProperty("workoutCount").GetInt32());
+        Assert.Equal(startUtc.AddMonths(-2), history.GetProperty("firstCompletedAt").GetDateTime());
+        var exercise = Assert.Single(root.GetProperty("exerciseActivity").EnumerateArray());
+        Assert.Equal(exerciseId, exercise.GetProperty("exerciseId").GetGuid());
+        Assert.Equal("Stats exercise", exercise.GetProperty("name").GetString());
+        Assert.Equal(3, exercise.GetProperty("workoutCount").GetInt32());
+        var observations = root.GetProperty("effort").GetProperty("observations").EnumerateArray().ToArray();
+        Assert.Equal(2, root.GetProperty("effort").GetProperty("contributingCount").GetInt32());
+        Assert.Equal(7, observations[0].GetProperty("value").GetInt32());
+        Assert.Equal(5, observations[1].GetProperty("value").GetInt32());
+        Assert.Equal(first.WorkoutSessionId, observations[0].GetProperty("sessionId").GetGuid());
+        Assert.Equal(second.WorkoutSessionId, observations[1].GetProperty("sessionId").GetGuid());
+    }
+
+    [Fact]
+    public async Task GetWorkoutStatistics_ReturnsEmptySummaryForValidPeriodWithoutWorkouts()
+    {
+        var response = await _client.GetAsync(
+            "/api/statistics/workouts?startUtc=2026-03-01T00%3A00%3A00Z&endUtc=2026-04-01T00%3A00%3A00Z");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var root = document.RootElement;
+        Assert.Equal(0, root.GetProperty("workoutCount").GetInt32());
+        Assert.Equal(JsonValueKind.Null, root.GetProperty("history").ValueKind);
+        Assert.Empty(root.GetProperty("exerciseActivity").EnumerateArray());
+        Assert.Equal(0, root.GetProperty("effort").GetProperty("contributingCount").GetInt32());
+        Assert.Empty(root.GetProperty("effort").GetProperty("observations").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task GetWorkoutStatistics_RejectsMissingMalformedNonUtcReversedAndOverlongRanges()
+    {
+        var invalidQueries = new[]
+        {
+            "?endUtc=2026-04-01T00%3A00%3A00Z",
+            "?startUtc=2026-03-01T00%3A00%3A00Z",
+            "?startUtc=not-a-date&endUtc=2026-04-01T00%3A00%3A00Z",
+            "?startUtc=2026-03-01T00%3A00%3A00%2B00%3A00&endUtc=2026-04-01T00%3A00%3A00Z",
+            "?startUtc=2026-04-01T00%3A00%3A00Z&endUtc=2026-03-01T00%3A00%3A00Z",
+            "?startUtc=2025-01-01T00%3A00%3A00Z&endUtc=2026-02-06T00%3A00%3A00Z",
+        };
+
+        foreach (var query in invalidQueries)
+        {
+            var response = await _client.GetAsync($"/api/statistics/workouts{query}");
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+    }
+
     // --- POST /api/workouts/{id}/sessions ---
 
     [Fact]
@@ -2222,6 +2310,14 @@ public class SessionApiTests : IAsyncLifetime
     }
 
     // --- Helpers ---
+
+    private async Task SetCompletedAtAsync(Guid sessionId, DateTime completedAt)
+    {
+        await using var scope = _fixture.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<WorkoutTrackerDbContext>();
+        await db.Database.ExecuteSqlInterpolatedAsync(
+            $"UPDATE workout_tracker.workout_sessions SET completed_at = {completedAt} WHERE workout_session_id = {sessionId}");
+    }
 
     private async Task<(Guid WorkoutId, Guid ExerciseId)> CreateWorkoutWithExerciseAsync(
         string workoutName, string exerciseName)

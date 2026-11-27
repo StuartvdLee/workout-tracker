@@ -87,7 +87,8 @@ public class WorkoutHistoryTests
         string workoutName = "Push Day",
         int loggedReps = 10,
         string loggedWeight = "135 lbs",
-        string notes = "Good form")
+        string notes = "Good form",
+        int? overallEffort = null)
     {
         await SeedExerciseAsync(page, exerciseName);
 
@@ -114,6 +115,7 @@ public class WorkoutHistoryTests
             DataObject = new
             {
                 sets = 3,
+                overallEffort,
                 loggedExercises = new[]
                 {
                     new { exerciseId, loggedReps, loggedWeight, notes },
@@ -157,6 +159,177 @@ public class WorkoutHistoryTests
         return sessions!.Value.EnumerateArray()
             .Single(session => session.GetProperty("plannedWorkoutId").GetString() == workoutId)
             .GetProperty("workoutSessionId").GetString()!;
+    }
+
+    [Fact]
+    public async Task StatisticsDashboard_ShowsPeriodSummaryAndRefreshesAfterDeletion()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var (workoutId, _) = await CreateWorkoutAndSessionViaApiAsync(
+                page,
+                exerciseName: "Statistics Press",
+                workoutName: "Statistics Workout",
+                overallEffort: 7);
+            var (workoutWithoutEffortId, _) = await CreateWorkoutAndSessionViaApiAsync(
+                page,
+                exerciseName: "Statistics Curl",
+                workoutName: "Statistics Workout Without Effort");
+
+            await page.Locator(".sidebar__link[data-page='statistics']").ClickAsync();
+            await page.WaitForSelectorAsync(".statistics-page");
+            await Expect(page.Locator("#statistics-workout-count")).ToHaveTextAsync("2");
+            Assert.Contains("sr-only", await page.Locator("#statistics-status").GetAttributeAsync("class"));
+            await Expect(page.Locator("#statistics-exercise-heading")).ToHaveCountAsync(0);
+            await Expect(page.Locator("#statistics-average-heading")).ToHaveTextAsync("Average workouts per week");
+            await Expect(page.Locator("#statistics-average-value")).ToHaveTextAsync("2");
+            await Expect(page.Locator("#statistics-average-note")).ToContainTextAsync("weeks with no workouts");
+            await Expect(page.Locator(".sidebar__link[data-page='statistics']")).ToHaveAttributeAsync("aria-current", "page");
+            await Expect(page.Locator("#statistics-next")).ToBeDisabledAsync();
+
+            await page.Locator("#statistics-kind-year").ClickAsync();
+            await Expect(page.Locator("#statistics-kind-year")).ToHaveAttributeAsync("aria-pressed", "true");
+            await Expect(page.Locator("#statistics-workout-count")).ToHaveTextAsync("2");
+            await Expect(page.Locator("#statistics-average-heading")).ToHaveTextAsync("Average workouts per year");
+            await Expect(page.Locator("#statistics-average-value")).ToHaveTextAsync("2");
+            await page.Locator("#statistics-previous").FocusAsync();
+            await page.Keyboard.PressAsync("Enter");
+            await Expect(page.Locator("#statistics-workout-count")).ToHaveTextAsync("0");
+            await Expect(page.Locator("#statistics-average-value")).ToHaveTextAsync("—");
+            await Expect(page.Locator("#statistics-next")).ToBeEnabledAsync();
+            await page.Locator("#statistics-current").ClickAsync();
+            await Expect(page.Locator("#statistics-workout-count")).ToHaveTextAsync("2");
+
+            var sessionId = await GetWorkoutSessionIdAsync(page, workoutId);
+            var sessionWithoutEffortId = await GetWorkoutSessionIdAsync(page, workoutWithoutEffortId);
+            await page.APIRequest.DeleteAsync($"{_webApp.BaseUrl}/api/sessions/{sessionId}");
+            await page.Locator(".sidebar__link[data-page='history']").ClickAsync();
+            await page.Locator(".sidebar__link[data-page='statistics']").ClickAsync();
+            await Expect(page.Locator("#statistics-workout-count")).ToHaveTextAsync("1");
+            await Expect(page.Locator("#statistics-average-value")).ToHaveTextAsync("1");
+
+            await page.APIRequest.DeleteAsync($"{_webApp.BaseUrl}/api/sessions/{sessionWithoutEffortId}");
+            await page.Locator(".sidebar__link[data-page='history']").ClickAsync();
+            await page.Locator(".sidebar__link[data-page='statistics']").ClickAsync();
+            await Expect(page.Locator("#statistics-workout-count")).ToHaveTextAsync("0");
+            await Expect(page.Locator("#statistics-empty-message")).ToBeVisibleAsync();
+            await Expect(page.Locator("#statistics-average-value")).ToHaveTextAsync("—");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task StatisticsDashboard_RetriesAfterFailureAndFitsNarrowViewports()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            await page.SetViewportSizeAsync(375, 812);
+            var shouldFail = true;
+            await page.RouteAsync("**/api/statistics/workouts**", async route =>
+            {
+                if (shouldFail)
+                {
+                    await route.FulfillAsync(new RouteFulfillOptions
+                    {
+                        Status = 502,
+                        ContentType = "application/json",
+                        Body = "{\"error\":\"API unavailable.\"}",
+                    });
+                }
+                else
+                {
+                    await route.ContinueAsync();
+                }
+            });
+
+            await page.Locator(".topbar__toggle").ClickAsync();
+            await page.Locator(".sidebar__link[data-page='statistics']").ClickAsync();
+            await page.WaitForSelectorAsync(".statistics-page");
+            await Expect(page.Locator("#statistics-error")).ToBeVisibleAsync();
+            await Expect(page.Locator("#statistics-results")).ToBeHiddenAsync();
+
+            shouldFail = false;
+            await page.Locator("#statistics-retry").ClickAsync();
+            await Expect(page.Locator("#statistics-workout-count")).ToHaveTextAsync("0");
+            await Expect(page.Locator("#statistics-empty-message")).ToBeVisibleAsync();
+            await page.Locator("#statistics-kind-month").FocusAsync();
+            await page.Keyboard.PressAsync("Enter");
+            await Expect(page.Locator("#statistics-kind-month")).ToHaveAttributeAsync("aria-pressed", "true");
+            await Expect(page.Locator("#statistics-average-heading")).ToHaveTextAsync("Average workouts per month");
+
+            var bounds = await page.Locator(".statistics-page").BoundingBoxAsync();
+            Assert.NotNull(bounds);
+            Assert.True(bounds.Width <= 375);
+
+            foreach (var width in new[] { 320, 375 })
+            {
+                await page.SetViewportSizeAsync(width, 812);
+                var kinds = page.Locator(".statistics-controls__kind");
+                var navigation = page.Locator(".statistics-controls__nav");
+                for (var i = 0; i < 3; i++)
+                {
+                    var kindBounds = await kinds.Nth(i).BoundingBoxAsync();
+                    var navigationBounds = await navigation.Nth(i).BoundingBoxAsync();
+                    Assert.NotNull(kindBounds);
+                    Assert.NotNull(navigationBounds);
+                    Assert.InRange(Math.Abs(kindBounds.X - navigationBounds.X), 0, 0.5);
+                    Assert.InRange(Math.Abs(kindBounds.Width - navigationBounds.Width), 0, 0.5);
+                }
+            }
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task StatisticsDashboard_IgnoresLateResponseForPreviousPeriod()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var requestNumber = 0;
+            await page.RouteAsync("**/api/statistics/workouts**", async route =>
+            {
+                var sequence = Interlocked.Increment(ref requestNumber);
+                if (sequence == 1)
+                {
+                    await Task.Delay(500);
+                }
+
+                await route.FulfillAsync(new RouteFulfillOptions
+                {
+                    Status = 200,
+                    ContentType = "application/json",
+                    Body = JsonSerializer.Serialize(new
+                    {
+                        workoutCount = sequence == 1 ? 4 : 2,
+                        exerciseActivity = Array.Empty<object>(),
+                        history = new { workoutCount = sequence == 1 ? 4 : 2, firstCompletedAt = DateTime.UtcNow },
+                        effort = new { contributingCount = 0, observations = Array.Empty<object>() },
+                    }),
+                });
+            });
+
+            var firstRequest = page.WaitForRequestAsync(request =>
+                request.Url.Contains("/api/statistics/workouts", StringComparison.Ordinal));
+            await page.Locator(".sidebar__link[data-page='statistics']").ClickAsync();
+            await firstRequest;
+            await page.Locator("#statistics-kind-month").ClickAsync();
+            await Expect(page.Locator("#statistics-workout-count")).ToHaveTextAsync("2");
+            await Task.Delay(600);
+            await Expect(page.Locator("#statistics-workout-count")).ToHaveTextAsync("2");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
     }
 
     [Fact]

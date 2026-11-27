@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Security.Cryptography;
 using System.Text;
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using WorkoutTracker.Infrastructure.Data;
@@ -936,6 +937,94 @@ app.MapGet("/api/sessions", async (WorkoutTrackerDbContext db) =>
     return Results.Ok(sessions);
 });
 
+app.MapGet("/api/statistics/workouts", async (
+    string? startUtc,
+    string? endUtc,
+    WorkoutTrackerDbContext db) =>
+{
+    if (!TryParseUtcInstant(startUtc, out var start) ||
+        !TryParseUtcInstant(endUtc, out var end) ||
+        start >= end ||
+        end - start > TimeSpan.FromDays(370))
+    {
+        return Results.BadRequest(new { error = "Invalid statistics date range." });
+    }
+
+    var sessions = await db.WorkoutSessions
+        .AsNoTracking()
+        .Where(session =>
+            EF.Property<DateTime>(session, "CompletedAt") >= start &&
+            EF.Property<DateTime>(session, "CompletedAt") < end)
+        .OrderBy(session => EF.Property<DateTime>(session, "CompletedAt"))
+        .ThenBy(session => session.WorkoutSessionId)
+        .Select(session => new
+        {
+            session.WorkoutSessionId,
+            CompletedAt = EF.Property<DateTime>(session, "CompletedAt"),
+            session.OverallEffort,
+        })
+        .ToListAsync();
+
+    var sessionIds = sessions.Select(session => session.WorkoutSessionId).ToArray();
+    var exerciseRows = await db.LoggedExercises
+        .AsNoTracking()
+        .Where(loggedExercise => sessionIds.Contains(loggedExercise.WorkoutSessionId))
+        .Select(loggedExercise => new
+        {
+            loggedExercise.WorkoutSessionId,
+            loggedExercise.ExerciseId,
+            ExerciseName = loggedExercise.Exercise.Name,
+        })
+        .ToListAsync();
+
+    var exerciseActivity = exerciseRows
+        .GroupBy(row => row.ExerciseId)
+        .Select(group => new
+        {
+            exerciseId = group.Key,
+            name = string.IsNullOrWhiteSpace(group.First().ExerciseName)
+                ? "Unnamed exercise"
+                : group.First().ExerciseName,
+            workoutCount = group.Select(row => row.WorkoutSessionId).Distinct().Count(),
+        })
+        .OrderBy(activity => activity.name, StringComparer.OrdinalIgnoreCase)
+        .ThenBy(activity => activity.exerciseId)
+        .ToArray();
+
+    var observations = sessions
+        .Where(session => session.OverallEffort is >= 1 and <= 10)
+        .Select(session => new
+        {
+            sessionId = session.WorkoutSessionId,
+            completedAt = session.CompletedAt,
+            value = session.OverallEffort!.Value,
+        })
+        .ToArray();
+
+    var history = await db.WorkoutSessions
+        .AsNoTracking()
+        .Where(session => EF.Property<DateTime>(session, "CompletedAt") < end)
+        .GroupBy(_ => 1)
+        .Select(group => new
+        {
+            workoutCount = group.Count(),
+            firstCompletedAt = group.Min(session => EF.Property<DateTime>(session, "CompletedAt")),
+        })
+        .SingleOrDefaultAsync();
+
+    return Results.Ok(new
+    {
+        workoutCount = sessions.Count,
+        exerciseActivity,
+        history,
+        effort = new
+        {
+            contributingCount = observations.Length,
+            observations,
+        },
+    });
+});
+
 app.MapGet("/api/sessions/latest", async (WorkoutTrackerDbContext db) =>
 {
     var latest = await db.WorkoutSessions
@@ -961,6 +1050,24 @@ app.MapGet("/api/sessions/latest", async (WorkoutTrackerDbContext db) =>
         completedAt = (DateTime?)latest.CompletedAt,
     });
 });
+
+static bool TryParseUtcInstant(string? value, out DateTime utc)
+{
+    utc = default;
+    if (string.IsNullOrWhiteSpace(value) ||
+        !value.EndsWith('Z') ||
+        !DateTimeOffset.TryParse(
+            value,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+            out var parsed))
+    {
+        return false;
+    }
+
+    utc = parsed.UtcDateTime;
+    return true;
+}
 
 app.MapGet("/api/sessions/{sessionId:guid}", async (Guid sessionId, WorkoutTrackerDbContext db) =>
     await SessionDetailResponseBuilder.BuildAsync(sessionId, db));

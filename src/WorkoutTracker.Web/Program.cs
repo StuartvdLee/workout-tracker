@@ -326,6 +326,25 @@ app.MapGet("/api/sessions", async (ILogger<Program> logger, IHttpClientFactory h
     }
 });
 
+app.MapGet("/api/statistics/workouts", async (
+    HttpRequest request,
+    ILogger<Program> logger,
+    IHttpClientFactory httpClientFactory) =>
+{
+    try
+    {
+        var client = httpClientFactory.CreateClient("api");
+        var response = await client.GetAsync($"/api/statistics/workouts{request.QueryString}");
+        var content = await response.Content.ReadAsStringAsync();
+        return Results.Content(content, "application/json", statusCode: (int)response.StatusCode);
+    }
+    catch (Exception ex)
+    {
+        WebProxyLog.ProxyError(logger, "GET /api/statistics/workouts", ex);
+        return Results.Json(new { error = "API unavailable." }, statusCode: 502);
+    }
+});
+
 app.MapGet("/api/sessions/latest", async (ILogger<Program> logger, IHttpClientFactory httpClientFactory) =>
 {
     try

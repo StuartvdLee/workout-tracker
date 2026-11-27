@@ -10,6 +10,7 @@ A fitness application for tracking workouts and exercise progress. Built with C#
 - **Workout Recovery** — Progress is saved in the same browser profile and restored after a refresh. Use Resume workout to continue, or explicitly discard it; retry if storage or completion fails.
 - **Previous Performance** — See weight, effort, and sets from each exercise's latest comparable session while training
 - **Workout History** — View completed workouts with current and previous weight, sets, and effort, and edit the session-wide sets value
+- **Workout Statistics** — Review completed workout counts by local week, month, or year, plus average workouts per period since your first recorded workout
 - **Workout Stats Graph** — Chart a workout's history by overall session effort or by individual exercise, with each session's sets shown as background bars behind the weight and effort lines
 
 Sessions created before sets tracking was introduced remain supported. Their sets values are shown with the standard no-data marker in history, omitted from active-workout previous-performance summaries, and left without a bar in the stats graph.

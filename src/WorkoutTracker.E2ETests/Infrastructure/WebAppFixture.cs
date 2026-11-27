@@ -880,6 +880,78 @@ public class WebAppFixture : WebApplicationFactory<Program>
             return Results.Ok(result);
         });
 
+        app.MapGet("/api/statistics/workouts", (HttpRequest request) =>
+        {
+            if (!TryParseStatisticsInstant(request.Query["startUtc"], out var start) ||
+                !TryParseStatisticsInstant(request.Query["endUtc"], out var end) ||
+                start >= end ||
+                end - start > TimeSpan.FromDays(370))
+            {
+                return Results.BadRequest(new { error = "Invalid statistics date range." });
+            }
+
+            List<MockWorkoutSession> sessionSnapshot;
+            lock (_sessionsLock)
+            {
+                sessionSnapshot = [.. _sessions];
+            }
+
+            List<MockExercise> exerciseSnapshot;
+            lock (_exercisesLock)
+            {
+                exerciseSnapshot = [.. _exercises];
+            }
+
+            var sessions = sessionSnapshot
+                .Where(session => session.CompletedAt >= start && session.CompletedAt < end)
+                .OrderBy(session => session.CompletedAt)
+                .ThenBy(session => session.SessionId, StringComparer.Ordinal)
+                .ToArray();
+            var exerciseActivity = sessions
+                .SelectMany(session => session.LoggedExercises
+                    .Select(loggedExercise => new
+                    {
+                        session.SessionId,
+                        loggedExercise.ExerciseId,
+                        Name = exerciseSnapshot.FirstOrDefault(exercise =>
+                            string.Equals(exercise.ExerciseId, loggedExercise.ExerciseId, StringComparison.OrdinalIgnoreCase))?.Name
+                            ?? "Unnamed exercise",
+                    })
+                    .DistinctBy(row => row.ExerciseId))
+                .GroupBy(row => row.ExerciseId, StringComparer.OrdinalIgnoreCase)
+                .Select(group => new
+                {
+                    exerciseId = group.Key,
+                    name = group.First().Name,
+                    workoutCount = group.Select(row => row.SessionId).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+                })
+                .OrderBy(activity => activity.name, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(activity => activity.exerciseId, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            var observations = sessions
+                .Where(session => session.OverallEffort is >= 1 and <= 10)
+                .Select(session => new
+                {
+                    sessionId = session.SessionId,
+                    completedAt = session.CompletedAt,
+                    value = session.OverallEffort!.Value,
+                })
+                .ToArray();
+            var historySessions = sessionSnapshot.Where(session => session.CompletedAt < end).ToArray();
+
+            return Results.Ok(new
+            {
+                workoutCount = sessions.Length,
+                exerciseActivity,
+                history = historySessions.Length == 0 ? null : new
+                {
+                    workoutCount = historySessions.Length,
+                    firstCompletedAt = historySessions.Min(session => session.CompletedAt),
+                },
+                effort = new { contributingCount = observations.Length, observations },
+            });
+        });
+
         // Mock API endpoint to get session detail with previous session comparison
         app.MapGet("/api/sessions/{sessionId}", (string sessionId) =>
         {
@@ -1090,6 +1162,22 @@ public class WebAppFixture : WebApplicationFactory<Program>
         }
 
         throw new DirectoryNotFoundException("Could not find WorkoutTracker.Web project directory");
+    }
+
+    private static bool TryParseStatisticsInstant(string? value, out DateTime instant)
+    {
+        instant = default;
+        if (string.IsNullOrWhiteSpace(value) ||
+            !value.EndsWith('Z') ||
+            !DateTimeOffset.TryParse(value, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.AssumeUniversal |
+                System.Globalization.DateTimeStyles.AdjustToUniversal, out var parsed))
+        {
+            return false;
+        }
+
+        instant = parsed.UtcDateTime;
+        return true;
     }
 
     protected override void Dispose(bool disposing)

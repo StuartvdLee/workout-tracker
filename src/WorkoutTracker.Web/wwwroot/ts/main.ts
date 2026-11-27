@@ -8,6 +8,7 @@ import { render as renderMuscles } from "./pages/muscles.js";
 import { render as renderHistory } from "./pages/history.js";
 import { render as renderActiveSession } from "./pages/active-session.js";
 import { render as renderSessionDetail } from "./pages/session-detail.js";
+import { render as renderStatistics } from "./pages/statistics.js";
 
 function initializeApp(): void {
   registerRoute("/", renderHome);
@@ -15,6 +16,7 @@ function initializeApp(): void {
   registerRoute("/exercises", renderExercises);
   registerRoute("/muscles", renderMuscles);
   registerRoute("/history", renderHistory);
+  registerRoute("/statistics", renderStatistics);
   registerRoute("/active-session", renderActiveSession);
   registerRoute("/history/session", renderSessionDetail);
 
