@@ -14,7 +14,7 @@ A fitness application for tracking workouts and exercise progress. Built with C#
 
 Sessions created before sets tracking was introduced remain supported. Their sets values are shown with the standard no-data marker in history, omitted from active-workout previous-performance summaries, and left without a bar in the stats graph.
 
-Workout drafts stay on the device and require browser storage and Web Locks. A completion interrupted by a lost response must be retried with the saved draft; it is not duplicated. Completion receipts and rejection fences remain in the database even if the corresponding history entry is deleted.
+Workout drafts stay on the device and require browser storage and Web Locks. Starting a workout when an editable draft already exists offers a choice to resume it or discard it before using the new selections. Incomplete weight entries are not saved and must be corrected before completion. A completion interrupted by a lost response must be retried with the saved draft; it is not duplicated. Completion receipts and rejection fences remain in the database even if the corresponding history entry is deleted.
 
 ## Prerequisites
 

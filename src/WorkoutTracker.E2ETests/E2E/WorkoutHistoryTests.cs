@@ -124,6 +124,41 @@ public class WorkoutHistoryTests
         return (workoutId, exerciseId);
     }
 
+    private async Task<(string WorkoutId, string[] ExerciseIds)> CreateWorkoutViaApiAsync(
+        IPage page,
+        string workoutName,
+        params string[] exerciseNames)
+    {
+        var exerciseIds = new List<string>();
+        foreach (var exerciseName in exerciseNames)
+        {
+            var response = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/exercises", new()
+            {
+                DataObject = new { name = exerciseName, muscleIds = Array.Empty<string>() },
+            });
+            exerciseIds.Add((await response.JsonAsync())!.Value.GetProperty("exerciseId").GetString()!);
+        }
+
+        var workoutResponse = await page.APIRequest.PostAsync($"{_webApp.BaseUrl}/api/workouts", new()
+        {
+            DataObject = new
+            {
+                name = workoutName,
+                exercises = exerciseIds.Select(exerciseId => new { exerciseId }).ToArray(),
+            },
+        });
+        var workoutId = (await workoutResponse.JsonAsync())!.Value.GetProperty("plannedWorkoutId").GetString()!;
+        return (workoutId, exerciseIds.ToArray());
+    }
+
+    private async Task<string> GetWorkoutSessionIdAsync(IPage page, string workoutId)
+    {
+        var sessions = await (await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/sessions")).JsonAsync();
+        return sessions!.Value.EnumerateArray()
+            .Single(session => session.GetProperty("plannedWorkoutId").GetString() == workoutId)
+            .GetProperty("workoutSessionId").GetString()!;
+    }
+
     [Fact]
     public async Task ActiveSession_RestoresInputsAcrossRepeatedRefreshAndRetainsHistory()
     {
@@ -142,6 +177,349 @@ public class WorkoutHistoryTests
             await page.ReloadAsync();
             await Expect(page.Locator($"#weight-{exerciseId}")).ToHaveValueAsync("45");
             Assert.Equal(1, (await (await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/sessions")).JsonAsync())?.GetArrayLength());
+        }
+        finally { await page.CloseAsync(); }
+    }
+
+    [Theory]
+    [InlineData("home")]
+    [InlineData("workouts")]
+    public async Task ActiveSession_NewStartOffersResumeOrDiscardWhileRefreshResumes(string startForm)
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var (workoutId, exerciseIds) = await CreateWorkoutViaApiAsync(
+                page, "Restart choice workout", "Restart first", "Restart second");
+            var firstExerciseId = exerciseIds[0];
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}&sets=3");
+            await page.Locator($"#weight-{firstExerciseId}").FillAsync("42");
+            var originalDraftId = await page.EvaluateAsync<string>(
+                "() => JSON.parse(localStorage.getItem('workout-tracker-active-draft')).draftId");
+
+            async Task StartWithSelectedFormAsync()
+            {
+                if (startForm == "home")
+                {
+                    await page.GotoAsync(_webApp.BaseUrl);
+                    await page.Locator($"#workout-select option[value='{workoutId}']")
+                        .WaitForAsync(new() { State = WaitForSelectorState.Attached });
+                    await page.Locator("#workout-select").SelectOptionAsync(workoutId);
+                    await page.Locator("#sets-select").SelectOptionAsync("5");
+                    await page.Locator("#home-randomise-toggle").ClickAsync();
+                    await page.Locator("#workout-form .workout-form__button").ClickAsync();
+                }
+                else
+                {
+                    await page.GotoAsync($"{_webApp.BaseUrl}/workouts");
+                    await page.Locator(".workout-list__start-btn").First.ClickAsync();
+                    await page.Locator("#prestart-sets").SelectOptionAsync("5");
+                    await page.Locator("#prestart-yes").ClickAsync();
+                }
+            }
+
+            await StartWithSelectedFormAsync();
+            await Expect(page).ToHaveURLAsync(new Regex(@"/active-session\?.*start=1"));
+            await Expect(page.Locator(".active-session p[role='alert']"))
+                .ToContainTextAsync("already in progress");
+            await page.GetByRole(AriaRole.Button, new() { Name = "Resume saved workout" }).ClickAsync();
+            await Expect(page).ToHaveURLAsync(new Regex($@"resume={Regex.Escape(originalDraftId)}"));
+            await Expect(page.Locator($"#weight-{firstExerciseId}")).ToHaveValueAsync("42");
+            Assert.Equal(3, await page.EvaluateAsync<int>(
+                "() => JSON.parse(localStorage.getItem('workout-tracker-active-draft')).sets"));
+
+            await page.ReloadAsync();
+            await Expect(page.Locator($"#weight-{firstExerciseId}")).ToHaveValueAsync("42");
+            await Expect(page.Locator(".active-session p[role='alert']")).ToHaveCountAsync(0);
+
+            await StartWithSelectedFormAsync();
+            await Expect(page.Locator(".active-session p[role='alert']")).ToContainTextAsync("already in progress");
+            page.Dialog += async (_, dialog) => await dialog.AcceptAsync();
+            await page.GetByRole(AriaRole.Button, new() { Name = "Discard and start new workout" }).ClickAsync();
+            await Expect(page.Locator($"#weight-{firstExerciseId}")).ToBeVisibleAsync();
+            Assert.Equal(5, await page.EvaluateAsync<int>(
+                "() => JSON.parse(localStorage.getItem('workout-tracker-active-draft')).sets"));
+            var encodedOrder = Regex.Match(page.Url, @"[?&]order=([^&]+)").Groups[1].Value;
+            var selectedOrder = Uri.UnescapeDataString(encodedOrder).Split(",");
+            Assert.Equal(selectedOrder, await page.EvaluateAsync<string[]>(
+                "() => JSON.parse(localStorage.getItem('workout-tracker-active-draft')).exerciseOrder"));
+
+            await page.ReloadAsync();
+            await Expect(page.Locator($"#weight-{firstExerciseId}")).ToBeVisibleAsync();
+            await Expect(page.Locator(".active-session p[role='alert']")).ToHaveCountAsync(0);
+            Assert.Equal(5, await page.EvaluateAsync<int>(
+                "() => JSON.parse(localStorage.getItem('workout-tracker-active-draft')).sets"));
+        }
+        finally { await page.CloseAsync(); }
+    }
+
+    [Fact]
+    public async Task ActiveSession_DelayedWorkoutResponseCannotOverwriteNewActiveWorkout()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var (oldWorkoutId, _) = await CreateWorkoutAndSessionViaApiAsync(page, "Old liveness exercise", "Old liveness workout");
+            var (newWorkoutId, newExerciseId) = await CreateWorkoutAndSessionViaApiAsync(page, "New liveness exercise", "New liveness workout");
+            await page.AddInitScriptAsync($$"""
+                (() => {
+                    const originalJson = Response.prototype.json;
+                    Response.prototype.json = async function (...args) {
+                        const value = await originalJson.apply(this, args);
+                        if (this.url.endsWith('/api/workouts/{{oldWorkoutId}}')) {
+                            window.__oldWorkoutJsonWaiting = true;
+                            await new Promise(resolve => { window.__releaseOldWorkoutJson = resolve; });
+                            window.__oldWorkoutJsonResumed = true;
+                        }
+                        return value;
+                    };
+                })();
+                """);
+
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={oldWorkoutId}&sets=3");
+            await page.WaitForFunctionAsync("() => window.__oldWorkoutJsonWaiting === true");
+            await page.Locator(".sidebar__link[data-page='home']").ClickAsync();
+            await page.Locator($"#workout-select option[value='{newWorkoutId}']")
+                .WaitForAsync(new() { State = WaitForSelectorState.Attached });
+            await page.Locator("#workout-select").SelectOptionAsync(newWorkoutId);
+            await page.Locator("#workout-form .workout-form__button").ClickAsync();
+            await Expect(page.Locator("#session-title")).ToHaveTextAsync("New liveness workout");
+            await page.Locator($"#weight-{newExerciseId}").FillAsync("77");
+
+            await page.EvaluateAsync("() => window.__releaseOldWorkoutJson()");
+            await page.WaitForFunctionAsync("() => window.__oldWorkoutJsonResumed === true");
+            await Expect(page.Locator("#session-title")).ToHaveTextAsync("New liveness workout");
+            await page.Locator("#session-save").ClickAsync();
+            await page.Locator("#effort-modal-skip").ClickAsync();
+            await Expect(page).ToHaveURLAsync(new Regex("/history/session\\?id="));
+
+            var sessions = await (await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/sessions")).JsonAsync();
+            Assert.Contains(sessions!.Value.EnumerateArray(), session =>
+                session.GetProperty("plannedWorkoutId").GetString() == newWorkoutId &&
+                session.GetProperty("loggedExercises")[0].GetProperty("loggedWeight").GetString() == "77");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task ActiveSession_Confirmed409OffersCleanupAfterNormalCompletion()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var (workoutId, exerciseId) = await CreateWorkoutAndSessionViaApiAsync(page);
+            var completedSessionId = await GetWorkoutSessionIdAsync(page, workoutId);
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}&sets=3");
+            await page.Locator($"#weight-{exerciseId}").FillAsync("55");
+            await page.RouteAsync($"**/api/workouts/{workoutId}/sessions", route => route.FulfillAsync(new()
+            {
+                Status = 409,
+                ContentType = "application/json",
+                Body = $$"""{"error":"Already completed","workoutSessionId":"{{completedSessionId}}"}""",
+            }));
+
+            await page.Locator("#session-save").ClickAsync();
+            await page.Locator("#effort-modal-skip").ClickAsync();
+            await Expect(page.Locator("#session-api-error")).ToContainTextAsync("View completed workout");
+            var cleanup = page.GetByRole(AriaRole.Button, new() { Name = "Clear completed workout draft" });
+            await Expect(cleanup).ToBeVisibleAsync();
+            page.Dialog += async (_, dialog) => await dialog.AcceptAsync();
+            await cleanup.ClickAsync();
+
+            await Expect(page).ToHaveURLAsync(new Regex($@"/history/session\?id={Regex.Escape(completedSessionId)}"));
+            Assert.Null(await page.EvaluateAsync<string?>("localStorage.getItem('workout-tracker-active-draft')"));
+            Assert.Equal(1, (await (await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/sessions")).JsonAsync())?.GetArrayLength());
+        }
+        finally { await page.CloseAsync(); }
+    }
+
+    [Fact]
+    public async Task ActiveSession_Confirmed409OffersCleanupFromPendingCompletion()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var (workoutId, exerciseId) = await CreateWorkoutAndSessionViaApiAsync(page);
+            var completedSessionId = await GetWorkoutSessionIdAsync(page, workoutId);
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}&sets=3");
+            await page.Locator($"#weight-{exerciseId}").FillAsync("55");
+            var endpoint = $"**/api/workouts/{workoutId}/sessions";
+            await page.RouteAsync(endpoint, route => route.AbortAsync());
+            await page.Locator("#session-save").ClickAsync();
+            await page.Locator("#effort-modal-skip").ClickAsync();
+            await Expect(page.Locator("#draft-status")).ToContainTextAsync("may have succeeded");
+            await page.UnrouteAsync(endpoint);
+            await page.ReloadAsync();
+            await page.RouteAsync(endpoint, route => route.FulfillAsync(new()
+            {
+                Status = 409,
+                ContentType = "application/json",
+                Body = $$"""{"error":"Already completed","workoutSessionId":"{{completedSessionId}}"}""",
+            }));
+
+            await page.Locator("#pending-retry").ClickAsync();
+            await Expect(page.Locator("#pending-error")).ToContainTextAsync("View completed workout");
+            var cleanup = page.GetByRole(AriaRole.Button, new() { Name = "Clear completed workout draft" });
+            await Expect(cleanup).ToBeVisibleAsync();
+            page.Dialog += async (_, dialog) => await dialog.AcceptAsync();
+            await cleanup.ClickAsync();
+
+            await Expect(page).ToHaveURLAsync(new Regex($@"/history/session\?id={Regex.Escape(completedSessionId)}"));
+            Assert.Null(await page.EvaluateAsync<string?>("localStorage.getItem('workout-tracker-active-draft')"));
+            Assert.Equal(1, (await (await page.APIRequest.GetAsync($"{_webApp.BaseUrl}/api/sessions")).JsonAsync())?.GetArrayLength());
+        }
+        finally { await page.CloseAsync(); }
+    }
+
+    [Fact]
+    public async Task ActiveSession_UncertainCompletionNeverOffersConfirmedCleanup()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var (workoutId, exerciseId) = await CreateWorkoutAndSessionViaApiAsync(page);
+            var sessionId = await GetWorkoutSessionIdAsync(page, workoutId);
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}&sets=3");
+            await page.Locator($"#weight-{exerciseId}").FillAsync("55");
+            var endpoint = $"**/api/workouts/{workoutId}/sessions";
+            await page.RouteAsync(endpoint, route => route.FulfillAsync(new()
+            {
+                Status = 500,
+                ContentType = "application/json",
+                Body = $$"""{"error":"Uncertain","workoutSessionId":"{{sessionId}}"}""",
+            }));
+            await page.Locator("#session-save").ClickAsync();
+            await page.Locator("#effort-modal-skip").ClickAsync();
+            await Expect(page.Locator("#draft-status")).ToContainTextAsync("may have succeeded");
+            await Expect(page.GetByRole(AriaRole.Button, new() { Name = "Clear completed workout draft" })).ToHaveCountAsync(0);
+            await page.UnrouteAsync(endpoint);
+            await page.ReloadAsync();
+            await page.RouteAsync(endpoint, route => route.FulfillAsync(new()
+            {
+                Status = 409,
+                ContentType = "application/json",
+                Body = """{"error":"Cannot confirm completion"}""",
+            }));
+
+            await page.Locator("#pending-retry").ClickAsync();
+            await Expect(page.Locator("#pending-status")).ToContainTextAsync("cannot be retried");
+            await Expect(page.GetByRole(AriaRole.Button, new() { Name = "Clear completed workout draft" })).ToHaveCountAsync(0);
+            Assert.NotNull(await page.EvaluateAsync<string?>("localStorage.getItem('workout-tracker-active-draft')"));
+        }
+        finally { await page.CloseAsync(); }
+    }
+
+    [Fact]
+    public async Task ActiveSession_IncompleteWeightSurvivesUnrelatedEditsAndBlocksReorderAndSubmission()
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var (workoutId, exerciseIds) = await CreateWorkoutViaApiAsync(
+                page, "Incomplete weight workout", "Incomplete first", "Incomplete second");
+            var exerciseId = exerciseIds[0];
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}&sets=3");
+            var weight = page.Locator($"#weight-{exerciseId}");
+            var warning = page.Locator($"#weight-warning-{exerciseId}");
+            await Expect(warning).ToBeHiddenAsync();
+            await weight.FillAsync("42");
+            await weight.FocusAsync();
+            await page.Keyboard.PressAsync("End");
+            await page.Keyboard.TypeAsync("e");
+            var invalidState = await weight.EvaluateAsync<string>(
+                "input => JSON.stringify({ value: input.value, badInput: input.validity.badInput })");
+            Assert.True(await weight.EvaluateAsync<bool>("input => input.validity.badInput"), invalidState);
+            await Expect(warning).ToContainTextAsync("has not been saved");
+            Assert.Equal($"weight-warning-{exerciseId}", await weight.GetAttributeAsync("aria-describedby"));
+            Assert.True(await warning.EvaluateAsync<bool>(
+                "element => element.previousElementSibling.classList.contains('active-session__input-group')"));
+
+            await page.Locator("#effort-" + exerciseIds[1]).EvaluateAsync(
+                "input => { input.value = '7'; input.dispatchEvent(new Event('input', { bubbles: true })); }");
+            await Expect(page.Locator("#draft-status")).ToContainTextAsync("incomplete weight entry is not saved");
+            await Expect(warning).ToContainTextAsync("has not been saved");
+            Assert.Equal("42", await page.EvaluateAsync<string>(
+                "id => JSON.parse(localStorage.getItem('workout-tracker-active-draft')).entries[id].loggedWeight", exerciseId));
+
+            await page.Locator("#session-edit-order").ClickAsync();
+            await Expect(page.Locator("#session-order-list")).ToHaveCountAsync(0);
+            await Expect(weight).ToBeVisibleAsync();
+            await Expect(page.Locator("#session-error")).ToContainTextAsync("before changing exercise order");
+            await Expect(warning).ToContainTextAsync("has not been saved");
+            await weight.FillAsync("43");
+            await Expect(page.Locator("#session-error")).ToHaveTextAsync("");
+
+            var completionRequests = 0;
+            page.Request += (_, request) =>
+            {
+                if (request.Url.Contains($"/api/workouts/{workoutId}/sessions") && request.Method == "POST")
+                    Interlocked.Increment(ref completionRequests);
+            };
+            await weight.FocusAsync();
+            await weight.PressAsync("End");
+            await page.Keyboard.TypeAsync("e");
+            await page.Locator("#session-save").ClickAsync();
+            await page.Locator("#effort-modal-skip").ClickAsync();
+            await Expect(page.Locator("#session-error")).ToContainTextAsync("valid number");
+            Assert.Equal(0, Volatile.Read(ref completionRequests));
+            Assert.Equal("43", await page.EvaluateAsync<string>(
+                "id => JSON.parse(localStorage.getItem('workout-tracker-active-draft')).entries[id].loggedWeight", exerciseId));
+            await weight.FillAsync("44");
+            await Expect(page.Locator("#session-error")).ToHaveTextAsync("");
+
+            await page.Locator("#session-error").EvaluateAsync("element => { element.textContent = 'An unrelated error'; }");
+            await weight.FillAsync("45");
+            await Expect(page.Locator("#session-error")).ToHaveTextAsync("An unrelated error");
+        }
+        finally { await page.CloseAsync(); }
+    }
+
+    [Theory]
+    [InlineData("missing")]
+    [InlineData("changed")]
+    public async Task ActiveSession_StaleHomeResumeDoesNotCreateOrReplaceDraft(string mutation)
+    {
+        var page = await CreatePageAsync();
+        try
+        {
+            var (workoutId, exerciseId) = await CreateWorkoutAndSessionViaApiAsync(page);
+            await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}&sets=3");
+            await page.Locator($"#weight-{exerciseId}").FillAsync("61");
+            var originalDraftId = await page.EvaluateAsync<string>(
+                "() => JSON.parse(localStorage.getItem('workout-tracker-active-draft')).draftId");
+            await page.GotoAsync(_webApp.BaseUrl);
+            await page.GetByRole(AriaRole.Button, new() { Name = "Resume workout" }).WaitForAsync();
+            await page.EvaluateAsync("""
+                ({ mutation }) => {
+                    const key = 'workout-tracker-active-draft';
+                    if (mutation === 'missing') {
+                        localStorage.removeItem(key);
+                    } else {
+                        const draft = JSON.parse(localStorage.getItem(key));
+                        draft.draftId = crypto.randomUUID();
+                        localStorage.setItem(key, JSON.stringify(draft));
+                    }
+                }
+                """, new { mutation });
+
+            await page.GetByRole(AriaRole.Button, new() { Name = "Resume workout" }).ClickAsync();
+            await Expect(page.GetByRole(AriaRole.Alert)).ToContainTextAsync(
+                mutation == "missing" ? "no longer available" : "changed while you were away");
+            await Expect(page.Locator("#session-save")).ToHaveCountAsync(0);
+            if (mutation == "missing")
+            {
+                Assert.Null(await page.EvaluateAsync<string?>("localStorage.getItem('workout-tracker-active-draft')"));
+            }
+            else
+            {
+                Assert.NotEqual(originalDraftId, await page.EvaluateAsync<string>(
+                    "() => JSON.parse(localStorage.getItem('workout-tracker-active-draft')).draftId"));
+                Assert.Equal("61", await page.EvaluateAsync<string>(
+                    "id => JSON.parse(localStorage.getItem('workout-tracker-active-draft')).entries[id].loggedWeight", exerciseId));
+            }
         }
         finally { await page.CloseAsync(); }
     }

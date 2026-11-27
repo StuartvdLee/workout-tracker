@@ -53,6 +53,10 @@ let currentPreviousData: Map<string, PreviousExerciseData> | "error" | null = nu
 let sessionSets: 3 | 5 | null = null;
 let draft: ActiveWorkoutDraft | null = null;
 let renderGeneration = 0;
+const INCOMPLETE_WEIGHT_WARNING =
+  "This incomplete weight has not been saved. Finish or clear the value before leaving.";
+const INCOMPLETE_WEIGHT_REORDER_ERROR =
+  "Finish or clear the incomplete weight entry before changing exercise order.";
 const MODAL_FOCUSABLE_SELECTOR =
   'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [contenteditable="true"], [tabindex]:not([tabindex="-1"])';
 
@@ -68,6 +72,8 @@ export async function render(container: HTMLElement): Promise<void> {
   const params = new URLSearchParams(window.location.search);
   const workoutId = params.get("id");
   const setsParam = params.get("sets");
+  const expectedDraftId = params.get("resume");
+  const isNewStart = params.get("start") === "1" && expectedDraftId === null;
 
   if (!workoutId) {
     container.innerHTML = `
@@ -97,9 +103,28 @@ export async function render(container: HTMLElement): Promise<void> {
       : "Saved workout storage is unavailable. Check your browser settings and retry.", saved.status === "invalid");
     return;
   }
+  if (expectedDraftId !== null) {
+    if (saved.status !== "found") {
+      showRecovery(container, "This saved workout is no longer available. No new workout was started.", false);
+      return;
+    }
+    if (saved.draft.draftId !== expectedDraftId || saved.draft.workoutId !== workoutId) {
+      showRecovery(container, "This saved workout changed while you were away. Return home and choose the current draft again.", false);
+      return;
+    }
+  }
   if (saved.status === "found" && saved.draft.workoutId !== workoutId) {
     showRecovery(container, "Another workout is already in progress. Resume it or explicitly discard it.", true, saved.draft);
     return;
+  }
+  if (saved.status === "found" && isNewStart && !saved.draft.completion) {
+    showRestartChoice(container, saved.draft);
+    return;
+  }
+  if (saved.status === "missing" && isNewStart) {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("start");
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
   }
   draft = saved.status === "found" ? saved.draft : null;
   if (draft?.completion) {
@@ -188,11 +213,12 @@ export async function render(container: HTMLElement): Promise<void> {
             : "Completion may have succeeded. Retry to check its result.";
           error.textContent = data.error ?? "The completion could not be confirmed.";
           if (response.status === 410) offerDeletedCleanup(error);
-          if (response.status === 409 && data.workoutSessionId) {
+          if (response.status === 409 && typeof data.workoutSessionId === "string" && data.workoutSessionId.length > 0) {
             const link = document.createElement("a");
             link.href = `/history/session?id=${encodeURIComponent(data.workoutSessionId)}`;
             link.textContent = " View completed workout";
             error.appendChild(link);
+            offerCompletedCleanup(error, data.workoutSessionId);
           }
         }
       } catch {
@@ -292,6 +318,61 @@ function offerDeletedCleanup(target: HTMLElement): void {
   target.appendChild(clear);
 }
 
+function offerCompletedCleanup(target: HTMLElement, workoutSessionId: string): void {
+  const clear = document.createElement("button");
+  clear.type = "button";
+  clear.className = "active-session__cancel-btn";
+  clear.textContent = "Clear completed workout draft";
+  clear.addEventListener("click", () => {
+    if (!window.confirm("The workout is already completed. Clear its saved draft?")) return;
+    try {
+      removeDraft();
+      navigate(`/history/session?id=${encodeURIComponent(workoutSessionId)}`);
+    } catch {
+      target.textContent = "Could not clear the completed workout draft. Check storage and retry.";
+      offerCompletedCleanup(target, workoutSessionId);
+    }
+  });
+  target.appendChild(clear);
+}
+
+function showRestartChoice(container: HTMLElement, existing: ActiveWorkoutDraft): void {
+  container.innerHTML = "";
+  const section = document.createElement("div");
+  section.className = "active-session";
+  const text = document.createElement("p");
+  text.setAttribute("role", "alert");
+  text.textContent = "A workout is already in progress. Resume it or discard it to start with your new set count and exercise order.";
+  section.appendChild(text);
+
+  const resume = document.createElement("button");
+  resume.type = "button";
+  resume.className = "active-session__save-btn";
+  resume.textContent = "Resume saved workout";
+  resume.addEventListener("click", () => navigate(
+    `/active-session?id=${encodeURIComponent(existing.workoutId)}&sets=${existing.sets}&resume=${encodeURIComponent(existing.draftId)}`,
+  ));
+  section.appendChild(resume);
+
+  const discard = document.createElement("button");
+  discard.type = "button";
+  discard.className = "active-session__cancel-btn";
+  discard.textContent = "Discard and start new workout";
+  discard.addEventListener("click", () => {
+    if (!window.confirm("Discard the saved workout and start with your new selections? This cannot be undone.")) return;
+    try {
+      removeDraft();
+      const url = new URL(window.location.href);
+      url.searchParams.delete("start");
+      navigate(`${url.pathname}${url.search}`);
+    } catch {
+      text.textContent = "Could not discard the saved workout. Check storage and try again.";
+    }
+  });
+  section.appendChild(discard);
+  container.appendChild(section);
+}
+
 function showRecovery(container: HTMLElement, message: string, canClear: boolean, existing?: ActiveWorkoutDraft): void {
   container.innerHTML = "";
   const section = document.createElement("div");
@@ -305,7 +386,9 @@ function showRecovery(container: HTMLElement, message: string, canClear: boolean
     resume.type = "button";
     resume.className = "active-session__save-btn";
     resume.textContent = "Resume saved workout";
-    resume.addEventListener("click", () => navigate(`/active-session?id=${encodeURIComponent(existing.workoutId)}&sets=${existing.sets}`));
+    resume.addEventListener("click", () => navigate(
+      `/active-session?id=${encodeURIComponent(existing.workoutId)}&sets=${existing.sets}&resume=${encodeURIComponent(existing.draftId)}`,
+    ));
     section.appendChild(resume);
   }
   if (canClear && !existing?.completion) {
@@ -335,6 +418,7 @@ function showRecovery(container: HTMLElement, message: string, canClear: boolean
 
 function saveDraft(): boolean {
   if (!draft || !workout || draft.completion) return false;
+  const hasIncompleteWeight = refreshWeightWarnings();
   const entries = Object.fromEntries([...logEntries].map(([id, entry]) => [id, { ...entry }]));
   const updated: ActiveWorkoutDraft = {
     ...draft,
@@ -346,14 +430,46 @@ function saveDraft(): boolean {
   try {
     writeDraft(updated);
     draft = updated;
-    if (status) status.textContent = "Progress saved on this browser.";
+    if (status) status.textContent = hasIncompleteWeight
+      ? "Progress saved on this browser. An incomplete weight entry is not saved; finish or clear it before leaving."
+      : "Progress saved on this browser.";
     if (retry) retry.style.display = "none";
     return true;
   } catch {
-    if (status) status.textContent = "Progress could not be saved and may be lost on refresh.";
+    if (status) status.textContent = hasIncompleteWeight
+      ? "Progress could not be saved and may be lost on refresh. The incomplete weight entry is also not saved."
+      : "Progress could not be saved and may be lost on refresh.";
     if (retry) retry.style.display = "";
     return false;
   }
+}
+
+function refreshWeightWarnings(): boolean {
+  if (!workout) return false;
+  let hasIncompleteWeight = false;
+  for (const exercise of workout.exercises) {
+    const input = document.getElementById(`weight-${exercise.exerciseId}`) as HTMLInputElement | null;
+    const warning = input?.closest(".active-session__weight-group")
+      ?.querySelector<HTMLElement>(".active-session__input-warning");
+    if (input?.validity.badInput) {
+      hasIncompleteWeight = true;
+      if (warning) warning.textContent = INCOMPLETE_WEIGHT_WARNING;
+      input.setAttribute("aria-invalid", "true");
+    } else {
+      if (warning) warning.textContent = "";
+      input?.removeAttribute("aria-invalid");
+    }
+  }
+  if (!hasIncompleteWeight) {
+    const error = document.getElementById("session-error");
+    const isWeightValidationError = workout.exercises.some(
+      exercise => error?.textContent === `Weight for ${exercise.name} must be a valid number.`,
+    );
+    if (error && (error.textContent === INCOMPLETE_WEIGHT_REORDER_ERROR || isWeightValidationError)) {
+      error.textContent = "";
+    }
+  }
+  return hasIncompleteWeight;
 }
 
 function initEventListeners(): void {
@@ -623,14 +739,17 @@ async function loadWorkout(workoutId: string, isActive: () => boolean, container
     return;
   }
 
+  let loadedWorkout: WorkoutDetail;
   try {
-    workout = await workoutResult.value.json();
+    loadedWorkout = await workoutResult.value.json();
   } catch {
+    if (!isActive()) return;
     if (titleEl) titleEl.textContent = "Workout";
     if (errorEl) errorEl.textContent = "Failed to load workout. Please try again.";
     return;
   }
   if (!isActive()) return;
+  workout = loadedWorkout;
   if (workout && draft) {
     const ids = new Set(workout.exercises.map(exercise => exercise.exerciseId));
     if (ids.size !== draft.exerciseOrder.length || !draft.exerciseOrder.every(id => ids.has(id))) {
@@ -771,7 +890,9 @@ function renderExerciseInputs(): void {
 
     // Weight input (KG)
     const weightGroup = document.createElement("div");
-    weightGroup.className = "active-session__input-group";
+    weightGroup.className = "active-session__weight-group";
+    const weightRow = document.createElement("div");
+    weightRow.className = "active-session__input-group";
     const weightLabel = document.createElement("label");
     weightLabel.className = "active-session__input-label";
     weightLabel.setAttribute("for", `weight-${exercise.exerciseId}`);
@@ -785,13 +906,28 @@ function renderExerciseInputs(): void {
     weightInput.step = "0.5";
     weightInput.value = existingEntry?.loggedWeight ?? "";
     weightInput.setAttribute("aria-label", `Weight in KG for ${exercise.name}`);
+    const weightWarning = document.createElement("span");
+    weightWarning.className = "active-session__input-warning";
+    weightWarning.id = `weight-warning-${exercise.exerciseId}`;
+    weightWarning.setAttribute("role", "status");
+    weightWarning.setAttribute("aria-live", "polite");
+    weightInput.setAttribute("aria-describedby", weightWarning.id);
     weightInput.addEventListener("input", () => {
       const entry = logEntries.get(exercise.exerciseId);
-      if (entry) entry.loggedWeight = weightInput.value;
+      if (weightInput.validity.badInput) {
+        weightWarning.textContent = INCOMPLETE_WEIGHT_WARNING;
+        weightInput.setAttribute("aria-invalid", "true");
+      } else {
+        weightWarning.textContent = "";
+        weightInput.removeAttribute("aria-invalid");
+        if (entry) entry.loggedWeight = weightInput.value;
+      }
       saveDraft();
     });
-    weightGroup.appendChild(weightLabel);
-    weightGroup.appendChild(weightInput);
+    weightRow.appendChild(weightLabel);
+    weightRow.appendChild(weightInput);
+    weightGroup.appendChild(weightRow);
+    weightGroup.appendChild(weightWarning);
     inputsDiv.appendChild(weightGroup);
 
     // Notes input removed — not in use
@@ -880,6 +1016,11 @@ function renderExerciseInputs(): void {
 function toggleOrderEditing(): void {
   if (!workout || workout.exercises.length === 0) return;
   if (isOrderEditing) return;
+  if (refreshWeightWarnings()) {
+    const error = document.getElementById("session-error");
+    if (error) error.textContent = INCOMPLETE_WEIGHT_REORDER_ERROR;
+    return;
+  }
 
   orderBeforeEditing = [...workout.exercises];
   hasOrderChanges = false;
@@ -1023,7 +1164,7 @@ async function handleSave(overallEffort: number | null): Promise<void> {
   if (exercisesEl && workout) {
     for (const exercise of workout.exercises) {
       const weightInput = document.getElementById(`weight-${exercise.exerciseId}`) as HTMLInputElement | null;
-      if (weightInput && weightInput.value !== "" && weightInput.validity.badInput) {
+      if (weightInput?.validity.badInput) {
         const errorEl = document.getElementById("session-error");
         if (errorEl) errorEl.textContent = `Weight for ${exercise.name} must be a valid number.`;
         return;
@@ -1115,11 +1256,13 @@ async function handleSave(overallEffort: number | null): Promise<void> {
           ? "This completion cannot be retried as a new workout. Your saved progress remains intact."
           : "Completion may have succeeded. Retry to check its result.");
         if (response.status === 410 && apiErrorEl) offerDeletedCleanup(apiErrorEl);
-        if (response.status === 409 && typeof data.workoutSessionId === "string" && apiErrorEl) {
+        if (response.status === 409 && typeof data.workoutSessionId === "string" &&
+            data.workoutSessionId.length > 0 && apiErrorEl) {
           const link = document.createElement("a");
           link.href = `/history/session?id=${encodeURIComponent(data.workoutSessionId)}`;
           link.textContent = " View completed workout";
           apiErrorEl.appendChild(link);
+          offerCompletedCleanup(apiErrorEl, data.workoutSessionId);
         }
       }
     }
