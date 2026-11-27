@@ -1885,10 +1885,9 @@ public class WorkoutHistoryTests
 
             await page.GotoAsync($"{_webApp.BaseUrl}/active-session?id={workoutId}{setsQuery}");
             await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
-            await page.Locator("#session-save").ClickAsync();
-            await page.Locator("#effort-modal-skip").ClickAsync();
 
-            await Expect(page.Locator("#session-api-error")).ToContainTextAsync("Sets must be 3 or 5");
+            await Expect(page.GetByRole(AriaRole.Alert)).ToContainTextAsync("Sets must be 3 or 5");
+            await Expect(page.Locator("#session-save")).ToHaveCountAsync(0);
             Assert.Equal(0, createRequests);
         }
         finally
